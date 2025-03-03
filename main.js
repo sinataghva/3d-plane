@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // Initialize the scene, camera, and renderer
 const scene = new THREE.Scene();
@@ -6,12 +7,31 @@ scene.background = new THREE.Color(0xf0f0f0);
 
 // Create a camera that will be positioned relative to the plane
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(10, 5, -20); // Initial position
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.shadowMap.enabled = true;
 document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+// Add orbit controls for debugging
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.minDistance = 2;
+controls.maxDistance = 100;
+
+// Debug mode flag - when true, use orbit controls; when false, use third-person camera
+let debugMode = false;
+
+// Toggle debug mode with the 'D' key
+window.addEventListener('keydown', (event) => {
+    if (event.key.toLowerCase() === 'd') {
+        debugMode = !debugMode;
+        console.log('Debug mode:', debugMode ? 'ON' : 'OFF');
+    }
+});
 
 // Add lights
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -199,6 +219,32 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// Add keyboard state tracking
+const keyboard = {
+    w: false
+};
+
+// Plane physics properties
+const planePhysics = {
+    speed: 0,
+    acceleration: 0.05,
+    maxSpeed: 2,
+    friction: 0.01
+};
+
+// Add keyboard event listeners
+window.addEventListener('keydown', (event) => {
+    if (event.key.toLowerCase() === 'w') {
+        keyboard.w = true;
+    }
+});
+
+window.addEventListener('keyup', (event) => {
+    if (event.key.toLowerCase() === 'w') {
+        keyboard.w = false;
+    }
+});
+
 // Animation loop
 function animate() {
     requestAnimationFrame(animate);
@@ -206,18 +252,60 @@ function animate() {
     // Rotate propeller around the correct axis (x-axis for forward rotation)
     propeller.rotation.x += 0.2;
     
-    // Position the camera in a third-person view behind and slightly above the plane
-    const cameraOffset = new THREE.Vector3(-5, 2, 0); // Behind and above the plane
-    cameraOffset.applyQuaternion(airplane.quaternion); // Rotate the offset based on plane orientation
+    // Handle plane movement based on keyboard input
+    if (keyboard.w) {
+        // Accelerate when W is pressed
+        planePhysics.speed += planePhysics.acceleration;
+        // Limit to max speed
+        if (planePhysics.speed > planePhysics.maxSpeed) {
+            planePhysics.speed = planePhysics.maxSpeed;
+        }
+        
+        // Increase propeller rotation speed with plane speed
+        propeller.rotation.x += planePhysics.speed * 0.1;
+    } else {
+        // Apply friction when W is not pressed
+        planePhysics.speed -= planePhysics.friction;
+        if (planePhysics.speed < 0) {
+            planePhysics.speed = 0;
+        }
+    }
     
-    // Set camera position relative to the plane
-    camera.position.copy(airplane.position).add(cameraOffset);
+    // Move the plane forward based on current speed
+    if (planePhysics.speed > 0) {
+        // Fix: Move along the local forward direction of the plane
+        // For a plane facing -Z (with rotation.y = -Math.PI/2), the forward direction is +X
+        const moveVector = new THREE.Vector3(planePhysics.speed, 0, 0);
+        moveVector.applyQuaternion(airplane.quaternion);
+        airplane.position.add(moveVector);
+        
+        // Keep the plane on the runway (limit to runway length)
+        if (airplane.position.z < -145) {
+            airplane.position.z = -145;
+        } else if (airplane.position.z > 145) {
+            airplane.position.z = 145;
+        }
+    }
     
-    // Make the camera look at the plane, slightly ahead of it
-    const lookAtOffset = new THREE.Vector3(2, 0, 0); // Look slightly ahead of the plane
-    lookAtOffset.applyQuaternion(airplane.quaternion);
-    const lookAtPoint = airplane.position.clone().add(lookAtOffset);
-    camera.lookAt(lookAtPoint);
+    if (!debugMode) {
+        // Use third-person camera when not in debug mode
+        // Position the camera in a third-person view behind and slightly above the plane
+        const cameraOffset = new THREE.Vector3(-10, 4, 0); // Restored to requested values
+        cameraOffset.applyQuaternion(airplane.quaternion); // Rotate the offset based on plane orientation
+        
+        // Set camera position relative to the plane
+        camera.position.copy(airplane.position).add(cameraOffset);
+        
+        // Make the camera look at the plane, slightly ahead of it
+        const lookAtOffset = new THREE.Vector3(2, 0, 0); // Look slightly ahead of the plane
+        lookAtOffset.applyQuaternion(airplane.quaternion);
+        const lookAtPoint = airplane.position.clone().add(lookAtOffset);
+        camera.lookAt(lookAtPoint);
+    } else {
+        // In debug mode, update orbit controls
+        controls.target.copy(airplane.position); // Focus orbit controls on the plane
+        controls.update();
+    }
     
     // Render the scene
     renderer.render(scene, camera);
