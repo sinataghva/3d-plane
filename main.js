@@ -229,12 +229,18 @@ const keyboard = {
 // Plane physics properties
 const planePhysics = {
     speed: 0,
-    acceleration: 0.05,
+    acceleration: 0.01,
     maxSpeed: 2,
     friction: 0.01,
     pitchAngle: 0,
     maxPitchAngle: 0.2, // Maximum pitch angle in radians (about 11.5 degrees)
-    pitchSpeed: 0.005   // How quickly the plane pitches
+    pitchSpeed: 0.005,  // How quickly the plane pitches
+    lift: 0,            // Current lift force
+    liftFactor: 0.02,   // How much lift is generated
+    gravity: 0.01,      // Gravity force pulling the plane down
+    minTakeoffSpeed: 1.5, // Minimum speed required for takeoff
+    isAirborne: false,  // Track if the plane is in the air
+    takeoffThreshold: 0.1 // Minimum height to be considered airborne
 };
 
 // Add keyboard event listeners
@@ -311,23 +317,73 @@ function animate() {
     // Apply pitch rotation to the airplane
     airplane.rotation.z = planePhysics.pitchAngle;
     
-    // Move the plane forward based on current speed
+    // Flight physics - calculate lift based on speed and pitch
     if (planePhysics.speed > 0) {
-        // Fix: Move along the local forward direction of the plane
+        // Only apply flight physics if the plane is moving
+        
+        // Move the plane forward based on current speed
         // For a plane facing -Z (with rotation.y = -Math.PI/2), the forward direction is +X
         const moveVector = new THREE.Vector3(planePhysics.speed, 0, 0);
         moveVector.applyQuaternion(airplane.quaternion);
         airplane.position.add(moveVector);
         
-        // Keep the plane on the runway (limit to runway length)
-        if (airplane.position.z < -145) {
-            airplane.position.z = -145;
-        } else if (airplane.position.z > 145) {
-            airplane.position.z = 145;
+        // Calculate lift based on speed and pitch angle
+        // More speed and positive pitch generate more lift
+        const speedFactor = Math.max(0, (planePhysics.speed - 0.5) / planePhysics.minTakeoffSpeed);
+        const pitchFactor = Math.max(0, planePhysics.pitchAngle * 10 + 0.5);
+        
+        // Smooth lift calculation with proper thresholds
+        planePhysics.lift = speedFactor * pitchFactor * planePhysics.liftFactor;
+        
+        // Check if we're already airborne or have enough speed for takeoff
+        if (planePhysics.isAirborne || planePhysics.speed >= planePhysics.minTakeoffSpeed) {
+            // Apply lift if we have positive pitch and enough speed
+            if (planePhysics.pitchAngle > 0 && planePhysics.speed > 0.8) {
+                // Plane is taking off or flying
+                airplane.position.y += planePhysics.lift;
+                
+                // Mark as airborne once we reach a certain height
+                if (airplane.position.y > 0.5 + planePhysics.takeoffThreshold) {
+                    planePhysics.isAirborne = true;
+                }
+            }
+            
+            // Apply gravity (always present)
+            airplane.position.y -= planePhysics.gravity;
+            
+            // Check if we've landed
+            if (airplane.position.y <= 0.5) {
+                airplane.position.y = 0.5;
+                // Only consider landed if speed is low enough or pitch is negative
+                if (planePhysics.speed < 0.8 || planePhysics.pitchAngle < 0) {
+                    planePhysics.isAirborne = false;
+                }
+            }
+        } else {
+            // Not enough speed for takeoff or not airborne, stay on ground
+            airplane.position.y = 0.5;
         }
         
-        // Keep the plane on the ground (y position fixed)
-        airplane.position.y = 0.5;
+        // Keep the plane on the runway only if not airborne
+        if (!planePhysics.isAirborne) {
+            if (airplane.position.z < -145) {
+                airplane.position.z = -145;
+            } else if (airplane.position.z > 145) {
+                airplane.position.z = 145;
+            }
+        }
+    } else {
+        // No speed, apply gravity and stay on ground
+        if (airplane.position.y > 0.5) {
+            airplane.position.y -= planePhysics.gravity * 2; // Fall faster when not moving
+            if (airplane.position.y < 0.5) {
+                airplane.position.y = 0.5;
+                planePhysics.isAirborne = false;
+            }
+        } else {
+            airplane.position.y = 0.5;
+            planePhysics.isAirborne = false;
+        }
     }
     
     if (!debugMode) {
