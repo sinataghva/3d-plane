@@ -1,0 +1,15 @@
+{
+  "name": "3d-plane",
+  "version": "1.0.0",
+  "description": "Web-based 3D model of a plane using Three.js",
+  "main": "index.js",
+  "scripts": {
+    "start": "serve ."
+  },
+  "dependencies": {
+    "three": "^0.159.0"
+  },
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+} 
