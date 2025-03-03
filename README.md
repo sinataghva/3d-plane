@@ -7,7 +7,7 @@ A web-based 3D model of a plane using Three.js.
 - Detailed 3D airplane model
 - Long runway on a grass field
 - Third-person camera view that follows the plane
-- Keyboard controls for plane movement
+- Keyboard controls for plane movement and pitch
 - Debug mode with orbit controls
 - Animated propeller
 - Responsive design
@@ -41,6 +41,8 @@ This will start a local server, typically at http://localhost:3000. Open this UR
 ## Controls
 
 - **W key**: Accelerate the plane forward along the runway
+- **Arrow Down**: Pitch the plane's nose up
+- **Arrow Up**: Pitch the plane's nose down
 - **D key**: Toggle debug mode with orbit controls
   - In debug mode, you can:
     - **Left-click + drag**: Rotate the camera around the plane
@@ -52,7 +54,7 @@ This will start a local server, typically at http://localhost:3000. Open this UR
 - The scene features a detailed airplane model positioned on a long runway.
 - The camera is positioned in a third-person view behind and slightly above the plane.
 - The propeller animates by spinning around its axis.
-- The plane can be controlled to move along the runway.
+- The plane can be controlled to move along the runway and pitch up/down.
 
 ## Customization
 

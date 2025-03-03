@@ -7,7 +7,7 @@ scene.background = new THREE.Color(0xf0f0f0);
 
 // Create a camera that will be positioned relative to the plane
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(10, 5, -20); // Initial position
+camera.position.set(10, 5, -120); // Updated to match the new plane position
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -133,7 +133,7 @@ function createAirplane() {
 // Create and add the airplane to the scene
 const { airplane, propeller } = createAirplane();
 // Position and rotate the airplane to align with the runway
-airplane.position.set(0, 0.5, -20);
+airplane.position.set(0, 0.5, -120); // Moved further back on the runway
 // Fix the plane's orientation to face forward along the runway
 airplane.rotation.y = -Math.PI / 2; // Rotate to face forward along the runway
 scene.add(airplane);
@@ -221,7 +221,9 @@ window.addEventListener('resize', () => {
 
 // Add keyboard state tracking
 const keyboard = {
-    w: false
+    w: false,
+    arrowUp: false,
+    arrowDown: false
 };
 
 // Plane physics properties
@@ -229,19 +231,30 @@ const planePhysics = {
     speed: 0,
     acceleration: 0.05,
     maxSpeed: 2,
-    friction: 0.01
+    friction: 0.01,
+    pitchAngle: 0,
+    maxPitchAngle: 0.2, // Maximum pitch angle in radians (about 11.5 degrees)
+    pitchSpeed: 0.005   // How quickly the plane pitches
 };
 
 // Add keyboard event listeners
 window.addEventListener('keydown', (event) => {
     if (event.key.toLowerCase() === 'w') {
         keyboard.w = true;
+    } else if (event.key === 'ArrowUp') {
+        keyboard.arrowUp = true;
+    } else if (event.key === 'ArrowDown') {
+        keyboard.arrowDown = true;
     }
 });
 
 window.addEventListener('keyup', (event) => {
     if (event.key.toLowerCase() === 'w') {
         keyboard.w = false;
+    } else if (event.key === 'ArrowUp') {
+        keyboard.arrowUp = false;
+    } else if (event.key === 'ArrowDown') {
+        keyboard.arrowDown = false;
     }
 });
 
@@ -271,6 +284,33 @@ function animate() {
         }
     }
     
+    // Handle pitch control with arrow keys
+    if (keyboard.arrowUp) {
+        // Pitch down (reversed)
+        planePhysics.pitchAngle -= planePhysics.pitchSpeed;
+        if (planePhysics.pitchAngle < -planePhysics.maxPitchAngle) {
+            planePhysics.pitchAngle = -planePhysics.maxPitchAngle;
+        }
+    } else if (keyboard.arrowDown) {
+        // Pitch up (reversed)
+        planePhysics.pitchAngle += planePhysics.pitchSpeed;
+        if (planePhysics.pitchAngle > planePhysics.maxPitchAngle) {
+            planePhysics.pitchAngle = planePhysics.maxPitchAngle;
+        }
+    } else {
+        // Return to level flight gradually when no arrow keys are pressed
+        if (planePhysics.pitchAngle > 0) {
+            planePhysics.pitchAngle -= planePhysics.pitchSpeed / 2;
+            if (planePhysics.pitchAngle < 0) planePhysics.pitchAngle = 0;
+        } else if (planePhysics.pitchAngle < 0) {
+            planePhysics.pitchAngle += planePhysics.pitchSpeed / 2;
+            if (planePhysics.pitchAngle > 0) planePhysics.pitchAngle = 0;
+        }
+    }
+    
+    // Apply pitch rotation to the airplane
+    airplane.rotation.z = planePhysics.pitchAngle;
+    
     // Move the plane forward based on current speed
     if (planePhysics.speed > 0) {
         // Fix: Move along the local forward direction of the plane
@@ -285,6 +325,9 @@ function animate() {
         } else if (airplane.position.z > 145) {
             airplane.position.z = 145;
         }
+        
+        // Keep the plane on the ground (y position fixed)
+        airplane.position.y = 0.5;
     }
     
     if (!debugMode) {
