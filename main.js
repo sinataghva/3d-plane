@@ -229,7 +229,7 @@ const keyboard = {
 // Plane physics properties
 const planePhysics = {
     speed: 0,
-    acceleration: 0.01,
+    acceleration: 0.05,
     maxSpeed: 2,
     friction: 0.01,
     pitchAngle: 0,
@@ -263,6 +263,20 @@ window.addEventListener('keyup', (event) => {
         keyboard.arrowDown = false;
     }
 });
+
+// Get DOM elements for updating flight data
+const speedValueElement = document.getElementById('speed-value');
+const altitudeValueElement = document.getElementById('altitude-value');
+
+// Function to update flight data display
+function updateFlightDataDisplay() {
+    // Calculate altitude relative to ground level (0.5 is ground level)
+    const altitude = Math.max(0, airplane.position.y - 0.5);
+    
+    // Update the display elements
+    speedValueElement.textContent = planePhysics.speed.toFixed(2);
+    altitudeValueElement.textContent = altitude.toFixed(2);
+}
 
 // Animation loop
 function animate() {
@@ -405,6 +419,9 @@ function animate() {
         controls.target.copy(airplane.position); // Focus orbit controls on the plane
         controls.update();
     }
+    
+    // Update flight data display
+    updateFlightDataDisplay();
     
     // Render the scene
     renderer.render(scene, camera);

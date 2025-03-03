@@ -39,4 +39,21 @@ h1 {
 p {
     font-size: 14px;
     color: #666;
+}
+
+#flight-data {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+}
+
+#flight-data p {
+    margin: 5px 0;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+#speed-value, #altitude-value {
+    font-weight: bold;
+    color: #0066cc;
 } 
