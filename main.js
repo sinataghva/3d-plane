@@ -206,8 +206,8 @@ function createAirbase() {
         airbaseGroup.add(thresholdMark2);
     }
     
-    // Surrounding grass field - make it larger to match runway
-    const grassGeometry = new THREE.PlaneGeometry(500, 500);
+    // Surrounding grass field - make it much larger
+    const grassGeometry = new THREE.PlaneGeometry(2000, 2000); // Much larger grass field
     const grassMaterial = new THREE.MeshPhongMaterial({ 
         color: 0x4CAF50,
         specular: 0x111111,
