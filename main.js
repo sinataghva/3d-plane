@@ -155,6 +155,21 @@ function createAirbase() {
     runway.receiveShadow = true;
     airbaseGroup.add(runway);
     
+    // Add barrier wall at runway end
+    const barrierGeometry = new THREE.BoxGeometry(20, 5, 0.5); // Width matches runway, height is 1 unit
+    const barrierMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0xCC0000, // Red color for visibility
+        specular: 0x111111,
+        shininess: 30
+    });
+    
+    // End barrier
+    const barrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
+    barrier.position.set(0, 0.5, 150); // Position at runway end, half height above ground
+    barrier.castShadow = true;
+    barrier.receiveShadow = true;
+    airbaseGroup.add(barrier);
+    
     // Runway center line
     const centerLineGeometry = new THREE.PlaneGeometry(0.5, 290);
     const centerLineMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
@@ -378,12 +393,21 @@ function animate() {
             airplane.position.y = 0.5;
         }
         
-        // Keep the plane on the runway only if not airborne
+        // Check for barrier collision when not airborne
         if (!planePhysics.isAirborne) {
+            // Only check for barrier collision when we're near it
+            const isNearBarrier = Math.abs(airplane.position.z - 144.5) < 2 && Math.abs(airplane.position.x) < 10;
+            
+            // Check if we hit the barrier at the end of the runway
+            if (isNearBarrier && airplane.position.z >= 144.5) {
+                // Stop the plane when hitting the barrier
+                airplane.position.z = 144.5;
+                planePhysics.speed = 0; // Kill the speed on impact
+            }
+            
+            // Still prevent going backwards past the start of the runway
             if (airplane.position.z < -145) {
                 airplane.position.z = -145;
-            } else if (airplane.position.z > 145) {
-                airplane.position.z = 145;
             }
         }
     } else {
