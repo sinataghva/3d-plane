@@ -23,13 +23,13 @@ controls.minDistance = 2;
 controls.maxDistance = 100;
 
 // Debug mode flag - when true, use orbit controls; when false, use third-person camera
-let debugMode = false;
+let cameraMode = false;
 
-// Toggle debug mode with the 'D' key
+// Toggle camera mode with the 'C' key
 window.addEventListener('keydown', (event) => {
-    if (event.key.toLowerCase() === 'd') {
-        debugMode = !debugMode;
-        console.log('Debug mode:', debugMode ? 'ON' : 'OFF');
+    if (event.key.toLowerCase() === 'c') {
+        cameraMode = !cameraMode;
+        console.log('Camera mode:', cameraMode ? 'ON' : 'OFF');
     }
 });
 
@@ -424,8 +424,8 @@ function animate() {
         }
     }
     
-    if (!debugMode) {
-        // Use third-person camera when not in debug mode
+    if (!cameraMode) {
+        // Use third-person camera when not in camera mode
         // Position the camera in a third-person view behind and slightly above the plane
         const cameraOffset = new THREE.Vector3(-10, 4, 0); // Restored to requested values
         cameraOffset.applyQuaternion(airplane.quaternion); // Rotate the offset based on plane orientation
@@ -439,7 +439,7 @@ function animate() {
         const lookAtPoint = airplane.position.clone().add(lookAtOffset);
         camera.lookAt(lookAtPoint);
     } else {
-        // In debug mode, update orbit controls
+        // In camera mode, update orbit controls
         controls.target.copy(airplane.position); // Focus orbit controls on the plane
         controls.update();
     }

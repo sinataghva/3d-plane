@@ -44,8 +44,8 @@ This will start a local server, typically at http://localhost:3000. Open this UR
 - **W key**: Accelerate the plane forward along the runway
 - **Arrow Down**: Pitch the plane's nose up
 - **Arrow Up**: Pitch the plane's nose down
-- **D key**: Toggle debug mode with orbit controls
-  - In debug mode, you can:
+- **C key**: Toggle camera mode with orbit controls
+  - In camera mode, you can:
     - **Left-click + drag**: Rotate the camera around the plane
     - **Right-click + drag**: Pan the camera
     - **Scroll**: Zoom in/out
