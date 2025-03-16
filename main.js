@@ -250,10 +250,10 @@ const planePhysics = {
     maxSpeed: 2,
     friction: 0.01,
     pitchAngle: 0,
-    maxPitchAngle: 0.2, // Maximum pitch angle in radians (about 11.5 degrees)
-    pitchSpeed: 0.005,  // How quickly the plane pitches
+    maxPitchAngle: 0.5,    // Increased from 0.2 to 0.5 (about 28.6 degrees)
+    pitchSpeed: 0.008,     // Increased from 0.005 to 0.008 for faster pitch response
     lift: 0,            // Current lift force
-    liftFactor: 0.02,   // How much lift is generated
+    liftFactor: 0.03,      // Increased from 0.02 to 0.03 for more lift at steeper angles
     gravity: 0.01,      // Gravity force pulling the plane down
     minTakeoffSpeed: 1.5, // Minimum speed required for takeoff
     isAirborne: false,  // Track if the plane is in the air
