@@ -250,15 +250,19 @@ const planePhysics = {
     maxSpeed: 2,
     friction: 0.01,
     pitchAngle: 0,
-    maxPitchAngle: 0.5,    // Increased from 0.2 to 0.5 (about 28.6 degrees)
-    pitchSpeed: 0.008,     // Increased from 0.005 to 0.008 for faster pitch response
-    lift: 0,            // Current lift force
-    liftFactor: 0.03,      // Increased from 0.02 to 0.03 for more lift at steeper angles
-    gravity: 0.01,      // Gravity force pulling the plane down
-    minTakeoffSpeed: 1.5, // Minimum speed required for takeoff
-    isAirborne: false,  // Track if the plane is in the air
-    takeoffThreshold: 0.1, // Minimum height to be considered airborne
-    rotationSpeed: 0.02  // How quickly the plane turns
+    maxPitchAngle: 0.5,
+    pitchSpeed: 0.008,
+    lift: 0,
+    liftFactor: 0.03,
+    gravity: 0.01,
+    minTakeoffSpeed: 1.5,
+    isAirborne: false,
+    takeoffThreshold: 0.1,
+    rotationSpeed: 0.02,
+    rollAngle: 0,           // Current roll angle
+    maxRollAngle: 0.5,      // Maximum banking angle (about 30 degrees)
+    rollSpeed: 0.05,        // How quickly the plane banks
+    rollRecoverySpeed: 0.03 // How quickly the plane levels out
 };
 
 // Add keyboard event listeners
@@ -331,14 +335,40 @@ function animate() {
     }
 
     // Handle rotation with A/D keys
-    if (keyboard.a) {
-        // Rotate left (positive Y rotation)
-        airplane.rotation.y += planePhysics.rotationSpeed;
-    } else if (keyboard.d) {
-        // Rotate right (negative Y rotation)
-        airplane.rotation.y -= planePhysics.rotationSpeed;
+    if (keyboard.a || keyboard.d) {
+        // Calculate target roll angle based on turn direction
+        const targetRoll = keyboard.a ? planePhysics.maxRollAngle : -planePhysics.maxRollAngle;
+        
+        // Smoothly interpolate current roll towards target
+        if (planePhysics.rollAngle < targetRoll) {
+            planePhysics.rollAngle += planePhysics.rollSpeed;
+            if (planePhysics.rollAngle > targetRoll) planePhysics.rollAngle = targetRoll;
+        } else if (planePhysics.rollAngle > targetRoll) {
+            planePhysics.rollAngle -= planePhysics.rollSpeed;
+            if (planePhysics.rollAngle < targetRoll) planePhysics.rollAngle = targetRoll;
+        }
+        
+        // Apply turn rate based on roll angle
+        const turnRate = planePhysics.rotationSpeed * (Math.abs(planePhysics.rollAngle) / planePhysics.maxRollAngle);
+        if (keyboard.a) {
+            airplane.rotation.y += turnRate;
+        } else {
+            airplane.rotation.y -= turnRate;
+        }
+    } else {
+        // No turn input - recover to level flight
+        if (planePhysics.rollAngle > 0) {
+            planePhysics.rollAngle -= planePhysics.rollRecoverySpeed;
+            if (planePhysics.rollAngle < 0) planePhysics.rollAngle = 0;
+        } else if (planePhysics.rollAngle < 0) {
+            planePhysics.rollAngle += planePhysics.rollRecoverySpeed;
+            if (planePhysics.rollAngle > 0) planePhysics.rollAngle = 0;
+        }
     }
-    
+
+    // Apply roll rotation to the airplane
+    airplane.rotation.x = planePhysics.rollAngle;
+
     // Handle pitch control with arrow keys
     if (keyboard.arrowUp) {
         // Pitch down (reversed)
