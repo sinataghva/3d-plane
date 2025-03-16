@@ -237,6 +237,8 @@ window.addEventListener('resize', () => {
 // Add keyboard state tracking
 const keyboard = {
     w: false,
+    a: false,
+    d: false,
     arrowUp: false,
     arrowDown: false
 };
@@ -255,13 +257,18 @@ const planePhysics = {
     gravity: 0.01,      // Gravity force pulling the plane down
     minTakeoffSpeed: 1.5, // Minimum speed required for takeoff
     isAirborne: false,  // Track if the plane is in the air
-    takeoffThreshold: 0.1 // Minimum height to be considered airborne
+    takeoffThreshold: 0.1, // Minimum height to be considered airborne
+    rotationSpeed: 0.02  // How quickly the plane turns
 };
 
 // Add keyboard event listeners
 window.addEventListener('keydown', (event) => {
     if (event.key.toLowerCase() === 'w') {
         keyboard.w = true;
+    } else if (event.key.toLowerCase() === 'a') {
+        keyboard.a = true;
+    } else if (event.key.toLowerCase() === 'd') {
+        keyboard.d = true;
     } else if (event.key === 'ArrowUp') {
         keyboard.arrowUp = true;
     } else if (event.key === 'ArrowDown') {
@@ -272,6 +279,10 @@ window.addEventListener('keydown', (event) => {
 window.addEventListener('keyup', (event) => {
     if (event.key.toLowerCase() === 'w') {
         keyboard.w = false;
+    } else if (event.key.toLowerCase() === 'a') {
+        keyboard.a = false;
+    } else if (event.key.toLowerCase() === 'd') {
+        keyboard.d = false;
     } else if (event.key === 'ArrowUp') {
         keyboard.arrowUp = false;
     } else if (event.key === 'ArrowDown') {
@@ -318,6 +329,15 @@ function animate() {
             planePhysics.speed = 0;
         }
     }
+
+    // Handle rotation with A/D keys
+    if (keyboard.a) {
+        // Rotate left (positive Y rotation)
+        airplane.rotation.y += planePhysics.rotationSpeed;
+    } else if (keyboard.d) {
+        // Rotate right (negative Y rotation)
+        airplane.rotation.y -= planePhysics.rotationSpeed;
+    }
     
     // Handle pitch control with arrow keys
     if (keyboard.arrowUp) {
@@ -350,10 +370,12 @@ function animate() {
     if (planePhysics.speed > 0) {
         // Only apply flight physics if the plane is moving
         
-        // Move the plane forward based on current speed
-        // For a plane facing -Z (with rotation.y = -Math.PI/2), the forward direction is +X
+        // Move the plane forward based on current speed and rotation
+        // Create a vector pointing forward (along the plane's local X-axis)
         const moveVector = new THREE.Vector3(planePhysics.speed, 0, 0);
+        // Apply the plane's rotation to the movement vector
         moveVector.applyQuaternion(airplane.quaternion);
+        // Update the plane's position
         airplane.position.add(moveVector);
         
         // Calculate lift based on speed and pitch angle
