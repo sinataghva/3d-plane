@@ -251,6 +251,7 @@ const planePhysics = {
     acceleration: 0.05,
     maxSpeed: 2,
     friction: 0.01,
+    yawAngle: -Math.PI / 2, // Current yaw (heading)
     pitchAngle: 0,
     maxPitchAngle: 0.5,
     pitchSpeed: 0.008,
@@ -361,9 +362,9 @@ function animate() {
         // Apply turn rate based on roll angle
         const turnRate = planePhysics.rotationSpeed * (Math.abs(planePhysics.rollAngle) / planePhysics.maxRollAngle);
         if (keyboard.arrowLeft) {
-            airplane.rotation.y += turnRate;
+            planePhysics.yawAngle += turnRate;
         } else {
-            airplane.rotation.y -= turnRate;
+            planePhysics.yawAngle -= turnRate;
         }
     } else {
         // No banking input - recover to level flight
@@ -378,14 +379,12 @@ function animate() {
 
     // Rudder control with A/D keys (yaw only)
     if (keyboard.a) {
-        airplane.rotation.y += planePhysics.rotationSpeed;
+        planePhysics.yawAngle += planePhysics.rotationSpeed;
     }
     if (keyboard.d) {
-        airplane.rotation.y -= planePhysics.rotationSpeed;
+        planePhysics.yawAngle -= planePhysics.rotationSpeed;
     }
 
-    // Apply roll rotation to the airplane
-    airplane.rotation.x = planePhysics.rollAngle;
 
     // Handle pitch control with arrow keys
     if (keyboard.arrowUp) {
@@ -410,10 +409,17 @@ function animate() {
             if (planePhysics.pitchAngle > 0) planePhysics.pitchAngle = 0;
         }
     }
-    
-    // Apply pitch rotation to the airplane
-    airplane.rotation.z = planePhysics.pitchAngle;
-    
+
+    // Update airplane orientation from yaw, pitch, and roll
+    airplane.quaternion.setFromEuler(
+        new THREE.Euler(
+            planePhysics.rollAngle,
+            planePhysics.yawAngle,
+            planePhysics.pitchAngle,
+            'XYZ'
+        )
+    );
+
     // Flight physics - calculate lift based on speed and pitch
     if (planePhysics.speed > 0) {
         // Only apply flight physics if the plane is moving
