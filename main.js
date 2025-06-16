@@ -411,12 +411,15 @@ function animate() {
     }
 
     // Update airplane orientation from yaw, pitch, and roll
+    // Construct orientation with yaw applied first to keep the roll axis stable
+    // when turning. Using the YZX order means yaw (Y) is applied before pitch
+    // (Z) and roll (X).
     airplane.quaternion.setFromEuler(
         new THREE.Euler(
             planePhysics.rollAngle,
             planePhysics.yawAngle,
             planePhysics.pitchAngle,
-            'XYZ'
+            'YZX'
         )
     );
 
