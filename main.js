@@ -263,7 +263,7 @@ const planePhysics = {
     takeoffThreshold: 0.1,
     rotationSpeed: 0.02,
     rollAngle: 0,           // Current roll angle
-    maxRollAngle: 0.5,      // Maximum banking angle (about 30 degrees)
+    maxRollAngle: 0.8,      // Maximum banking angle (about 45 degrees)
     rollSpeed: 0.05,        // How quickly the plane banks
     rollRecoverySpeed: 0.03 // How quickly the plane levels out
 };
@@ -348,7 +348,7 @@ function animate() {
     // Handle banking with Arrow Left/Right keys
     if (keyboard.arrowLeft || keyboard.arrowRight) {
         // Calculate target roll angle based on turn direction
-        const targetRoll = keyboard.arrowLeft ? planePhysics.maxRollAngle : -planePhysics.maxRollAngle;
+        const targetRoll = keyboard.arrowLeft ? -planePhysics.maxRollAngle : planePhysics.maxRollAngle;
 
         // Smoothly interpolate current roll towards target
         if (planePhysics.rollAngle < targetRoll) {
