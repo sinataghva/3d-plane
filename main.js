@@ -239,6 +239,8 @@ const keyboard = {
     w: false,
     a: false,
     d: false,
+    arrowLeft: false,
+    arrowRight: false,
     arrowUp: false,
     arrowDown: false
 };
@@ -273,6 +275,10 @@ window.addEventListener('keydown', (event) => {
         keyboard.a = true;
     } else if (event.key.toLowerCase() === 'd') {
         keyboard.d = true;
+    } else if (event.key === 'ArrowLeft') {
+        keyboard.arrowLeft = true;
+    } else if (event.key === 'ArrowRight') {
+        keyboard.arrowRight = true;
     } else if (event.key === 'ArrowUp') {
         keyboard.arrowUp = true;
     } else if (event.key === 'ArrowDown') {
@@ -287,6 +293,10 @@ window.addEventListener('keyup', (event) => {
         keyboard.a = false;
     } else if (event.key.toLowerCase() === 'd') {
         keyboard.d = false;
+    } else if (event.key === 'ArrowLeft') {
+        keyboard.arrowLeft = false;
+    } else if (event.key === 'ArrowRight') {
+        keyboard.arrowRight = false;
     } else if (event.key === 'ArrowUp') {
         keyboard.arrowUp = false;
     } else if (event.key === 'ArrowDown') {
@@ -334,11 +344,11 @@ function animate() {
         }
     }
 
-    // Handle rotation with A/D keys
-    if (keyboard.a || keyboard.d) {
+    // Handle banking with Arrow Left/Right keys
+    if (keyboard.arrowLeft || keyboard.arrowRight) {
         // Calculate target roll angle based on turn direction
-        const targetRoll = keyboard.a ? planePhysics.maxRollAngle : -planePhysics.maxRollAngle;
-        
+        const targetRoll = keyboard.arrowLeft ? planePhysics.maxRollAngle : -planePhysics.maxRollAngle;
+
         // Smoothly interpolate current roll towards target
         if (planePhysics.rollAngle < targetRoll) {
             planePhysics.rollAngle += planePhysics.rollSpeed;
@@ -347,16 +357,16 @@ function animate() {
             planePhysics.rollAngle -= planePhysics.rollSpeed;
             if (planePhysics.rollAngle < targetRoll) planePhysics.rollAngle = targetRoll;
         }
-        
+
         // Apply turn rate based on roll angle
         const turnRate = planePhysics.rotationSpeed * (Math.abs(planePhysics.rollAngle) / planePhysics.maxRollAngle);
-        if (keyboard.a) {
+        if (keyboard.arrowLeft) {
             airplane.rotation.y += turnRate;
         } else {
             airplane.rotation.y -= turnRate;
         }
     } else {
-        // No turn input - recover to level flight
+        // No banking input - recover to level flight
         if (planePhysics.rollAngle > 0) {
             planePhysics.rollAngle -= planePhysics.rollRecoverySpeed;
             if (planePhysics.rollAngle < 0) planePhysics.rollAngle = 0;
@@ -364,6 +374,14 @@ function animate() {
             planePhysics.rollAngle += planePhysics.rollRecoverySpeed;
             if (planePhysics.rollAngle > 0) planePhysics.rollAngle = 0;
         }
+    }
+
+    // Rudder control with A/D keys (yaw only)
+    if (keyboard.a) {
+        airplane.rotation.y += planePhysics.rotationSpeed;
+    }
+    if (keyboard.d) {
+        airplane.rotation.y -= planePhysics.rotationSpeed;
     }
 
     // Apply roll rotation to the airplane
