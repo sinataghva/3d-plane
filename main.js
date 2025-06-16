@@ -239,6 +239,8 @@ const keyboard = {
     w: false,
     a: false,
     d: false,
+    arrowLeft: false,
+    arrowRight: false,
     arrowUp: false,
     arrowDown: false
 };
@@ -249,6 +251,7 @@ const planePhysics = {
     acceleration: 0.05,
     maxSpeed: 2,
     friction: 0.01,
+    yawAngle: -Math.PI / 2, // Current yaw (heading)
     pitchAngle: 0,
     maxPitchAngle: 0.5,
     pitchSpeed: 0.008,
@@ -260,7 +263,7 @@ const planePhysics = {
     takeoffThreshold: 0.1,
     rotationSpeed: 0.02,
     rollAngle: 0,           // Current roll angle
-    maxRollAngle: 0.5,      // Maximum banking angle (about 30 degrees)
+    maxRollAngle: 0.8,      // Maximum banking angle (about 45 degrees)
     rollSpeed: 0.05,        // How quickly the plane banks
     rollRecoverySpeed: 0.03 // How quickly the plane levels out
 };
@@ -273,6 +276,10 @@ window.addEventListener('keydown', (event) => {
         keyboard.a = true;
     } else if (event.key.toLowerCase() === 'd') {
         keyboard.d = true;
+    } else if (event.key === 'ArrowLeft') {
+        keyboard.arrowLeft = true;
+    } else if (event.key === 'ArrowRight') {
+        keyboard.arrowRight = true;
     } else if (event.key === 'ArrowUp') {
         keyboard.arrowUp = true;
     } else if (event.key === 'ArrowDown') {
@@ -287,6 +294,10 @@ window.addEventListener('keyup', (event) => {
         keyboard.a = false;
     } else if (event.key.toLowerCase() === 'd') {
         keyboard.d = false;
+    } else if (event.key === 'ArrowLeft') {
+        keyboard.arrowLeft = false;
+    } else if (event.key === 'ArrowRight') {
+        keyboard.arrowRight = false;
     } else if (event.key === 'ArrowUp') {
         keyboard.arrowUp = false;
     } else if (event.key === 'ArrowDown') {
@@ -334,11 +345,11 @@ function animate() {
         }
     }
 
-    // Handle rotation with A/D keys
-    if (keyboard.a || keyboard.d) {
+    // Handle banking with Arrow Left/Right keys
+    if (keyboard.arrowLeft || keyboard.arrowRight) {
         // Calculate target roll angle based on turn direction
-        const targetRoll = keyboard.a ? planePhysics.maxRollAngle : -planePhysics.maxRollAngle;
-        
+        const targetRoll = keyboard.arrowLeft ? -planePhysics.maxRollAngle : planePhysics.maxRollAngle;
+
         // Smoothly interpolate current roll towards target
         if (planePhysics.rollAngle < targetRoll) {
             planePhysics.rollAngle += planePhysics.rollSpeed;
@@ -347,16 +358,16 @@ function animate() {
             planePhysics.rollAngle -= planePhysics.rollSpeed;
             if (planePhysics.rollAngle < targetRoll) planePhysics.rollAngle = targetRoll;
         }
-        
+
         // Apply turn rate based on roll angle
         const turnRate = planePhysics.rotationSpeed * (Math.abs(planePhysics.rollAngle) / planePhysics.maxRollAngle);
-        if (keyboard.a) {
-            airplane.rotation.y += turnRate;
+        if (keyboard.arrowLeft) {
+            planePhysics.yawAngle += turnRate;
         } else {
-            airplane.rotation.y -= turnRate;
+            planePhysics.yawAngle -= turnRate;
         }
     } else {
-        // No turn input - recover to level flight
+        // No banking input - recover to level flight
         if (planePhysics.rollAngle > 0) {
             planePhysics.rollAngle -= planePhysics.rollRecoverySpeed;
             if (planePhysics.rollAngle < 0) planePhysics.rollAngle = 0;
@@ -366,8 +377,14 @@ function animate() {
         }
     }
 
-    // Apply roll rotation to the airplane
-    airplane.rotation.x = planePhysics.rollAngle;
+    // Rudder control with A/D keys (yaw only)
+    if (keyboard.a) {
+        planePhysics.yawAngle += planePhysics.rotationSpeed;
+    }
+    if (keyboard.d) {
+        planePhysics.yawAngle -= planePhysics.rotationSpeed;
+    }
+
 
     // Handle pitch control with arrow keys
     if (keyboard.arrowUp) {
@@ -392,10 +409,20 @@ function animate() {
             if (planePhysics.pitchAngle > 0) planePhysics.pitchAngle = 0;
         }
     }
-    
-    // Apply pitch rotation to the airplane
-    airplane.rotation.z = planePhysics.pitchAngle;
-    
+
+    // Update airplane orientation from yaw, pitch, and roll
+    // Construct orientation with yaw applied first to keep the roll axis stable
+    // when turning. Using the YZX order means yaw (Y) is applied before pitch
+    // (Z) and roll (X).
+    airplane.quaternion.setFromEuler(
+        new THREE.Euler(
+            planePhysics.rollAngle,
+            planePhysics.yawAngle,
+            planePhysics.pitchAngle,
+            'YZX'
+        )
+    );
+
     // Flight physics - calculate lift based on speed and pitch
     if (planePhysics.speed > 0) {
         // Only apply flight physics if the plane is moving

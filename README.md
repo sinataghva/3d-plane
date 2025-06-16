@@ -42,6 +42,8 @@ This will start a local server, typically at http://localhost:3000. Open this UR
 ## Controls
 
 - **W key**: Accelerate the plane forward along the runway
+- **A / D keys**: Rudder left/right (yaw)
+- **Arrow Left / Arrow Right**: Bank left/right and turn
 - **Arrow Down**: Pitch the plane's nose up
 - **Arrow Up**: Pitch the plane's nose down
 - **C key**: Toggle camera mode with orbit controls
