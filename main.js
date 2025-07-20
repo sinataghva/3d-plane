@@ -219,6 +219,50 @@ function createAirbase() {
     grass.receiveShadow = true;
     airbaseGroup.add(grass);
     
+    // --- Add trees to the grass field ---
+    function createTree() {
+        const tree = new THREE.Group();
+        // Trunk (make taller and thicker)
+        const trunkGeometry = new THREE.CylinderGeometry(0.35, 0.45, 3.5, 10);
+        const trunkMaterial = new THREE.MeshPhongMaterial({ color: 0x8B5A2B });
+        const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+        trunk.position.y = 1.75; // half the trunk height
+        trunk.castShadow = true;
+        trunk.receiveShadow = true;
+        tree.add(trunk);
+        // Foliage (make larger)
+        const foliageGeometry = new THREE.ConeGeometry(2, 4.5, 16);
+        const foliageMaterial = new THREE.MeshPhongMaterial({ color: 0x2E8B57 });
+        const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+        foliage.position.y = 4.5; // on top of trunk
+        foliage.castShadow = true;
+        foliage.receiveShadow = true;
+        tree.add(foliage);
+        return tree;
+    }
+    // Place 200 trees in a grid with jitter, avoiding the runway area
+    const treeCount = 200;
+    const gridSize = 10;
+    const grassLimit = 900; // grass is 2000x2000, so -1000 to 1000, but keep margin
+    let placed = 0;
+    let attempts = 0;
+    while (placed < treeCount && attempts < treeCount * 10) {
+        // Use a grid, but add random jitter
+        const x = Math.round((Math.random() * 2 - 1) * grassLimit / gridSize) * gridSize + (Math.random() - 0.5) * 5;
+        const z = Math.round((Math.random() * 2 - 1) * grassLimit / gridSize) * gridSize + (Math.random() - 0.5) * 5;
+        // Avoid runway area: |x| < 30 and |z| < 170
+        if (Math.abs(x) < 30 && Math.abs(z) < 170) {
+            attempts++;
+            continue;
+        }
+        // Place the tree
+        const tree = createTree();
+        tree.position.set(x, 0, z);
+        airbaseGroup.add(tree);
+        placed++;
+        attempts++;
+    }
+    
     return airbaseGroup;
 }
 
@@ -226,6 +270,48 @@ function createAirbase() {
 const airbase = createAirbase();
 airbase.position.y = -0.5; // Position at ground level
 scene.add(airbase);
+
+// --- Add clouds to the sky ---
+function createCloud() {
+    const cloud = new THREE.Group();
+    // Softer, slightly grayish material
+    const material = new THREE.MeshPhongMaterial({ color: 0xf4f4f4, shininess: 5, flatShading: true });
+    const puffCount = 5 + Math.floor(Math.random() * 4); // 5-8 puffs per cloud
+    for (let i = 0; i < puffCount; i++) {
+        // Larger, more varied puffs
+        const puffRadius = 2.5 + Math.random() * 3.5; // 2.5 to 6 units
+        const puff = new THREE.Mesh(
+            new THREE.SphereGeometry(puffRadius, 20, 16),
+            material
+        );
+        // More spread out and random positions
+        puff.position.set(
+            (Math.random() - 0.5) * 10 + i * 2, // spread along x
+            (Math.random() - 0.5) * 4,           // vertical offset
+            (Math.random() - 0.5) * 6            // depth offset
+        );
+        puff.castShadow = false;
+        puff.receiveShadow = false;
+        cloud.add(puff);
+    }
+    // Randomly scale the whole cloud for variety
+    const scale = 1.5 + Math.random() * 1.5;
+    cloud.scale.set(scale, scale, scale);
+    // Randomly rotate for more natural look
+    cloud.rotation.y = Math.random() * Math.PI * 2;
+    return cloud;
+}
+// Place 20 clouds at random positions in the sky
+const cloudCount = 20;
+for (let i = 0; i < cloudCount; i++) {
+    const cloud = createCloud();
+    // Place clouds well above the ground, spread out over the scene
+    const x = (Math.random() * 2 - 1) * 800;
+    const y = 50 + Math.random() * 60; // 50 to 110 units above ground
+    const z = (Math.random() * 2 - 1) * 800;
+    cloud.position.set(x, y, z);
+    scene.add(cloud);
+}
 
 // Handle window resize
 window.addEventListener('resize', () => {
