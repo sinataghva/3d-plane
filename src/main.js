@@ -1,5 +1,7 @@
 import './styles.css';
 
+import * as THREE from 'three';
+
 import { createAirplane } from './airplane.js';
 import { createAirbase } from './airbase.js';
 import { addClouds } from './clouds.js';
@@ -27,11 +29,13 @@ const keyboard = createKeyboardState();
 const planePhysics = createPlanePhysics();
 const cameraMode = createCameraModeToggle();
 const hud = createHud();
+const clock = new THREE.Clock();
 
 function animate() {
     requestAnimationFrame(animate);
 
-    updatePlanePhysics({ airplane, propeller, keyboard, planePhysics });
+    const delta = clock.getDelta();
+    updatePlanePhysics({ airplane, propeller, keyboard, planePhysics, delta });
     updateCamera({ camera, controls, airplane, cameraMode });
     hud.update({ airplane, planePhysics });
 

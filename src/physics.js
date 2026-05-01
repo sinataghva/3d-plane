@@ -24,17 +24,19 @@ export function createPlanePhysics() {
     };
 }
 
-export function updatePlanePhysics({ airplane, propeller, keyboard, planePhysics }) {
-    propeller.rotation.x += 0.2;
+export function updatePlanePhysics({ airplane, propeller, keyboard, planePhysics, delta }) {
+    const frameScale = Math.min(delta * 60, 3);
+
+    propeller.rotation.x += 0.2 * frameScale;
 
     if (keyboard.w) {
-        planePhysics.speed += planePhysics.acceleration;
+        planePhysics.speed += planePhysics.acceleration * frameScale;
         if (planePhysics.speed > planePhysics.maxSpeed) {
             planePhysics.speed = planePhysics.maxSpeed;
         }
-        propeller.rotation.x += planePhysics.speed * 0.1;
+        propeller.rotation.x += planePhysics.speed * 0.1 * frameScale;
     } else {
-        planePhysics.speed -= planePhysics.friction;
+        planePhysics.speed -= planePhysics.friction * frameScale;
         if (planePhysics.speed < 0) {
             planePhysics.speed = 0;
         }
@@ -44,14 +46,14 @@ export function updatePlanePhysics({ airplane, propeller, keyboard, planePhysics
         const targetRoll = keyboard.arrowLeft ? -planePhysics.maxRollAngle : planePhysics.maxRollAngle;
 
         if (planePhysics.rollAngle < targetRoll) {
-            planePhysics.rollAngle += planePhysics.rollSpeed;
+            planePhysics.rollAngle += planePhysics.rollSpeed * frameScale;
             if (planePhysics.rollAngle > targetRoll) planePhysics.rollAngle = targetRoll;
         } else if (planePhysics.rollAngle > targetRoll) {
-            planePhysics.rollAngle -= planePhysics.rollSpeed;
+            planePhysics.rollAngle -= planePhysics.rollSpeed * frameScale;
             if (planePhysics.rollAngle < targetRoll) planePhysics.rollAngle = targetRoll;
         }
 
-        const turnRate = planePhysics.rotationSpeed * (Math.abs(planePhysics.rollAngle) / planePhysics.maxRollAngle);
+        const turnRate = planePhysics.rotationSpeed * (Math.abs(planePhysics.rollAngle) / planePhysics.maxRollAngle) * frameScale;
         if (keyboard.arrowLeft) {
             planePhysics.yawAngle += turnRate;
         } else {
@@ -59,37 +61,37 @@ export function updatePlanePhysics({ airplane, propeller, keyboard, planePhysics
         }
     } else {
         if (planePhysics.rollAngle > 0) {
-            planePhysics.rollAngle -= planePhysics.rollRecoverySpeed;
+            planePhysics.rollAngle -= planePhysics.rollRecoverySpeed * frameScale;
             if (planePhysics.rollAngle < 0) planePhysics.rollAngle = 0;
         } else if (planePhysics.rollAngle < 0) {
-            planePhysics.rollAngle += planePhysics.rollRecoverySpeed;
+            planePhysics.rollAngle += planePhysics.rollRecoverySpeed * frameScale;
             if (planePhysics.rollAngle > 0) planePhysics.rollAngle = 0;
         }
     }
 
     if (keyboard.a) {
-        planePhysics.yawAngle += planePhysics.rotationSpeed;
+        planePhysics.yawAngle += planePhysics.rotationSpeed * frameScale;
     }
     if (keyboard.d) {
-        planePhysics.yawAngle -= planePhysics.rotationSpeed;
+        planePhysics.yawAngle -= planePhysics.rotationSpeed * frameScale;
     }
 
     if (keyboard.arrowUp) {
-        planePhysics.pitchAngle -= planePhysics.pitchSpeed;
+        planePhysics.pitchAngle -= planePhysics.pitchSpeed * frameScale;
         if (planePhysics.pitchAngle < -planePhysics.maxPitchAngle) {
             planePhysics.pitchAngle = -planePhysics.maxPitchAngle;
         }
     } else if (keyboard.arrowDown) {
-        planePhysics.pitchAngle += planePhysics.pitchSpeed;
+        planePhysics.pitchAngle += planePhysics.pitchSpeed * frameScale;
         if (planePhysics.pitchAngle > planePhysics.maxPitchAngle) {
             planePhysics.pitchAngle = planePhysics.maxPitchAngle;
         }
     } else {
         if (planePhysics.pitchAngle > 0) {
-            planePhysics.pitchAngle -= planePhysics.pitchSpeed / 2;
+            planePhysics.pitchAngle -= (planePhysics.pitchSpeed / 2) * frameScale;
             if (planePhysics.pitchAngle < 0) planePhysics.pitchAngle = 0;
         } else if (planePhysics.pitchAngle < 0) {
-            planePhysics.pitchAngle += planePhysics.pitchSpeed / 2;
+            planePhysics.pitchAngle += (planePhysics.pitchSpeed / 2) * frameScale;
             if (planePhysics.pitchAngle > 0) planePhysics.pitchAngle = 0;
         }
     }
@@ -104,7 +106,7 @@ export function updatePlanePhysics({ airplane, propeller, keyboard, planePhysics
     );
 
     if (planePhysics.speed > 0) {
-        const moveVector = new THREE.Vector3(planePhysics.speed, 0, 0);
+        const moveVector = new THREE.Vector3(planePhysics.speed * frameScale, 0, 0);
         moveVector.applyQuaternion(airplane.quaternion);
         airplane.position.add(moveVector);
 
@@ -114,14 +116,14 @@ export function updatePlanePhysics({ airplane, propeller, keyboard, planePhysics
 
         if (planePhysics.isAirborne || planePhysics.speed >= planePhysics.minTakeoffSpeed) {
             if (planePhysics.pitchAngle > 0 && planePhysics.speed > 0.8) {
-                airplane.position.y += planePhysics.lift;
+                airplane.position.y += planePhysics.lift * frameScale;
 
                 if (airplane.position.y > 0.5 + planePhysics.takeoffThreshold) {
                     planePhysics.isAirborne = true;
                 }
             }
 
-            airplane.position.y -= planePhysics.gravity;
+            airplane.position.y -= planePhysics.gravity * frameScale;
 
             if (airplane.position.y <= 0.5) {
                 airplane.position.y = 0.5;
@@ -147,7 +149,7 @@ export function updatePlanePhysics({ airplane, propeller, keyboard, planePhysics
         }
     } else {
         if (airplane.position.y > 0.5) {
-            airplane.position.y -= planePhysics.gravity * 2;
+            airplane.position.y -= planePhysics.gravity * 2 * frameScale;
             if (airplane.position.y < 0.5) {
                 airplane.position.y = 0.5;
                 planePhysics.isAirborne = false;
