@@ -2,7 +2,7 @@
   "name": "3d-plane",
   "version": "1.0.0",
   "description": "Web-based 3D model of a plane using Three.js",
-  "main": "main.js",
+  "main": "src/main.js",
   "scripts": {
     "dev": "vite",
     "start": "vite",

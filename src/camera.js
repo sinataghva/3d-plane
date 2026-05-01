@@ -1,0 +1,35 @@
+import * as THREE from 'three';
+
+export function createCameraModeToggle() {
+    let cameraMode = false;
+
+    window.addEventListener('keydown', (event) => {
+        if (event.key.toLowerCase() === 'c') {
+            cameraMode = !cameraMode;
+            console.log('Camera mode:', cameraMode ? 'ON' : 'OFF');
+        }
+    });
+
+    return {
+        isOrbitMode() {
+            return cameraMode;
+        }
+    };
+}
+
+export function updateCamera({ camera, controls, airplane, cameraMode }) {
+    if (!cameraMode.isOrbitMode()) {
+        const cameraOffset = new THREE.Vector3(-10, 4, 0);
+        cameraOffset.applyQuaternion(airplane.quaternion);
+
+        camera.position.copy(airplane.position).add(cameraOffset);
+
+        const lookAtOffset = new THREE.Vector3(2, 0, 0);
+        lookAtOffset.applyQuaternion(airplane.quaternion);
+        const lookAtPoint = airplane.position.clone().add(lookAtOffset);
+        camera.lookAt(lookAtPoint);
+    } else {
+        controls.target.copy(airplane.position);
+        controls.update();
+    }
+}

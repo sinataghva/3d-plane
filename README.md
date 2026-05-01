@@ -86,7 +86,7 @@ npm run preview
 
 ## Customization
 
-You can modify the airplane model by editing the `createAirplane()` function in `main.js`. Adjust colors, dimensions, or add additional components as needed.
+You can modify the airplane model by editing the `createAirplane()` function in `src/airplane.js`. Adjust colors, dimensions, or add additional components as needed.
 
 ## Technologies Used
 
