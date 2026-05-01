@@ -8,15 +8,15 @@ import { addClouds } from './clouds.js';
 import { createCameraModeToggle, updateCamera } from './camera.js';
 import { createHud } from './hud.js';
 import { createKeyboardState } from './input.js';
-import { createPlanePhysics, updatePlanePhysics } from './physics.js';
+import { createPlanePhysics, createPlaneState, syncPlaneMesh, updatePlanePhysics } from './physics.js';
 import { createScene } from './scene.js';
 
 const container = document.getElementById('canvas-container');
 const { scene, camera, renderer, controls } = createScene({ container });
 
 const { airplane, propeller } = createAirplane();
-airplane.position.set(0, 0.5, -120);
-airplane.rotation.y = -Math.PI / 2;
+const planeState = createPlaneState();
+syncPlaneMesh({ airplane, propeller, planeState });
 scene.add(airplane);
 
 const airbase = createAirbase();
@@ -35,9 +35,10 @@ function animate() {
     requestAnimationFrame(animate);
 
     const delta = clock.getDelta();
-    updatePlanePhysics({ airplane, propeller, keyboard, planePhysics, delta });
+    updatePlanePhysics({ planeState, keyboard, planePhysics, delta });
+    syncPlaneMesh({ airplane, propeller, planeState });
     updateCamera({ camera, controls, airplane, cameraMode });
-    hud.update({ airplane, planePhysics });
+    hud.update({ planeState });
 
     renderer.render(scene, camera);
 }

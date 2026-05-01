@@ -3,10 +3,10 @@ export function createHud() {
     const altitudeValueElement = document.getElementById('altitude-value');
 
     return {
-        update({ airplane, planePhysics }) {
-            const altitude = Math.max(0, airplane.position.y - 0.5);
+        update({ planeState }) {
+            const altitude = Math.max(0, planeState.position.y - 0.5);
 
-            speedValueElement.textContent = planePhysics.speed.toFixed(2);
+            speedValueElement.textContent = planeState.speed.toFixed(2);
             altitudeValueElement.textContent = altitude.toFixed(2);
         }
     };

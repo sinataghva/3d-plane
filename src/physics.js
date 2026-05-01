@@ -1,162 +1,174 @@
 import * as THREE from 'three';
 
+export function createPlaneState() {
+    return {
+        position: { x: 0, y: 0.5, z: -120 },
+        speed: 0,
+        yawAngle: -Math.PI / 2,
+        pitchAngle: 0,
+        rollAngle: 0,
+        lift: 0,
+        isAirborne: false,
+        propellerRotation: 0
+    };
+}
+
 export function createPlanePhysics() {
     return {
-        speed: 0,
         acceleration: 0.05,
         maxSpeed: 2,
         friction: 0.01,
-        yawAngle: -Math.PI / 2,
-        pitchAngle: 0,
         maxPitchAngle: 0.5,
         pitchSpeed: 0.008,
-        lift: 0,
         liftFactor: 0.03,
         gravity: 0.01,
         minTakeoffSpeed: 1.5,
-        isAirborne: false,
         takeoffThreshold: 0.1,
         rotationSpeed: 0.02,
-        rollAngle: 0,
         maxRollAngle: 0.8,
         rollSpeed: 0.05,
         rollRecoverySpeed: 0.03
     };
 }
 
-export function updatePlanePhysics({ airplane, propeller, keyboard, planePhysics, delta }) {
+export function updatePlanePhysics({ planeState, keyboard, planePhysics, delta }) {
     const frameScale = Math.min(delta * 60, 3);
 
-    propeller.rotation.x += 0.2 * frameScale;
+    planeState.propellerRotation += 0.2 * frameScale;
 
     if (keyboard.w) {
-        planePhysics.speed += planePhysics.acceleration * frameScale;
-        if (planePhysics.speed > planePhysics.maxSpeed) {
-            planePhysics.speed = planePhysics.maxSpeed;
+        planeState.speed += planePhysics.acceleration * frameScale;
+        if (planeState.speed > planePhysics.maxSpeed) {
+            planeState.speed = planePhysics.maxSpeed;
         }
-        propeller.rotation.x += planePhysics.speed * 0.1 * frameScale;
+        planeState.propellerRotation += planeState.speed * 0.1 * frameScale;
     } else {
-        planePhysics.speed -= planePhysics.friction * frameScale;
-        if (planePhysics.speed < 0) {
-            planePhysics.speed = 0;
+        planeState.speed -= planePhysics.friction * frameScale;
+        if (planeState.speed < 0) {
+            planeState.speed = 0;
         }
     }
 
     if (keyboard.arrowLeft || keyboard.arrowRight) {
         const targetRoll = keyboard.arrowLeft ? -planePhysics.maxRollAngle : planePhysics.maxRollAngle;
 
-        if (planePhysics.rollAngle < targetRoll) {
-            planePhysics.rollAngle += planePhysics.rollSpeed * frameScale;
-            if (planePhysics.rollAngle > targetRoll) planePhysics.rollAngle = targetRoll;
-        } else if (planePhysics.rollAngle > targetRoll) {
-            planePhysics.rollAngle -= planePhysics.rollSpeed * frameScale;
-            if (planePhysics.rollAngle < targetRoll) planePhysics.rollAngle = targetRoll;
+        if (planeState.rollAngle < targetRoll) {
+            planeState.rollAngle += planePhysics.rollSpeed * frameScale;
+            if (planeState.rollAngle > targetRoll) planeState.rollAngle = targetRoll;
+        } else if (planeState.rollAngle > targetRoll) {
+            planeState.rollAngle -= planePhysics.rollSpeed * frameScale;
+            if (planeState.rollAngle < targetRoll) planeState.rollAngle = targetRoll;
         }
 
-        const turnRate = planePhysics.rotationSpeed * (Math.abs(planePhysics.rollAngle) / planePhysics.maxRollAngle) * frameScale;
+        const turnRate = planePhysics.rotationSpeed * (Math.abs(planeState.rollAngle) / planePhysics.maxRollAngle) * frameScale;
         if (keyboard.arrowLeft) {
-            planePhysics.yawAngle += turnRate;
+            planeState.yawAngle += turnRate;
         } else {
-            planePhysics.yawAngle -= turnRate;
+            planeState.yawAngle -= turnRate;
         }
     } else {
-        if (planePhysics.rollAngle > 0) {
-            planePhysics.rollAngle -= planePhysics.rollRecoverySpeed * frameScale;
-            if (planePhysics.rollAngle < 0) planePhysics.rollAngle = 0;
-        } else if (planePhysics.rollAngle < 0) {
-            planePhysics.rollAngle += planePhysics.rollRecoverySpeed * frameScale;
-            if (planePhysics.rollAngle > 0) planePhysics.rollAngle = 0;
+        if (planeState.rollAngle > 0) {
+            planeState.rollAngle -= planePhysics.rollRecoverySpeed * frameScale;
+            if (planeState.rollAngle < 0) planeState.rollAngle = 0;
+        } else if (planeState.rollAngle < 0) {
+            planeState.rollAngle += planePhysics.rollRecoverySpeed * frameScale;
+            if (planeState.rollAngle > 0) planeState.rollAngle = 0;
         }
     }
 
     if (keyboard.a) {
-        planePhysics.yawAngle += planePhysics.rotationSpeed * frameScale;
+        planeState.yawAngle += planePhysics.rotationSpeed * frameScale;
     }
     if (keyboard.d) {
-        planePhysics.yawAngle -= planePhysics.rotationSpeed * frameScale;
+        planeState.yawAngle -= planePhysics.rotationSpeed * frameScale;
     }
 
     if (keyboard.arrowUp) {
-        planePhysics.pitchAngle -= planePhysics.pitchSpeed * frameScale;
-        if (planePhysics.pitchAngle < -planePhysics.maxPitchAngle) {
-            planePhysics.pitchAngle = -planePhysics.maxPitchAngle;
+        planeState.pitchAngle -= planePhysics.pitchSpeed * frameScale;
+        if (planeState.pitchAngle < -planePhysics.maxPitchAngle) {
+            planeState.pitchAngle = -planePhysics.maxPitchAngle;
         }
     } else if (keyboard.arrowDown) {
-        planePhysics.pitchAngle += planePhysics.pitchSpeed * frameScale;
-        if (planePhysics.pitchAngle > planePhysics.maxPitchAngle) {
-            planePhysics.pitchAngle = planePhysics.maxPitchAngle;
+        planeState.pitchAngle += planePhysics.pitchSpeed * frameScale;
+        if (planeState.pitchAngle > planePhysics.maxPitchAngle) {
+            planeState.pitchAngle = planePhysics.maxPitchAngle;
         }
     } else {
-        if (planePhysics.pitchAngle > 0) {
-            planePhysics.pitchAngle -= (planePhysics.pitchSpeed / 2) * frameScale;
-            if (planePhysics.pitchAngle < 0) planePhysics.pitchAngle = 0;
-        } else if (planePhysics.pitchAngle < 0) {
-            planePhysics.pitchAngle += (planePhysics.pitchSpeed / 2) * frameScale;
-            if (planePhysics.pitchAngle > 0) planePhysics.pitchAngle = 0;
+        if (planeState.pitchAngle > 0) {
+            planeState.pitchAngle -= (planePhysics.pitchSpeed / 2) * frameScale;
+            if (planeState.pitchAngle < 0) planeState.pitchAngle = 0;
+        } else if (planeState.pitchAngle < 0) {
+            planeState.pitchAngle += (planePhysics.pitchSpeed / 2) * frameScale;
+            if (planeState.pitchAngle > 0) planeState.pitchAngle = 0;
         }
     }
 
-    airplane.quaternion.setFromEuler(
-        new THREE.Euler(
-            planePhysics.rollAngle,
-            planePhysics.yawAngle,
-            planePhysics.pitchAngle,
-            'YZX'
-        )
+    const orientation = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(planeState.rollAngle, planeState.yawAngle, planeState.pitchAngle, 'YZX')
     );
 
-    if (planePhysics.speed > 0) {
-        const moveVector = new THREE.Vector3(planePhysics.speed * frameScale, 0, 0);
-        moveVector.applyQuaternion(airplane.quaternion);
-        airplane.position.add(moveVector);
+    if (planeState.speed > 0) {
+        const moveVector = new THREE.Vector3(planeState.speed * frameScale, 0, 0);
+        moveVector.applyQuaternion(orientation);
+        planeState.position.x += moveVector.x;
+        planeState.position.y += moveVector.y;
+        planeState.position.z += moveVector.z;
 
-        const speedFactor = Math.max(0, (planePhysics.speed - 0.5) / planePhysics.minTakeoffSpeed);
-        const pitchFactor = Math.max(0, planePhysics.pitchAngle * 10 + 0.5);
-        planePhysics.lift = speedFactor * pitchFactor * planePhysics.liftFactor;
+        const speedFactor = Math.max(0, (planeState.speed - 0.5) / planePhysics.minTakeoffSpeed);
+        const pitchFactor = Math.max(0, planeState.pitchAngle * 10 + 0.5);
+        planeState.lift = speedFactor * pitchFactor * planePhysics.liftFactor;
 
-        if (planePhysics.isAirborne || planePhysics.speed >= planePhysics.minTakeoffSpeed) {
-            if (planePhysics.pitchAngle > 0 && planePhysics.speed > 0.8) {
-                airplane.position.y += planePhysics.lift * frameScale;
+        if (planeState.isAirborne || planeState.speed >= planePhysics.minTakeoffSpeed) {
+            if (planeState.pitchAngle > 0 && planeState.speed > 0.8) {
+                planeState.position.y += planeState.lift * frameScale;
 
-                if (airplane.position.y > 0.5 + planePhysics.takeoffThreshold) {
-                    planePhysics.isAirborne = true;
+                if (planeState.position.y > 0.5 + planePhysics.takeoffThreshold) {
+                    planeState.isAirborne = true;
                 }
             }
 
-            airplane.position.y -= planePhysics.gravity * frameScale;
+            planeState.position.y -= planePhysics.gravity * frameScale;
 
-            if (airplane.position.y <= 0.5) {
-                airplane.position.y = 0.5;
-                if (planePhysics.speed < 0.8 || planePhysics.pitchAngle < 0) {
-                    planePhysics.isAirborne = false;
+            if (planeState.position.y <= 0.5) {
+                planeState.position.y = 0.5;
+                if (planeState.speed < 0.8 || planeState.pitchAngle < 0) {
+                    planeState.isAirborne = false;
                 }
             }
         } else {
-            airplane.position.y = 0.5;
+            planeState.position.y = 0.5;
         }
 
-        if (!planePhysics.isAirborne) {
-            const isNearBarrier = Math.abs(airplane.position.z - 144.5) < 2 && Math.abs(airplane.position.x) < 10;
+        if (!planeState.isAirborne) {
+            const isNearBarrier = Math.abs(planeState.position.z - 144.5) < 2 && Math.abs(planeState.position.x) < 10;
 
-            if (isNearBarrier && airplane.position.z >= 144.5) {
-                airplane.position.z = 144.5;
-                planePhysics.speed = 0;
+            if (isNearBarrier && planeState.position.z >= 144.5) {
+                planeState.position.z = 144.5;
+                planeState.speed = 0;
             }
 
-            if (airplane.position.z < -145) {
-                airplane.position.z = -145;
+            if (planeState.position.z < -145) {
+                planeState.position.z = -145;
             }
         }
     } else {
-        if (airplane.position.y > 0.5) {
-            airplane.position.y -= planePhysics.gravity * 2 * frameScale;
-            if (airplane.position.y < 0.5) {
-                airplane.position.y = 0.5;
-                planePhysics.isAirborne = false;
+        if (planeState.position.y > 0.5) {
+            planeState.position.y -= planePhysics.gravity * 2 * frameScale;
+            if (planeState.position.y < 0.5) {
+                planeState.position.y = 0.5;
+                planeState.isAirborne = false;
             }
         } else {
-            airplane.position.y = 0.5;
-            planePhysics.isAirborne = false;
+            planeState.position.y = 0.5;
+            planeState.isAirborne = false;
         }
     }
+}
+
+export function syncPlaneMesh({ airplane, propeller, planeState }) {
+    airplane.position.set(planeState.position.x, planeState.position.y, planeState.position.z);
+    airplane.quaternion.setFromEuler(
+        new THREE.Euler(planeState.rollAngle, planeState.yawAngle, planeState.pitchAngle, 'YZX')
+    );
+    propeller.rotation.x = planeState.propellerRotation;
 }
