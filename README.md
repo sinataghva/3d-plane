@@ -37,7 +37,19 @@ Start the development server:
 npm start
 ```
 
-This will start a local server, typically at http://localhost:3000. Open this URL in your browser to view the 3D plane model.
+This will start the Vite development server, typically at http://localhost:5173. Open this URL in your browser to view the 3D plane model.
+
+Build a production version:
+
+```bash
+npm run build
+```
+
+Preview the production build locally:
+
+```bash
+npm run preview
+```
 
 ## Controls
 
@@ -79,5 +91,6 @@ You can modify the airplane model by editing the `createAirplane()` function in 
 ## Technologies Used
 
 - Three.js - JavaScript 3D library
+- Vite - Development server and production bundler
 - HTML5 & CSS3
 - JavaScript (ES6+) 
