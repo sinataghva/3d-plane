@@ -108,6 +108,20 @@ npm run format
 
 You can modify the airplane model by editing the `createAirplane()` function in `src/airplane.js`. Adjust colors, dimensions, or add additional components as needed.
 
+## Asset Conventions
+
+The app currently uses procedural Three.js geometry for the airplane, runway, trees, and clouds. Keep that as the default unless a future change intentionally swaps in model assets.
+
+Use these locations for future static assets:
+
+- `public/models/` for `.glb` and `.gltf` model files
+- `public/textures/` for image textures
+- `src/assets/` for asset-loading utilities
+
+Files in `public/` are served from the site root. For example, `public/models/airplane.glb` should be loaded with `/models/airplane.glb`.
+
+Use `loadGltfModel()` from `src/assets/modelLoader.js` for future GLTF/GLB loading.
+
 ## Technologies Used
 
 - Three.js - JavaScript 3D library
