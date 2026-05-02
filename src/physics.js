@@ -1,5 +1,67 @@
 import * as THREE from 'three';
 
+/**
+ * @typedef {import('./input.js').KeyboardState} KeyboardState
+ */
+
+/**
+ * @typedef {object} PlanePosition
+ * @property {number} x
+ * @property {number} y
+ * @property {number} z
+ */
+
+/**
+ * Mutable simulation state for the plane.
+ *
+ * @typedef {object} PlaneState
+ * @property {PlanePosition} position
+ * @property {number} speed
+ * @property {number} yawAngle
+ * @property {number} pitchAngle
+ * @property {number} rollAngle
+ * @property {number} lift
+ * @property {boolean} isAirborne
+ * @property {number} propellerRotation
+ */
+
+/**
+ * Tunable simulation constants.
+ *
+ * @typedef {object} PlanePhysics
+ * @property {number} acceleration
+ * @property {number} maxSpeed
+ * @property {number} friction
+ * @property {number} maxPitchAngle
+ * @property {number} pitchSpeed
+ * @property {number} liftFactor
+ * @property {number} gravity
+ * @property {number} minTakeoffSpeed
+ * @property {number} takeoffThreshold
+ * @property {number} rotationSpeed
+ * @property {number} maxRollAngle
+ * @property {number} rollSpeed
+ * @property {number} rollRecoverySpeed
+ */
+
+/**
+ * @typedef {object} UpdatePlanePhysicsArgs
+ * @property {PlaneState} planeState
+ * @property {KeyboardState} keyboard
+ * @property {PlanePhysics} planePhysics
+ * @property {number} delta
+ */
+
+/**
+ * @typedef {object} SyncPlaneMeshArgs
+ * @property {THREE.Object3D} airplane
+ * @property {THREE.Object3D} propeller
+ * @property {PlaneState} planeState
+ */
+
+/**
+ * @returns {PlaneState}
+ */
 export function createPlaneState() {
     return {
         position: { x: 0, y: 0.5, z: -120 },
@@ -13,6 +75,9 @@ export function createPlaneState() {
     };
 }
 
+/**
+ * @returns {PlanePhysics}
+ */
 export function createPlanePhysics() {
     return {
         acceleration: 0.05,
@@ -31,6 +96,11 @@ export function createPlanePhysics() {
     };
 }
 
+/**
+ * Advances the plane simulation without touching Three.js scene objects.
+ *
+ * @param {UpdatePlanePhysicsArgs} args
+ */
 export function updatePlanePhysics({
     planeState,
     keyboard,
@@ -197,6 +267,11 @@ export function updatePlanePhysics({
     }
 }
 
+/**
+ * Applies plain simulation state to the rendered Three.js objects.
+ *
+ * @param {SyncPlaneMeshArgs} args
+ */
 export function syncPlaneMesh({ airplane, propeller, planeState }) {
     airplane.position.set(
         planeState.position.x,

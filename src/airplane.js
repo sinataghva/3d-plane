@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 
+/**
+ * @returns {{ airplane: THREE.Group, propeller: THREE.Mesh }}
+ */
 export function createAirplane() {
     const airplane = new THREE.Group();
 

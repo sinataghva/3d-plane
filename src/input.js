@@ -1,3 +1,19 @@
+/**
+ * @typedef {object} KeyboardState
+ * @property {boolean} w
+ * @property {boolean} a
+ * @property {boolean} d
+ * @property {boolean} arrowLeft
+ * @property {boolean} arrowRight
+ * @property {boolean} arrowUp
+ * @property {boolean} arrowDown
+ */
+
+/**
+ * Tracks the keyboard controls used by the plane simulation.
+ *
+ * @returns {KeyboardState}
+ */
 export function createKeyboardState() {
     const keyboard = {
         w: false,

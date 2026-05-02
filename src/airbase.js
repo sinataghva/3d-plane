@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 
+/**
+ * @returns {THREE.Group}
+ */
 function createTree() {
     const tree = new THREE.Group();
 
@@ -22,6 +25,9 @@ function createTree() {
     return tree;
 }
 
+/**
+ * @returns {THREE.Group}
+ */
 export function createAirbase() {
     const airbaseGroup = new THREE.Group();
 

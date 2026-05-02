@@ -17,6 +17,10 @@ import {
 import { createScene } from './scene.js';
 
 const container = document.getElementById('canvas-container');
+if (!(container instanceof HTMLElement)) {
+    throw new Error('Missing #canvas-container element');
+}
+
 const { scene, camera, renderer, controls } = createScene({ container });
 
 const { airplane, propeller } = createAirplane();

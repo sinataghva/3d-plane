@@ -61,6 +61,7 @@ Run linting and formatting checks:
 
 ```bash
 npm run lint
+npm run typecheck
 npm run format:check
 ```
 

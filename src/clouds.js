@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 
+/**
+ * @returns {THREE.Group}
+ */
 function createCloud() {
     const cloud = new THREE.Group();
     const material = new THREE.MeshPhongMaterial({
@@ -33,6 +36,10 @@ function createCloud() {
     return cloud;
 }
 
+/**
+ * @param {THREE.Scene} scene
+ * @param {number} [cloudCount]
+ */
 export function addClouds(scene, cloudCount = 20) {
     for (let i = 0; i < cloudCount; i++) {
         const cloud = createCloud();

@@ -1,6 +1,18 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+/**
+ * @typedef {object} SceneContext
+ * @property {THREE.Scene} scene
+ * @property {THREE.PerspectiveCamera} camera
+ * @property {THREE.WebGLRenderer} renderer
+ * @property {OrbitControls} controls
+ */
+
+/**
+ * @param {{ container: HTMLElement }} args
+ * @returns {SceneContext}
+ */
 export function createScene({ container }) {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf0f0f0);

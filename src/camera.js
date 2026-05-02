@@ -1,5 +1,13 @@
 import * as THREE from 'three';
 
+/**
+ * @typedef {object} CameraMode
+ * @property {() => boolean} isOrbitMode
+ */
+
+/**
+ * @returns {CameraMode}
+ */
 export function createCameraModeToggle() {
     let cameraMode = false;
 
@@ -16,6 +24,13 @@ export function createCameraModeToggle() {
     };
 }
 
+/**
+ * @param {object} args
+ * @param {THREE.PerspectiveCamera} args.camera
+ * @param {import('three/addons/controls/OrbitControls.js').OrbitControls} args.controls
+ * @param {THREE.Object3D} args.airplane
+ * @param {CameraMode} args.cameraMode
+ */
 export function updateCamera({ camera, controls, airplane, cameraMode }) {
     if (!cameraMode.isOrbitMode()) {
         const cameraOffset = new THREE.Vector3(-10, 4, 0);
