@@ -16,16 +16,16 @@
         "format:check": "prettier --check ."
     },
     "dependencies": {
-        "three": "^0.159.0"
+        "three": "0.159.0"
     },
     "devDependencies": {
-        "@eslint/js": "^10.0.1",
-        "@types/three": "^0.184.0",
-        "eslint": "^10.3.0",
-        "globals": "^17.6.0",
-        "prettier": "^3.8.3",
-        "typescript": "^6.0.3",
-        "vite": "^5.4.11",
-        "vitest": "^4.1.5"
+        "@eslint/js": "10.0.1",
+        "@types/three": "0.184.0",
+        "eslint": "10.3.0",
+        "globals": "17.6.0",
+        "prettier": "3.8.3",
+        "typescript": "6.0.3",
+        "vite": "5.4.21",
+        "vitest": "4.1.5"
     }
 }
