@@ -51,6 +51,12 @@ Preview the production build locally:
 npm run preview
 ```
 
+Run the physics unit tests:
+
+```bash
+npm test
+```
+
 ## Controls
 
 - **W key**: Accelerate the plane forward along the runway
