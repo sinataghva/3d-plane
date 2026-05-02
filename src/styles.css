@@ -19,6 +19,38 @@ body {
     z-index: 1;
 }
 
+.has-runtime-error #canvas-container,
+.has-runtime-error #info {
+    display: none;
+}
+
+#runtime-fallback {
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background-color: #f0f0f0;
+}
+
+#runtime-fallback[hidden] {
+    display: none;
+}
+
+.runtime-fallback-panel {
+    max-width: 520px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.runtime-fallback-panel p + p {
+    margin-top: 10px;
+}
+
 #info {
     position: absolute;
     top: 20px;

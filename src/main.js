@@ -14,42 +14,72 @@ import {
     syncPlaneMesh,
     updatePlanePhysics
 } from './physics.js';
+import { isWebGLAvailable, showRuntimeFallback } from './runtimeFallback.js';
 import { createScene } from './scene.js';
 
-const container = document.getElementById('canvas-container');
-if (!(container instanceof HTMLElement)) {
-    throw new Error('Missing #canvas-container element');
+/**
+ * @param {unknown} error
+ */
+function reportRuntimeError(error) {
+    console.error(error);
+    showRuntimeFallback('The 3D scene could not be started.');
 }
 
-const { scene, camera, renderer, controls } = createScene({ container });
+window.addEventListener('error', (event) => {
+    reportRuntimeError(event.error || event.message);
+});
 
-const { airplane, propeller } = createAirplane();
-const planeState = createPlaneState();
-syncPlaneMesh({ airplane, propeller, planeState });
-scene.add(airplane);
+window.addEventListener('unhandledrejection', (event) => {
+    reportRuntimeError(event.reason);
+});
 
-const airbase = createAirbase();
-airbase.position.y = -0.5;
-scene.add(airbase);
+function startApp() {
+    if (!isWebGLAvailable()) {
+        showRuntimeFallback('WebGL is not available in this browser.');
+        return;
+    }
 
-addClouds(scene);
+    const container = document.getElementById('canvas-container');
+    if (!(container instanceof HTMLElement)) {
+        throw new Error('Missing #canvas-container element');
+    }
 
-const keyboard = createKeyboardState();
-const planePhysics = createPlanePhysics();
-const cameraMode = createCameraModeToggle();
-const hud = createHud();
-const clock = new THREE.Clock();
+    const { scene, camera, renderer, controls } = createScene({ container });
 
-function animate() {
-    requestAnimationFrame(animate);
-
-    const delta = clock.getDelta();
-    updatePlanePhysics({ planeState, keyboard, planePhysics, delta });
+    const { airplane, propeller } = createAirplane();
+    const planeState = createPlaneState();
     syncPlaneMesh({ airplane, propeller, planeState });
-    updateCamera({ camera, controls, airplane, cameraMode });
-    hud.update({ planeState });
+    scene.add(airplane);
 
-    renderer.render(scene, camera);
+    const airbase = createAirbase();
+    airbase.position.y = -0.5;
+    scene.add(airbase);
+
+    addClouds(scene);
+
+    const keyboard = createKeyboardState();
+    const planePhysics = createPlanePhysics();
+    const cameraMode = createCameraModeToggle();
+    const hud = createHud();
+    const clock = new THREE.Clock();
+
+    function animate() {
+        requestAnimationFrame(animate);
+
+        const delta = clock.getDelta();
+        updatePlanePhysics({ planeState, keyboard, planePhysics, delta });
+        syncPlaneMesh({ airplane, propeller, planeState });
+        updateCamera({ camera, controls, airplane, cameraMode });
+        hud.update({ planeState });
+
+        renderer.render(scene, camera);
+    }
+
+    animate();
 }
 
-animate();
+try {
+    startApp();
+} catch (error) {
+    reportRuntimeError(error);
+}
