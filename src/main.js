@@ -61,12 +61,17 @@ function startApp() {
     const planePhysics = createPlanePhysics();
     const cameraMode = createCameraModeToggle();
     const hud = createHud();
-    const clock = new THREE.Clock();
+    const timer = new THREE.Timer();
+    timer.connect(document);
 
-    function animate() {
+    /**
+     * @param {number} timestamp
+     */
+    function animate(timestamp) {
         requestAnimationFrame(animate);
 
-        const delta = clock.getDelta();
+        timer.update(timestamp);
+        const delta = timer.getDelta();
         updatePlanePhysics({ planeState, keyboard, planePhysics, delta });
         syncPlaneMesh({ airplane, propeller, planeState });
         updateCamera({ camera, controls, airplane, cameraMode });
@@ -75,7 +80,7 @@ function startApp() {
         renderer.render(scene, camera);
     }
 
-    animate();
+    requestAnimationFrame(animate);
 }
 
 try {
