@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { createPlanePhysics, createPlaneState, updatePlanePhysics } from './physics.js';
+import {
+    createPlanePhysics,
+    createPlaneState,
+    updatePlanePhysics
+} from './physics.js';
 
 const FRAME_DELTA = 1 / 60;
 
@@ -17,7 +21,12 @@ function createKeyboard(overrides = {}) {
     };
 }
 
-function update({ planeState = createPlaneState(), keyboard = createKeyboard(), planePhysics = createPlanePhysics(), delta = FRAME_DELTA } = {}) {
+function update({
+    planeState = createPlaneState(),
+    keyboard = createKeyboard(),
+    planePhysics = createPlanePhysics(),
+    delta = FRAME_DELTA
+} = {}) {
     updatePlanePhysics({ planeState, keyboard, planePhysics, delta });
     return planeState;
 }
@@ -94,8 +103,18 @@ describe('plane physics', () => {
         const planePhysics = createPlanePhysics();
         const keyboard = createKeyboard({ w: true });
 
-        update({ planeState: oneFrameState, planePhysics, keyboard, delta: FRAME_DELTA });
-        update({ planeState: twoFrameState, planePhysics, keyboard, delta: FRAME_DELTA * 2 });
+        update({
+            planeState: oneFrameState,
+            planePhysics,
+            keyboard,
+            delta: FRAME_DELTA
+        });
+        update({
+            planeState: twoFrameState,
+            planePhysics,
+            keyboard,
+            delta: FRAME_DELTA * 2
+        });
 
         expect(twoFrameState.speed).toBeCloseTo(oneFrameState.speed * 2);
     });

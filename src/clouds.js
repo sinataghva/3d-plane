@@ -2,7 +2,11 @@ import * as THREE from 'three';
 
 function createCloud() {
     const cloud = new THREE.Group();
-    const material = new THREE.MeshPhongMaterial({ color: 0xf4f4f4, shininess: 5, flatShading: true });
+    const material = new THREE.MeshPhongMaterial({
+        color: 0xf4f4f4,
+        shininess: 5,
+        flatShading: true
+    });
     const puffCount = 5 + Math.floor(Math.random() * 4);
 
     for (let i = 0; i < puffCount; i++) {

@@ -1,36 +1,36 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Plane Model</title>
-</head>
-<body>
-    <div id="info">
-        <h1>3D Plane Model</h1>
-        <p>Third-person view of a plane on a runway</p>
-        <h2>Controls</h2>
-        <ul>
-            <li><kbd>W</kbd>: Accelerate</li>
-            <li><kbd>A</kbd> / <kbd>D</kbd>: Rudder</li>
-            <li><kbd>←</kbd> / <kbd>→</kbd>: Bank &amp; turn</li>
-            <li><kbd>↓</kbd>: Pitch up</li>
-            <li><kbd>↑</kbd>: Pitch down</li>
-        </ul>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>3D Plane Model</title>
+    </head>
+    <body>
+        <div id="info">
+            <h1>3D Plane Model</h1>
+            <p>Third-person view of a plane on a runway</p>
+            <h2>Controls</h2>
+            <ul>
+                <li><kbd>W</kbd>: Accelerate</li>
+                <li><kbd>A</kbd> / <kbd>D</kbd>: Rudder</li>
+                <li><kbd>←</kbd> / <kbd>→</kbd>: Bank &amp; turn</li>
+                <li><kbd>↓</kbd>: Pitch up</li>
+                <li><kbd>↑</kbd>: Pitch down</li>
+            </ul>
 
-        <h2>Takeoff</h2>
-        <p>Accelerate to high speed, then pitch up to fly</p>
+            <h2>Takeoff</h2>
+            <p>Accelerate to high speed, then pitch up to fly</p>
 
-        <h2>Camera</h2>
-        <p>Press <kbd>C</kbd> to toggle orbit controls</p>
+            <h2>Camera</h2>
+            <p>Press <kbd>C</kbd> to toggle orbit controls</p>
 
-        <div id="flight-data">
-            <h2>Flight Data</h2>
-            <p>Speed: <span id="speed-value">0</span> units/s</p>
-            <p>Altitude: <span id="altitude-value">0</span> units</p>
+            <div id="flight-data">
+                <h2>Flight Data</h2>
+                <p>Speed: <span id="speed-value">0</span> units/s</p>
+                <p>Altitude: <span id="altitude-value">0</span> units</p>
+            </div>
         </div>
-    </div>
-    <div id="canvas-container"></div>
-    <script type="module" src="/src/main.js"></script>
-</body>
+        <div id="canvas-container"></div>
+        <script type="module" src="/src/main.js"></script>
+    </body>
 </html>

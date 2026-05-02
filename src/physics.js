@@ -31,7 +31,12 @@ export function createPlanePhysics() {
     };
 }
 
-export function updatePlanePhysics({ planeState, keyboard, planePhysics, delta }) {
+export function updatePlanePhysics({
+    planeState,
+    keyboard,
+    planePhysics,
+    delta
+}) {
     const frameScale = Math.min(delta * 60, 3);
 
     planeState.propellerRotation += 0.2 * frameScale;
@@ -50,17 +55,24 @@ export function updatePlanePhysics({ planeState, keyboard, planePhysics, delta }
     }
 
     if (keyboard.arrowLeft || keyboard.arrowRight) {
-        const targetRoll = keyboard.arrowLeft ? -planePhysics.maxRollAngle : planePhysics.maxRollAngle;
+        const targetRoll = keyboard.arrowLeft
+            ? -planePhysics.maxRollAngle
+            : planePhysics.maxRollAngle;
 
         if (planeState.rollAngle < targetRoll) {
             planeState.rollAngle += planePhysics.rollSpeed * frameScale;
-            if (planeState.rollAngle > targetRoll) planeState.rollAngle = targetRoll;
+            if (planeState.rollAngle > targetRoll)
+                planeState.rollAngle = targetRoll;
         } else if (planeState.rollAngle > targetRoll) {
             planeState.rollAngle -= planePhysics.rollSpeed * frameScale;
-            if (planeState.rollAngle < targetRoll) planeState.rollAngle = targetRoll;
+            if (planeState.rollAngle < targetRoll)
+                planeState.rollAngle = targetRoll;
         }
 
-        const turnRate = planePhysics.rotationSpeed * (Math.abs(planeState.rollAngle) / planePhysics.maxRollAngle) * frameScale;
+        const turnRate =
+            planePhysics.rotationSpeed *
+            (Math.abs(planeState.rollAngle) / planePhysics.maxRollAngle) *
+            frameScale;
         if (keyboard.arrowLeft) {
             planeState.yawAngle += turnRate;
         } else {
@@ -104,25 +116,43 @@ export function updatePlanePhysics({ planeState, keyboard, planePhysics, delta }
     }
 
     const orientation = new THREE.Quaternion().setFromEuler(
-        new THREE.Euler(planeState.rollAngle, planeState.yawAngle, planeState.pitchAngle, 'YZX')
+        new THREE.Euler(
+            planeState.rollAngle,
+            planeState.yawAngle,
+            planeState.pitchAngle,
+            'YZX'
+        )
     );
 
     if (planeState.speed > 0) {
-        const moveVector = new THREE.Vector3(planeState.speed * frameScale, 0, 0);
+        const moveVector = new THREE.Vector3(
+            planeState.speed * frameScale,
+            0,
+            0
+        );
         moveVector.applyQuaternion(orientation);
         planeState.position.x += moveVector.x;
         planeState.position.y += moveVector.y;
         planeState.position.z += moveVector.z;
 
-        const speedFactor = Math.max(0, (planeState.speed - 0.5) / planePhysics.minTakeoffSpeed);
+        const speedFactor = Math.max(
+            0,
+            (planeState.speed - 0.5) / planePhysics.minTakeoffSpeed
+        );
         const pitchFactor = Math.max(0, planeState.pitchAngle * 10 + 0.5);
         planeState.lift = speedFactor * pitchFactor * planePhysics.liftFactor;
 
-        if (planeState.isAirborne || planeState.speed >= planePhysics.minTakeoffSpeed) {
+        if (
+            planeState.isAirborne ||
+            planeState.speed >= planePhysics.minTakeoffSpeed
+        ) {
             if (planeState.pitchAngle > 0 && planeState.speed > 0.8) {
                 planeState.position.y += planeState.lift * frameScale;
 
-                if (planeState.position.y > 0.5 + planePhysics.takeoffThreshold) {
+                if (
+                    planeState.position.y >
+                    0.5 + planePhysics.takeoffThreshold
+                ) {
                     planeState.isAirborne = true;
                 }
             }
@@ -140,7 +170,9 @@ export function updatePlanePhysics({ planeState, keyboard, planePhysics, delta }
         }
 
         if (!planeState.isAirborne) {
-            const isNearBarrier = Math.abs(planeState.position.z - 144.5) < 2 && Math.abs(planeState.position.x) < 10;
+            const isNearBarrier =
+                Math.abs(planeState.position.z - 144.5) < 2 &&
+                Math.abs(planeState.position.x) < 10;
 
             if (isNearBarrier && planeState.position.z >= 144.5) {
                 planeState.position.z = 144.5;
@@ -166,9 +198,18 @@ export function updatePlanePhysics({ planeState, keyboard, planePhysics, delta }
 }
 
 export function syncPlaneMesh({ airplane, propeller, planeState }) {
-    airplane.position.set(planeState.position.x, planeState.position.y, planeState.position.z);
+    airplane.position.set(
+        planeState.position.x,
+        planeState.position.y,
+        planeState.position.z
+    );
     airplane.quaternion.setFromEuler(
-        new THREE.Euler(planeState.rollAngle, planeState.yawAngle, planeState.pitchAngle, 'YZX')
+        new THREE.Euler(
+            planeState.rollAngle,
+            planeState.yawAngle,
+            planeState.pitchAngle,
+            'YZX'
+        )
     );
     propeller.rotation.x = planeState.propellerRotation;
 }

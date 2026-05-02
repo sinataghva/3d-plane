@@ -8,7 +8,12 @@ import { addClouds } from './clouds.js';
 import { createCameraModeToggle, updateCamera } from './camera.js';
 import { createHud } from './hud.js';
 import { createKeyboardState } from './input.js';
-import { createPlanePhysics, createPlaneState, syncPlaneMesh, updatePlanePhysics } from './physics.js';
+import {
+    createPlanePhysics,
+    createPlaneState,
+    syncPlaneMesh,
+    updatePlanePhysics
+} from './physics.js';
 import { createScene } from './scene.js';
 
 const container = document.getElementById('canvas-container');

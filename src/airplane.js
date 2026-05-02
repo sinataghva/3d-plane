@@ -57,7 +57,15 @@ export function createAirplane() {
     stabilizer.receiveShadow = true;
     airplane.add(stabilizer);
 
-    const cockpitGeometry = new THREE.SphereGeometry(0.8, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const cockpitGeometry = new THREE.SphereGeometry(
+        0.8,
+        16,
+        16,
+        0,
+        Math.PI * 2,
+        0,
+        Math.PI / 2
+    );
     const cockpit = new THREE.Mesh(cockpitGeometry, detailMaterial);
     cockpit.position.set(1.5, 0.6, 0);
     cockpit.rotation.x = Math.PI;

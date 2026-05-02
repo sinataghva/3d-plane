@@ -57,6 +57,19 @@ Run the physics unit tests:
 npm test
 ```
 
+Run linting and formatting checks:
+
+```bash
+npm run lint
+npm run format:check
+```
+
+Format the project:
+
+```bash
+npm run format
+```
+
 ## Controls
 
 - **W key**: Accelerate the plane forward along the runway
@@ -65,23 +78,23 @@ npm test
 - **Arrow Down**: Pitch the plane's nose up
 - **Arrow Up**: Pitch the plane's nose down
 - **C key**: Toggle camera mode with orbit controls
-  - In camera mode, you can:
-    - **Left-click + drag**: Rotate the camera around the plane
-    - **Right-click + drag**: Pan the camera
-    - **Scroll**: Zoom in/out
+    - In camera mode, you can:
+        - **Left-click + drag**: Rotate the camera around the plane
+        - **Right-click + drag**: Pan the camera
+        - **Scroll**: Zoom in/out
 
 ## Flight Instructions
 
 1. **Takeoff**:
-   - Accelerate to high speed by holding W
-   - Once at sufficient speed, pitch up using the Down Arrow
-   - The plane will lift off when it has enough speed and upward pitch
-   - Continue to adjust pitch for climbing or descending
+    - Accelerate to high speed by holding W
+    - Once at sufficient speed, pitch up using the Down Arrow
+    - The plane will lift off when it has enough speed and upward pitch
+    - Continue to adjust pitch for climbing or descending
 
 2. **Landing**:
-   - Reduce speed by releasing W
-   - Gently pitch down to descend
-   - Level out as you approach the ground
+    - Reduce speed by releasing W
+    - Gently pitch down to descend
+    - Level out as you approach the ground
 
 ## Scene Description
 
@@ -99,4 +112,4 @@ You can modify the airplane model by editing the `createAirplane()` function in 
 - Three.js - JavaScript 3D library
 - Vite - Development server and production bundler
 - HTML5 & CSS3
-- JavaScript (ES6+) 
+- JavaScript (ES6+)

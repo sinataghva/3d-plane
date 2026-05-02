@@ -6,7 +6,6 @@ export function createCameraModeToggle() {
     window.addEventListener('keydown', (event) => {
         if (event.key.toLowerCase() === 'c') {
             cameraMode = !cameraMode;
-            console.log('Camera mode:', cameraMode ? 'ON' : 'OFF');
         }
     });
 
