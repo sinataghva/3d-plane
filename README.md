@@ -37,7 +37,7 @@ Start the development server:
 npm start
 ```
 
-This will start the Vite development server, typically at http://localhost:5173. Open this URL in your browser to view the 3D plane model.
+This will start the Vite development server at http://127.0.0.1:5173. Open this URL in your browser to view the 3D plane model.
 
 Build a production version:
 
@@ -45,7 +45,7 @@ Build a production version:
 npm run build
 ```
 
-Preview the production build locally:
+Preview the production build locally at http://127.0.0.1:4173:
 
 ```bash
 npm run preview
