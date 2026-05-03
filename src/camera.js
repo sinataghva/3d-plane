@@ -3,23 +3,29 @@ import * as THREE from 'three';
 /**
  * @typedef {object} CameraMode
  * @property {() => boolean} isOrbitMode
+ * @property {() => string} getMode
  */
+
+const CAMERA_MODES = ['chase', 'cockpit', 'orbit'];
 
 /**
  * @returns {CameraMode}
  */
 export function createCameraModeToggle() {
-    let cameraMode = false;
+    let cameraModeIndex = 0;
 
     window.addEventListener('keydown', (event) => {
         if (event.key.toLowerCase() === 'c') {
-            cameraMode = !cameraMode;
+            cameraModeIndex = (cameraModeIndex + 1) % CAMERA_MODES.length;
         }
     });
 
     return {
         isOrbitMode() {
-            return cameraMode;
+            return this.getMode() === 'orbit';
+        },
+        getMode() {
+            return CAMERA_MODES[cameraModeIndex];
         }
     };
 }
@@ -32,13 +38,25 @@ export function createCameraModeToggle() {
  * @param {CameraMode} args.cameraMode
  */
 export function updateCamera({ camera, controls, airplane, cameraMode }) {
-    if (!cameraMode.isOrbitMode()) {
+    const activeMode = cameraMode.getMode();
+
+    if (activeMode === 'chase') {
         const cameraOffset = new THREE.Vector3(-10, 4, 0);
         cameraOffset.applyQuaternion(airplane.quaternion);
 
         camera.position.copy(airplane.position).add(cameraOffset);
 
         const lookAtOffset = new THREE.Vector3(2, 0, 0);
+        lookAtOffset.applyQuaternion(airplane.quaternion);
+        const lookAtPoint = airplane.position.clone().add(lookAtOffset);
+        camera.lookAt(lookAtPoint);
+    } else if (activeMode === 'cockpit') {
+        const cameraOffset = new THREE.Vector3(1.9, 0.95, 0);
+        cameraOffset.applyQuaternion(airplane.quaternion);
+
+        camera.position.copy(airplane.position).add(cameraOffset);
+
+        const lookAtOffset = new THREE.Vector3(12, 0.65, 0);
         lookAtOffset.applyQuaternion(airplane.quaternion);
         const lookAtPoint = airplane.position.clone().add(lookAtOffset);
         camera.lookAt(lookAtPoint);

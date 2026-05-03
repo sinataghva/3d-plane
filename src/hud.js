@@ -22,6 +22,14 @@ function formatHeading(yawAngle) {
     return Math.round(heading).toString().padStart(3, '0');
 }
 
+/**
+ * @param {string} mode
+ * @returns {string}
+ */
+function formatCameraMode(mode) {
+    return mode.charAt(0).toUpperCase() + mode.slice(1);
+}
+
 export function createHud() {
     const speedValueElement = document.getElementById('speed-value');
     const altitudeValueElement = document.getElementById('altitude-value');
@@ -51,7 +59,7 @@ export function createHud() {
         update({ planeState, cameraMode }) {
             const altitude = Math.max(0, planeState.position.y - 0.5);
             const flightState = planeState.isAirborne ? 'Airborne' : 'Ground';
-            const cameraLabel = cameraMode.isOrbitMode() ? 'Orbit' : 'Chase';
+            const cameraLabel = formatCameraMode(cameraMode.getMode());
 
             speedValueElement.textContent = planeState.speed.toFixed(2);
             altitudeValueElement.textContent = altitude.toFixed(2);
