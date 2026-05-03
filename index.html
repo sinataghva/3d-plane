@@ -6,7 +6,7 @@
         <title>3D Plane Model</title>
     </head>
     <body>
-        <div id="info">
+        <div id="instructions-panel" class="hud-panel">
             <h1>3D Plane Model</h1>
             <p>Third-person view of a plane on a runway</p>
             <h2>Controls</h2>
@@ -23,13 +23,14 @@
 
             <h2>Camera</h2>
             <p>Press <kbd>C</kbd> to toggle orbit controls</p>
-
-            <div id="flight-data">
-                <h2>Flight Data</h2>
-                <p>Speed: <span id="speed-value">0</span> units/s</p>
-                <p>Altitude: <span id="altitude-value">0</span> units</p>
-            </div>
         </div>
+
+        <div id="flight-data" class="hud-panel">
+            <h2>Flight Data</h2>
+            <p>Speed: <span id="speed-value">0</span> units/s</p>
+            <p>Altitude: <span id="altitude-value">0</span> units</p>
+        </div>
+
         <div id="canvas-container"></div>
         <div id="runtime-fallback" role="alert" hidden>
             <div class="runtime-fallback-panel">
