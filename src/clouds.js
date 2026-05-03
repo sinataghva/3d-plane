@@ -5,9 +5,12 @@ import * as THREE from 'three';
  */
 function createCloud() {
     const cloud = new THREE.Group();
-    const material = new THREE.MeshPhongMaterial({
-        color: 0xf4f4f4,
-        shininess: 5,
+    const material = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        emissive: 0xb8d7f0,
+        emissiveIntensity: 0.08,
+        roughness: 1,
+        metalness: 0,
         flatShading: true
     });
     const puffCount = 5 + Math.floor(Math.random() * 4);
@@ -40,12 +43,12 @@ function createCloud() {
  * @param {THREE.Scene} scene
  * @param {number} [cloudCount]
  */
-export function addClouds(scene, cloudCount = 20) {
+export function addClouds(scene, cloudCount = 26) {
     for (let i = 0; i < cloudCount; i++) {
         const cloud = createCloud();
-        const x = (Math.random() * 2 - 1) * 800;
-        const y = 50 + Math.random() * 60;
-        const z = (Math.random() * 2 - 1) * 800;
+        const x = (Math.random() * 2 - 1) * 760;
+        const y = 62 + Math.random() * 70;
+        const z = (Math.random() * 2 - 1) * 760;
         cloud.position.set(x, y, z);
         scene.add(cloud);
     }
