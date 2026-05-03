@@ -75,7 +75,7 @@ function startApp() {
         updatePlanePhysics({ planeState, keyboard, planePhysics, delta });
         syncPlaneMesh({ airplane, propeller, planeState });
         updateCamera({ camera, controls, airplane, cameraMode });
-        hud.update({ planeState });
+        hud.update({ planeState, cameraMode });
 
         renderer.render(scene, camera);
     }

@@ -26,9 +26,42 @@
         </div>
 
         <div id="flight-data" class="hud-panel">
-            <h2>Flight Data</h2>
-            <p>Speed: <span id="speed-value">0</span> units/s</p>
-            <p>Altitude: <span id="altitude-value">0</span> units</p>
+            <div class="instrument-header">
+                <h2>Flight Data</h2>
+                <span id="flight-state-value" class="status-pill">Ground</span>
+            </div>
+            <div class="primary-instruments">
+                <div class="instrument-readout">
+                    <span class="instrument-label">Speed</span>
+                    <span class="instrument-value" id="speed-value">0.00</span>
+                    <span class="instrument-unit">km/s</span>
+                </div>
+                <div class="instrument-readout">
+                    <span class="instrument-label">Altitude</span>
+                    <span class="instrument-value" id="altitude-value"
+                        >0.00</span
+                    >
+                    <span class="instrument-unit">m</span>
+                </div>
+            </div>
+            <div class="secondary-instruments">
+                <div>
+                    <span class="instrument-label">Heading</span>
+                    <span id="heading-value">000</span>
+                </div>
+                <div>
+                    <span class="instrument-label">Pitch</span>
+                    <span id="pitch-value">0</span>
+                </div>
+                <div>
+                    <span class="instrument-label">Roll</span>
+                    <span id="roll-value">0</span>
+                </div>
+                <div>
+                    <span class="instrument-label">Camera</span>
+                    <span id="camera-mode-value">Chase</span>
+                </div>
+            </div>
         </div>
 
         <div id="canvas-container"></div>

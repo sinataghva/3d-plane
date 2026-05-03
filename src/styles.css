@@ -80,19 +80,88 @@ p {
 
 #flight-data {
     bottom: 20px;
-    min-width: 220px;
+    width: 285px;
+    max-width: calc(100vw - 40px);
+    background-color: rgba(18, 24, 31, 0.74);
+    color: #f6f8fb;
+    backdrop-filter: blur(4px);
 }
 
-#flight-data p {
-    margin: 5px 0;
+.instrument-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 3px 7px;
+    border: 1px solid rgba(142, 202, 230, 0.45);
+    border-radius: 999px;
+    background-color: rgba(0, 102, 204, 0.24);
+    color: #d8f1ff;
     font-family: monospace;
-    font-size: 14px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
 }
 
-#speed-value,
-#altitude-value {
+.primary-instruments {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.instrument-readout {
+    padding: 9px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 5px;
+    background-color: rgba(0, 0, 0, 0.22);
+}
+
+.instrument-label {
+    display: block;
+    margin-bottom: 4px;
+    color: rgba(246, 248, 251, 0.66);
+    font-size: 11px;
     font-weight: bold;
-    color: #0066cc;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.instrument-value {
+    display: block;
+    color: #8ecae6;
+    font-family: monospace;
+    font-size: 24px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.instrument-unit {
+    display: block;
+    margin-top: 4px;
+    color: rgba(246, 248, 251, 0.62);
+    font-size: 12px;
+}
+
+.secondary-instruments {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 10px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.secondary-instruments div {
+    color: #f6f8fb;
+    font-family: monospace;
+    font-size: 13px;
 }
 
 #instructions-panel h2,
@@ -104,6 +173,8 @@ p {
 
 #flight-data h2 {
     margin-top: 0;
+    margin-bottom: 0;
+    color: #f6f8fb;
 }
 
 #instructions-panel ul {
@@ -140,7 +211,7 @@ kbd {
 
     #flight-data {
         bottom: 12px;
-        min-width: 180px;
+        width: min(285px, calc(100vw - 24px));
     }
 
     h1 {
@@ -152,8 +223,15 @@ kbd {
         font-size: 14px;
     }
 
-    p,
-    #flight-data p {
+    p {
         font-size: 13px;
+    }
+
+    .instrument-value {
+        font-size: 22px;
+    }
+
+    .secondary-instruments {
+        gap: 7px 10px;
     }
 }
