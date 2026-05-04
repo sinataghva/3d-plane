@@ -1,88 +1,394 @@
 import * as THREE from 'three';
 
 /**
+ * @param {THREE.Object3D} object
+ */
+function enableShadows(object) {
+    object.castShadow = true;
+    object.receiveShadow = true;
+}
+
+/**
+ * @param {THREE.Vector3} start
+ * @param {THREE.Vector3} end
+ * @param {number} radius
+ * @param {THREE.Material} material
+ * @returns {THREE.Mesh}
+ */
+function createStrut(start, end, radius, material) {
+    const direction = new THREE.Vector3().subVectors(end, start);
+    const length = direction.length();
+    const geometry = new THREE.CylinderGeometry(radius, radius, length, 10);
+    const strut = new THREE.Mesh(geometry, material);
+
+    strut.position.copy(start).add(end).multiplyScalar(0.5);
+    strut.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        direction.normalize()
+    );
+    enableShadows(strut);
+
+    return strut;
+}
+
+/**
+ * @param {THREE.Mesh} mesh
+ * @param {THREE.Group} group
+ */
+function addPart(mesh, group) {
+    enableShadows(mesh);
+    group.add(mesh);
+}
+
+/**
  * @returns {{ airplane: THREE.Group, propeller: THREE.Mesh }}
  */
 export function createAirplane() {
     const airplane = new THREE.Group();
 
     const bodyMaterial = new THREE.MeshPhongMaterial({
-        color: 0x3366cc,
-        specular: 0x111111,
-        shininess: 30
+        color: 0xf5f5f2,
+        specular: 0x555555,
+        shininess: 42
     });
-    const detailMaterial = new THREE.MeshPhongMaterial({
-        color: 0xffffff,
-        specular: 0x111111,
-        shininess: 30
+    const blueMaterial = new THREE.MeshPhongMaterial({
+        color: 0x0d4fb7,
+        specular: 0x222222,
+        shininess: 50
+    });
+    const redMaterial = new THREE.MeshPhongMaterial({
+        color: 0xd62323,
+        specular: 0x222222,
+        shininess: 45
+    });
+    const glassMaterial = new THREE.MeshPhongMaterial({
+        color: 0x168d91,
+        emissive: 0x063b3d,
+        emissiveIntensity: 0.08,
+        specular: 0xb8ffff,
+        shininess: 90,
+        transparent: true,
+        opacity: 0.9
+    });
+    const propellerMaterial = new THREE.MeshPhongMaterial({
+        color: 0x202020,
+        specular: 0x444444,
+        shininess: 28
+    });
+    const metalMaterial = new THREE.MeshPhongMaterial({
+        color: 0xc8cdd0,
+        specular: 0x444444,
+        shininess: 45
+    });
+    const tireMaterial = new THREE.MeshPhongMaterial({
+        color: 0x111111,
+        specular: 0x080808,
+        shininess: 12
     });
 
-    const fuselageGeometry = new THREE.CylinderGeometry(0.8, 0.8, 6, 16);
+    const fuselageGeometry = new THREE.CylinderGeometry(0.5, 0.58, 5.4, 28);
     fuselageGeometry.rotateZ(Math.PI / 2);
     const fuselage = new THREE.Mesh(fuselageGeometry, bodyMaterial);
-    fuselage.castShadow = true;
-    fuselage.receiveShadow = true;
-    airplane.add(fuselage);
+    fuselage.position.set(-0.2, 0, 0);
+    addPart(fuselage, airplane);
 
-    const noseGeometry = new THREE.ConeGeometry(0.8, 2, 16);
-    noseGeometry.rotateZ(-Math.PI / 2);
+    const noseGeometry = new THREE.CylinderGeometry(0.36, 0.5, 0.78, 24);
+    noseGeometry.rotateZ(Math.PI / 2);
     const nose = new THREE.Mesh(noseGeometry, bodyMaterial);
-    nose.position.set(4, 0, 0);
-    nose.castShadow = true;
-    nose.receiveShadow = true;
-    airplane.add(nose);
+    nose.position.set(2.9, 0.02, 0);
+    addPart(nose, airplane);
 
-    const tailGeometry = new THREE.ConeGeometry(0.8, 1, 16);
-    tailGeometry.rotateZ(Math.PI / 2);
-    const tail = new THREE.Mesh(tailGeometry, bodyMaterial);
-    tail.position.set(-3.5, 0, 0);
-    tail.castShadow = true;
-    tail.receiveShadow = true;
-    airplane.add(tail);
+    const cowlingGeometry = new THREE.CylinderGeometry(0.31, 0.34, 0.36, 24);
+    cowlingGeometry.rotateZ(Math.PI / 2);
+    const cowling = new THREE.Mesh(cowlingGeometry, bodyMaterial);
+    cowling.position.set(3.42, 0.02, 0);
+    addPart(cowling, airplane);
 
-    const wingGeometry = new THREE.BoxGeometry(3, 0.2, 10);
-    const wings = new THREE.Mesh(wingGeometry, bodyMaterial);
-    wings.castShadow = true;
-    wings.receiveShadow = true;
-    airplane.add(wings);
+    const cabinGeometry = new THREE.BoxGeometry(1.15, 0.68, 0.96);
+    const cabin = new THREE.Mesh(cabinGeometry, bodyMaterial);
+    cabin.position.set(0.98, 0.58, 0);
+    addPart(cabin, airplane);
 
-    const tailWingGeometry = new THREE.BoxGeometry(1.5, 0.2, 3);
-    const tailWing = new THREE.Mesh(tailWingGeometry, bodyMaterial);
-    tailWing.position.set(-3, 0, 0);
-    tailWing.castShadow = true;
-    tailWing.receiveShadow = true;
-    airplane.add(tailWing);
+    const windshieldGeometry = new THREE.BoxGeometry(0.08, 0.5, 0.8);
+    const windshield = new THREE.Mesh(windshieldGeometry, glassMaterial);
+    windshield.position.set(1.56, 0.6, 0);
+    windshield.rotation.z = -0.16;
+    addPart(windshield, airplane);
 
-    const stabilizerGeometry = new THREE.BoxGeometry(1.5, 2, 0.2);
-    const stabilizer = new THREE.Mesh(stabilizerGeometry, bodyMaterial);
-    stabilizer.position.set(-3, 1, 0);
-    stabilizer.castShadow = true;
-    stabilizer.receiveShadow = true;
-    airplane.add(stabilizer);
+    const rearWindow = windshield.clone();
+    rearWindow.position.x = 0.38;
+    rearWindow.rotation.z = 0.08;
+    addPart(rearWindow, airplane);
 
-    const cockpitGeometry = new THREE.SphereGeometry(
-        0.8,
-        16,
-        16,
-        0,
-        Math.PI * 2,
-        0,
-        Math.PI / 2
+    const sideWindowGeometry = new THREE.BoxGeometry(0.34, 0.34, 0.04);
+    const sideWindowXPositions = [0.75, 1.18];
+
+    for (const x of sideWindowXPositions) {
+        const leftWindow = new THREE.Mesh(sideWindowGeometry, glassMaterial);
+        leftWindow.position.set(x, 0.62, 0.5);
+        addPart(leftWindow, airplane);
+
+        const rightWindow = leftWindow.clone();
+        rightWindow.position.z = -0.5;
+        addPart(rightWindow, airplane);
+    }
+
+    const wingGeometry = new THREE.BoxGeometry(1.75, 0.09, 8.8);
+    const wing = new THREE.Mesh(wingGeometry, bodyMaterial);
+    wing.position.set(0.35, 1.2, 0);
+    addPart(wing, airplane);
+
+    const wingLeadingEdgeGeometry = new THREE.CylinderGeometry(
+        0.055,
+        0.055,
+        8.8,
+        16
     );
-    const cockpit = new THREE.Mesh(cockpitGeometry, detailMaterial);
-    cockpit.position.set(1.5, 0.6, 0);
-    cockpit.rotation.x = Math.PI;
-    cockpit.rotation.y = Math.PI / 2;
-    cockpit.castShadow = true;
-    cockpit.receiveShadow = true;
-    airplane.add(cockpit);
+    wingLeadingEdgeGeometry.rotateX(Math.PI / 2);
+    const wingLeadingEdge = new THREE.Mesh(
+        wingLeadingEdgeGeometry,
+        bodyMaterial
+    );
+    wingLeadingEdge.position.set(1.23, 1.2, 0);
+    addPart(wingLeadingEdge, airplane);
 
-    const propellerGeometry = new THREE.BoxGeometry(0.2, 0.1, 3);
-    const propeller = new THREE.Mesh(propellerGeometry, detailMaterial);
-    propeller.position.set(5, 0, 0);
-    propeller.castShadow = true;
-    propeller.receiveShadow = true;
-    airplane.add(propeller);
+    const leftWingTipGeometry = new THREE.BoxGeometry(1.75, 0.1, 0.08);
+    const leftWingTip = new THREE.Mesh(leftWingTipGeometry, bodyMaterial);
+    leftWingTip.position.set(0.35, 1.19, 4.48);
+    addPart(leftWingTip, airplane);
+
+    const rightWingTip = leftWingTip.clone();
+    rightWingTip.position.z = -4.48;
+    addPart(rightWingTip, airplane);
+
+    const aileronGeometry = new THREE.BoxGeometry(0.36, 0.045, 1.55);
+    const leftAileron = new THREE.Mesh(aileronGeometry, blueMaterial);
+    leftAileron.name = 'leftAileron';
+    leftAileron.position.set(-0.52, 1.235, 3.25);
+    addPart(leftAileron, airplane);
+
+    const rightAileron = leftAileron.clone();
+    rightAileron.name = 'rightAileron';
+    rightAileron.position.z = -3.25;
+    addPart(rightAileron, airplane);
+
+    const flapGeometry = new THREE.BoxGeometry(0.34, 0.045, 1.35);
+    const leftFlap = new THREE.Mesh(flapGeometry, blueMaterial);
+    leftFlap.name = 'leftFlap';
+    leftFlap.position.set(-0.53, 1.233, 1.2);
+    addPart(leftFlap, airplane);
+
+    const rightFlap = leftFlap.clone();
+    rightFlap.name = 'rightFlap';
+    rightFlap.position.z = -1.2;
+    addPart(rightFlap, airplane);
+
+    const stripeGeometry = new THREE.BoxGeometry(2.9, 0.06, 0.045);
+    const leftStripe = new THREE.Mesh(stripeGeometry, blueMaterial);
+    leftStripe.position.set(-0.75, 0.08, 0.55);
+    addPart(leftStripe, airplane);
+
+    const rightStripe = leftStripe.clone();
+    rightStripe.position.z = -0.55;
+    addPart(rightStripe, airplane);
+
+    const lowerStripeGeometry = new THREE.BoxGeometry(2.45, 0.045, 0.04);
+    const leftLowerStripe = new THREE.Mesh(lowerStripeGeometry, blueMaterial);
+    leftLowerStripe.position.set(-0.88, -0.1, 0.56);
+    addPart(leftLowerStripe, airplane);
+
+    const rightLowerStripe = leftLowerStripe.clone();
+    rightLowerStripe.position.z = -0.56;
+    addPart(rightLowerStripe, airplane);
+
+    const strutPoints = [
+        [
+            new THREE.Vector3(1.15, -0.2, 0.48),
+            new THREE.Vector3(0.45, 1.12, 3.1)
+        ],
+        [
+            new THREE.Vector3(1.15, -0.2, -0.48),
+            new THREE.Vector3(0.45, 1.12, -3.1)
+        ],
+        [
+            new THREE.Vector3(-0.15, -0.22, 0.48),
+            new THREE.Vector3(0.05, 1.12, 2.85)
+        ],
+        [
+            new THREE.Vector3(-0.15, -0.22, -0.48),
+            new THREE.Vector3(0.05, 1.12, -2.85)
+        ]
+    ];
+
+    for (const [start, end] of strutPoints) {
+        airplane.add(createStrut(start, end, 0.03, metalMaterial));
+    }
+
+    const tailConeGeometry = new THREE.ConeGeometry(0.42, 1.15, 24);
+    tailConeGeometry.rotateZ(Math.PI / 2);
+    const tailCone = new THREE.Mesh(tailConeGeometry, bodyMaterial);
+    tailCone.position.set(-3.12, 0, 0);
+    addPart(tailCone, airplane);
+
+    const tailWingGeometry = new THREE.BoxGeometry(1.2, 0.07, 2.45);
+    const tailWing = new THREE.Mesh(tailWingGeometry, bodyMaterial);
+    tailWing.position.set(-3.55, 0.12, 0);
+    addPart(tailWing, airplane);
+
+    const tailTipGeometry = new THREE.BoxGeometry(0.72, 0.08, 0.08);
+    const leftTailTip = new THREE.Mesh(tailTipGeometry, bodyMaterial);
+    leftTailTip.position.set(-3.55, 0.13, 1.27);
+    addPart(leftTailTip, airplane);
+
+    const rightTailTip = leftTailTip.clone();
+    rightTailTip.position.z = -1.27;
+    addPart(rightTailTip, airplane);
+
+    const elevatorGeometry = new THREE.BoxGeometry(0.34, 0.045, 1.05);
+    const leftElevator = new THREE.Mesh(elevatorGeometry, blueMaterial);
+    leftElevator.name = 'leftElevator';
+    leftElevator.position.set(-4.12, 0.155, 0.72);
+    addPart(leftElevator, airplane);
+
+    const rightElevator = leftElevator.clone();
+    rightElevator.name = 'rightElevator';
+    rightElevator.position.z = -0.72;
+    addPart(rightElevator, airplane);
+
+    const verticalTailGeometry = new THREE.BoxGeometry(0.82, 1.35, 0.08);
+    const verticalTail = new THREE.Mesh(verticalTailGeometry, bodyMaterial);
+    verticalTail.position.set(-3.8, 0.78, 0);
+    verticalTail.rotation.z = -0.08;
+    addPart(verticalTail, airplane);
+
+    const rudderStripeGeometry = new THREE.BoxGeometry(0.18, 1.1, 0.09);
+    const rudder = new THREE.Mesh(rudderStripeGeometry, blueMaterial);
+    rudder.name = 'rudder';
+    rudder.position.set(-4.05, 0.75, 0.055);
+    rudder.rotation.z = -0.08;
+    addPart(rudder, airplane);
+
+    const tailCapGeometry = new THREE.BoxGeometry(0.5, 0.18, 0.09);
+    const tailCap = new THREE.Mesh(tailCapGeometry, bodyMaterial);
+    tailCap.position.set(-3.8, 1.48, 0);
+    tailCap.rotation.z = -0.08;
+    addPart(tailCap, airplane);
+
+    const beaconGeometry = new THREE.BoxGeometry(0.08, 0.12, 0.08);
+    const beacon = new THREE.Mesh(beaconGeometry, redMaterial);
+    beacon.position.set(-3.9, 1.66, 0);
+    addPart(beacon, airplane);
+
+    const gearLegGeometry = new THREE.CylinderGeometry(0.035, 0.035, 0.92, 10);
+    const leftGearLeg = new THREE.Mesh(gearLegGeometry, metalMaterial);
+    leftGearLeg.position.set(0.65, -0.55, 1.05);
+    leftGearLeg.rotation.z = -0.22;
+    addPart(leftGearLeg, airplane);
+
+    const rightGearLeg = leftGearLeg.clone();
+    rightGearLeg.position.z = -1.05;
+    addPart(rightGearLeg, airplane);
+
+    const axleGeometry = new THREE.CylinderGeometry(0.035, 0.035, 2.1, 10);
+    axleGeometry.rotateX(Math.PI / 2);
+    const axle = new THREE.Mesh(axleGeometry, metalMaterial);
+    axle.position.set(0.65, -0.78, 0);
+    addPart(axle, airplane);
+
+    const wheelGeometry = new THREE.TorusGeometry(0.28, 0.085, 12, 24);
+    const leftWheel = new THREE.Mesh(wheelGeometry, tireMaterial);
+    leftWheel.position.set(0.65, -0.8, 1.1);
+    addPart(leftWheel, airplane);
+
+    const rightWheel = leftWheel.clone();
+    rightWheel.position.z = -1.1;
+    addPart(rightWheel, airplane);
+
+    const wheelPantGeometry = new THREE.SphereGeometry(0.34, 18, 12);
+    const leftWheelPant = new THREE.Mesh(wheelPantGeometry, blueMaterial);
+    leftWheelPant.position.set(0.65, -0.68, 1.1);
+    leftWheelPant.scale.set(1.35, 0.48, 0.82);
+    addPart(leftWheelPant, airplane);
+
+    const rightWheelPant = leftWheelPant.clone();
+    rightWheelPant.position.z = -1.1;
+    addPart(rightWheelPant, airplane);
+
+    const tailWheel = new THREE.Mesh(wheelGeometry, tireMaterial);
+    tailWheel.scale.set(0.42, 0.42, 0.42);
+    tailWheel.position.set(-3.58, -0.77, 0);
+    addPart(tailWheel, airplane);
+
+    const tailGearMountGeometry = new THREE.BoxGeometry(0.24, 0.08, 0.16);
+    const tailGearMount = new THREE.Mesh(tailGearMountGeometry, metalMaterial);
+    tailGearMount.position.set(-3.42, -0.28, 0);
+    addPart(tailGearMount, airplane);
+
+    airplane.add(
+        createStrut(
+            new THREE.Vector3(-3.42, -0.3, 0),
+            new THREE.Vector3(-3.58, -0.66, 0),
+            0.026,
+            metalMaterial
+        )
+    );
+
+    airplane.add(
+        createStrut(
+            new THREE.Vector3(-3.55, -0.62, 0.09),
+            new THREE.Vector3(-3.58, -0.78, 0.16),
+            0.016,
+            metalMaterial
+        )
+    );
+
+    airplane.add(
+        createStrut(
+            new THREE.Vector3(-3.55, -0.62, -0.09),
+            new THREE.Vector3(-3.58, -0.78, -0.16),
+            0.016,
+            metalMaterial
+        )
+    );
+
+    const wheelHubGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.07, 18);
+    wheelHubGeometry.rotateX(Math.PI / 2);
+    for (const wheel of [leftWheel, rightWheel, tailWheel]) {
+        const hub = new THREE.Mesh(wheelHubGeometry, metalMaterial);
+        hub.position.copy(wheel.position);
+        hub.scale.copy(wheel.scale);
+        addPart(hub, airplane);
+    }
+
+    const spinnerGeometry = new THREE.ConeGeometry(0.17, 0.32, 20);
+    spinnerGeometry.rotateZ(-Math.PI / 2);
+    const spinner = new THREE.Mesh(spinnerGeometry, bodyMaterial);
+    spinner.position.set(3.78, 0.02, 0);
+    addPart(spinner, airplane);
+
+    const propellerGeometry = new THREE.BoxGeometry(0.08, 0.05, 1.65);
+    const propeller = new THREE.Mesh(propellerGeometry, propellerMaterial);
+    propeller.position.set(3.88, 0.02, 0);
+    addPart(propeller, airplane);
+
+    const crossBladeGeometry = new THREE.BoxGeometry(0.08, 1.25, 0.05);
+    const crossBlade = new THREE.Mesh(crossBladeGeometry, propellerMaterial);
+    addPart(crossBlade, propeller);
+
+    const propellerHubGeometry = new THREE.SphereGeometry(0.13, 16, 12);
+    const propellerHub = new THREE.Mesh(propellerHubGeometry, metalMaterial);
+    propellerHub.position.copy(propeller.position);
+    addPart(propellerHub, airplane);
+
+    airplane.userData.controlSurfaces = {
+        leftAileron,
+        rightAileron,
+        leftFlap,
+        rightFlap,
+        leftElevator,
+        rightElevator,
+        rudder
+    };
 
     return { airplane, propeller };
 }
