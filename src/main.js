@@ -2,7 +2,7 @@ import './styles.css';
 
 import * as THREE from 'three';
 
-import { createAirplane } from './airplane.js';
+import { createAirplane, updateAirplaneControlSurfaces } from './airplane.js';
 import { createAirbase } from './airbase.js';
 import { addClouds } from './clouds.js';
 import { createCameraModeToggle, updateCamera } from './camera.js';
@@ -73,6 +73,7 @@ function startApp() {
         timer.update(timestamp);
         const delta = timer.getDelta();
         updatePlanePhysics({ planeState, keyboard, planePhysics, delta });
+        updateAirplaneControlSurfaces({ airplane, keyboard, delta });
         syncPlaneMesh({ airplane, propeller, planeState });
         updateCamera({ camera, controls, airplane, cameraMode });
         hud.update({ planeState, cameraMode });

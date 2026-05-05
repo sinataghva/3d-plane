@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 
 /**
+ * @typedef {import('./input.js').KeyboardState} KeyboardState
+ */
+
+/**
  * @param {THREE.Object3D} object
  */
 function enableShadows(object) {
@@ -38,6 +42,16 @@ function createStrut(start, end, radius, material) {
 function addPart(mesh, group) {
     enableShadows(mesh);
     group.add(mesh);
+}
+
+/**
+ * @param {number} current
+ * @param {number} target
+ * @param {number} delta
+ * @returns {number}
+ */
+function dampSurface(current, target, delta) {
+    return THREE.MathUtils.damp(current, target, 14, delta);
 }
 
 /**
@@ -391,4 +405,55 @@ export function createAirplane() {
     };
 
     return { airplane, propeller };
+}
+
+/**
+ * Moves the visible aileron, elevator, and rudder surfaces with the keyboard.
+ *
+ * @param {object} args
+ * @param {THREE.Object3D} args.airplane
+ * @param {KeyboardState} args.keyboard
+ * @param {number} args.delta
+ */
+export function updateAirplaneControlSurfaces({ airplane, keyboard, delta }) {
+    const surfaces = airplane.userData.controlSurfaces;
+    if (!surfaces) return;
+
+    const aileronDeflection = 0.34;
+    const elevatorDeflection = 0.3;
+    const rudderDeflection = 0.36;
+
+    const rollInput =
+        (keyboard.arrowRight ? 1 : 0) - (keyboard.arrowLeft ? 1 : 0);
+    const pitchInput =
+        (keyboard.arrowDown ? 1 : 0) - (keyboard.arrowUp ? 1 : 0);
+    const rudderInput = (keyboard.a ? 1 : 0) - (keyboard.d ? 1 : 0);
+
+    surfaces.leftAileron.rotation.z = dampSurface(
+        surfaces.leftAileron.rotation.z,
+        rollInput * aileronDeflection,
+        delta
+    );
+    surfaces.rightAileron.rotation.z = dampSurface(
+        surfaces.rightAileron.rotation.z,
+        -rollInput * aileronDeflection,
+        delta
+    );
+
+    surfaces.leftElevator.rotation.z = dampSurface(
+        surfaces.leftElevator.rotation.z,
+        pitchInput * elevatorDeflection,
+        delta
+    );
+    surfaces.rightElevator.rotation.z = dampSurface(
+        surfaces.rightElevator.rotation.z,
+        pitchInput * elevatorDeflection,
+        delta
+    );
+
+    surfaces.rudder.rotation.y = dampSurface(
+        surfaces.rudder.rotation.y,
+        rudderInput * rudderDeflection,
+        delta
+    );
 }
