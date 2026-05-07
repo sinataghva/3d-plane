@@ -11,7 +11,7 @@
             <p>Third-person view of a plane on a runway</p>
             <h2>Controls</h2>
             <ul>
-                <li><kbd>W</kbd>: Accelerate</li>
+                <li><kbd>W</kbd> / <kbd>S</kbd>: Thrust up/down</li>
                 <li><kbd>A</kbd> / <kbd>D</kbd>: Rudder</li>
                 <li><kbd>←</kbd> / <kbd>→</kbd>: Bank &amp; turn</li>
                 <li><kbd>↓</kbd>: Pitch up</li>
@@ -42,6 +42,11 @@
                         >0.00</span
                     >
                     <span class="instrument-unit">m</span>
+                </div>
+                <div class="instrument-readout">
+                    <span class="instrument-label">Thrust</span>
+                    <span class="instrument-value" id="thrust-value">0</span>
+                    <span class="instrument-unit">%</span>
                 </div>
             </div>
             <div class="secondary-instruments">

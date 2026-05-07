@@ -1,6 +1,7 @@
 /**
  * @typedef {object} KeyboardState
  * @property {boolean} w
+ * @property {boolean} s
  * @property {boolean} a
  * @property {boolean} d
  * @property {boolean} arrowLeft
@@ -17,6 +18,7 @@
 export function createKeyboardState() {
     const keyboard = {
         w: false,
+        s: false,
         a: false,
         d: false,
         arrowLeft: false,
@@ -28,6 +30,8 @@ export function createKeyboardState() {
     window.addEventListener('keydown', (event) => {
         if (event.key.toLowerCase() === 'w') {
             keyboard.w = true;
+        } else if (event.key.toLowerCase() === 's') {
+            keyboard.s = true;
         } else if (event.key.toLowerCase() === 'a') {
             keyboard.a = true;
         } else if (event.key.toLowerCase() === 'd') {
@@ -46,6 +50,8 @@ export function createKeyboardState() {
     window.addEventListener('keyup', (event) => {
         if (event.key.toLowerCase() === 'w') {
             keyboard.w = false;
+        } else if (event.key.toLowerCase() === 's') {
+            keyboard.s = false;
         } else if (event.key.toLowerCase() === 'a') {
             keyboard.a = false;
         } else if (event.key.toLowerCase() === 'd') {

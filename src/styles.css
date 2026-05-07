@@ -112,7 +112,7 @@ p {
 
 .primary-instruments {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
 }
 
@@ -233,5 +233,11 @@ kbd {
 
     .secondary-instruments {
         gap: 7px 10px;
+    }
+}
+
+@media (max-width: 380px) {
+    .primary-instruments {
+        grid-template-columns: 1fr 1fr;
     }
 }

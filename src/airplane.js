@@ -37,7 +37,7 @@ function createStrut(start, end, radius, material) {
 
 /**
  * @param {THREE.Mesh} mesh
- * @param {THREE.Group} group
+ * @param {THREE.Object3D} group
  */
 function addPart(mesh, group) {
     enableShadows(mesh);

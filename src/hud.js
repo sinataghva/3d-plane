@@ -33,6 +33,7 @@ function formatCameraMode(mode) {
 export function createHud() {
     const speedValueElement = document.getElementById('speed-value');
     const altitudeValueElement = document.getElementById('altitude-value');
+    const thrustValueElement = document.getElementById('thrust-value');
     const headingValueElement = document.getElementById('heading-value');
     const pitchValueElement = document.getElementById('pitch-value');
     const rollValueElement = document.getElementById('roll-value');
@@ -43,6 +44,7 @@ export function createHud() {
     if (
         !speedValueElement ||
         !altitudeValueElement ||
+        !thrustValueElement ||
         !headingValueElement ||
         !pitchValueElement ||
         !rollValueElement ||
@@ -63,6 +65,9 @@ export function createHud() {
 
             speedValueElement.textContent = planeState.speed.toFixed(2);
             altitudeValueElement.textContent = altitude.toFixed(2);
+            thrustValueElement.textContent = Math.round(
+                planeState.thrust * 100
+            ).toString();
             headingValueElement.textContent = formatHeading(
                 planeState.yawAngle
             );
