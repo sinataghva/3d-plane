@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
     createPlanePhysics,
     createPlaneState,
+    resetPlaneState,
     updatePlanePhysics
 } from './physics.js';
 
@@ -98,6 +99,70 @@ describe('plane physics', () => {
 
         expect(planeState.position.y).toBe(0.5);
         expect(planeState.isAirborne).toBe(false);
+    });
+
+    it('crashes on hard ground impact', () => {
+        const planeState = createPlaneState();
+        planeState.position.y = 0.56;
+        planeState.isAirborne = true;
+        planeState.speed = 1.2;
+        planeState.thrust = 0.4;
+        planeState.verticalSpeed = -0.18;
+
+        update({ planeState });
+
+        expect(planeState.position.y).toBe(0.5);
+        expect(planeState.isCrashed).toBe(true);
+        expect(planeState.isAirborne).toBe(false);
+        expect(planeState.speed).toBe(0);
+        expect(planeState.thrust).toBe(0);
+        expect(planeState.crashImpact).toBeGreaterThan(0);
+    });
+
+    it('allows a gentle landing without crashing', () => {
+        const planeState = createPlaneState();
+        planeState.position.y = 0.53;
+        planeState.isAirborne = true;
+        planeState.speed = 0.8;
+        planeState.verticalSpeed = -0.02;
+
+        update({ planeState });
+
+        expect(planeState.position.y).toBe(0.5);
+        expect(planeState.isCrashed).toBe(false);
+        expect(planeState.isAirborne).toBe(false);
+    });
+
+    it('does not continue physics updates after a crash', () => {
+        const planeState = createPlaneState();
+        planeState.isCrashed = true;
+        planeState.speed = 0;
+        planeState.thrust = 0;
+        const initialYaw = planeState.yawAngle;
+
+        update({
+            planeState,
+            keyboard: createKeyboard({ w: true, a: true }),
+            delta: FRAME_DELTA * 20
+        });
+
+        expect(planeState.thrust).toBe(0);
+        expect(planeState.yawAngle).toBe(initialYaw);
+    });
+
+    it('resets a crashed plane to the runway start state', () => {
+        const planeState = createPlaneState();
+        planeState.position.x = 40;
+        planeState.position.y = 0.5;
+        planeState.position.z = 20;
+        planeState.speed = 1.4;
+        planeState.thrust = 0.8;
+        planeState.isCrashed = true;
+        planeState.crashImpact = 0.2;
+
+        resetPlaneState(planeState);
+
+        expect(planeState).toMatchObject(createPlaneState());
     });
 
     it('stops the plane at the runway barrier while on the ground', () => {

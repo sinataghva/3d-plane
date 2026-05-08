@@ -25,6 +25,8 @@ import * as THREE from 'three';
  * @property {number} verticalSpeed
  * @property {boolean} isAirborne
  * @property {boolean} isStalling
+ * @property {boolean} isCrashed
+ * @property {number} crashImpact
  * @property {number} propellerRotation
  */
 
@@ -60,6 +62,9 @@ import * as THREE from 'three';
  * @property {number} rollSpeed
  * @property {number} rollRecoverySpeed
  * @property {number} pitchRecoverySpeed
+ * @property {number} crashSinkSpeed
+ * @property {number} crashPitchAngle
+ * @property {number} crashRollAngle
  */
 
 /**
@@ -92,8 +97,32 @@ export function createPlaneState() {
         verticalSpeed: 0,
         isAirborne: false,
         isStalling: false,
+        isCrashed: false,
+        crashImpact: 0,
         propellerRotation: 0
     };
+}
+
+/**
+ * @param {PlaneState} planeState
+ */
+export function resetPlaneState(planeState) {
+    const nextState = createPlaneState();
+    planeState.position.x = nextState.position.x;
+    planeState.position.y = nextState.position.y;
+    planeState.position.z = nextState.position.z;
+    planeState.speed = nextState.speed;
+    planeState.thrust = nextState.thrust;
+    planeState.yawAngle = nextState.yawAngle;
+    planeState.pitchAngle = nextState.pitchAngle;
+    planeState.rollAngle = nextState.rollAngle;
+    planeState.lift = nextState.lift;
+    planeState.verticalSpeed = nextState.verticalSpeed;
+    planeState.isAirborne = nextState.isAirborne;
+    planeState.isStalling = nextState.isStalling;
+    planeState.isCrashed = nextState.isCrashed;
+    planeState.crashImpact = nextState.crashImpact;
+    planeState.propellerRotation = nextState.propellerRotation;
 }
 
 /**
@@ -128,7 +157,10 @@ export function createPlanePhysics() {
         rotationSpeed: 0.02,
         rollSpeed: 0.05,
         rollRecoverySpeed: 0.018,
-        pitchRecoverySpeed: 0.006
+        pitchRecoverySpeed: 0.006,
+        crashSinkSpeed: 0.12,
+        crashPitchAngle: 0.7,
+        crashRollAngle: 1.35
     };
 }
 
@@ -143,6 +175,10 @@ export function updatePlanePhysics({
     planePhysics,
     delta
 }) {
+    if (planeState.isCrashed) {
+        return;
+    }
+
     const frameScale = Math.min(delta * 60, 3);
     const groundLevel = 0.5;
     const altitude = Math.max(0, planeState.position.y - groundLevel);
@@ -324,11 +360,28 @@ export function updatePlanePhysics({
         planeState.position.y += planeState.verticalSpeed * frameScale;
 
         if (planeState.position.y <= groundLevel) {
+            const impactSpeed = Math.abs(planeState.verticalSpeed);
+            const hasHardImpact =
+                planeState.verticalSpeed < -planePhysics.crashSinkSpeed;
+            const hasBadAttitude =
+                Math.abs(planeState.pitchAngle) >
+                    planePhysics.crashPitchAngle ||
+                Math.abs(planeState.rollAngle) > planePhysics.crashRollAngle;
+
             planeState.position.y = groundLevel;
             planeState.verticalSpeed = 0;
             planeState.isAirborne = false;
             planeState.isStalling = false;
-            planeState.rollAngle *= 0.5;
+
+            if (hasHardImpact || hasBadAttitude) {
+                planeState.speed = 0;
+                planeState.thrust = 0;
+                planeState.isCrashed = true;
+                planeState.crashImpact = impactSpeed;
+            } else {
+                planeState.rollAngle *= 0.5;
+                planeState.crashImpact = 0;
+            }
         }
     }
 
