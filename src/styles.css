@@ -22,6 +22,7 @@ body {
 .has-runtime-error #canvas-container,
 .has-runtime-error #instructions-panel,
 .has-runtime-error #flight-data,
+.has-runtime-error #warning-banner,
 .has-runtime-error #crash-overlay {
     display: none;
 }
@@ -197,6 +198,67 @@ kbd {
     border: 1px solid #b4b4b4;
     border-radius: 3px;
     box-shadow: inset 0 -1px 0 #b4b4b4;
+}
+
+.warning-banner {
+    position: fixed;
+    top: 18px;
+    left: 50%;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: min(520px, calc(100vw - 32px));
+    min-height: 40px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    border-radius: 6px;
+    background: rgba(16, 24, 32, 0.78);
+    color: #f6f8fb;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+    translate: -50% 0;
+    backdrop-filter: blur(6px);
+    pointer-events: none;
+}
+
+.warning-banner[hidden] {
+    display: none;
+}
+
+.warning-banner[data-level='danger'] {
+    border-color: rgba(255, 103, 67, 0.72);
+    background: rgba(82, 20, 12, 0.86);
+}
+
+.warning-banner[data-level='caution'] {
+    border-color: rgba(255, 209, 102, 0.72);
+    background: rgba(68, 48, 13, 0.84);
+}
+
+.warning-banner[data-level='info'] {
+    border-color: rgba(142, 202, 230, 0.58);
+    background: rgba(18, 45, 66, 0.82);
+}
+
+.warning-label {
+    display: inline-flex;
+    flex: 0 0 auto;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.warning-message {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: bold;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .crash-overlay {

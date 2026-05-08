@@ -17,6 +17,7 @@ import {
 } from './physics.js';
 import { isWebGLAvailable, showRuntimeFallback } from './runtimeFallback.js';
 import { createScene } from './scene.js';
+import { createWarningBanner } from './warnings.js';
 
 /**
  * @param {unknown} error
@@ -162,6 +163,7 @@ function startApp() {
     const planePhysics = createPlanePhysics();
     const cameraMode = createCameraModeToggle();
     const hud = createHud();
+    const warningBanner = createWarningBanner();
     const timer = new THREE.Timer();
     timer.connect(document);
     let crashElapsed = 0;
@@ -200,6 +202,12 @@ function startApp() {
         syncPlaneMesh({ airplane, propeller, planeState });
         updateCamera({ camera, controls, airplane, cameraMode });
         hud.update({ planeState, cameraMode });
+        warningBanner.update({
+            planeState,
+            cameraMode,
+            stallSpeed: planePhysics.stallSpeed,
+            delta
+        });
 
         renderer.render(scene, camera);
     }
