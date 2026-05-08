@@ -4,6 +4,7 @@
  */
 
 const RADIANS_TO_DEGREES = 180 / Math.PI;
+const INTERNAL_SPEED_TO_KMH = 90;
 
 /**
  * @param {number} angle
@@ -28,6 +29,22 @@ function formatHeading(yawAngle) {
  */
 function formatCameraMode(mode) {
     return mode.charAt(0).toUpperCase() + mode.slice(1);
+}
+
+/**
+ * @param {number} speed
+ * @returns {string}
+ */
+export function formatSpeedKmh(speed) {
+    return Math.max(0, Math.round(speed * INTERNAL_SPEED_TO_KMH)).toString();
+}
+
+/**
+ * @param {number} altitude
+ * @returns {string}
+ */
+export function formatAltitudeMeters(altitude) {
+    return Math.max(0, Math.round(altitude)).toString();
 }
 
 export function createHud() {
@@ -63,8 +80,8 @@ export function createHud() {
             const flightState = planeState.isAirborne ? 'Airborne' : 'Ground';
             const cameraLabel = formatCameraMode(cameraMode.getMode());
 
-            speedValueElement.textContent = planeState.speed.toFixed(2);
-            altitudeValueElement.textContent = altitude.toFixed(2);
+            speedValueElement.textContent = formatSpeedKmh(planeState.speed);
+            altitudeValueElement.textContent = formatAltitudeMeters(altitude);
             thrustValueElement.textContent = Math.round(
                 planeState.thrust * 100
             ).toString();
