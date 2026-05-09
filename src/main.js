@@ -8,6 +8,7 @@ import { addClouds } from './clouds.js';
 import { createCameraModeToggle, updateCamera } from './camera.js';
 import { createHud } from './hud.js';
 import { createKeyboardState } from './input.js';
+import { createMiniMap } from './minimap.js';
 import {
     createPlanePhysics,
     createPlaneState,
@@ -163,6 +164,7 @@ function startApp() {
     const planePhysics = createPlanePhysics();
     const cameraMode = createCameraModeToggle();
     const hud = createHud();
+    const miniMap = createMiniMap();
     const warningBanner = createWarningBanner();
     const timer = new THREE.Timer();
     timer.connect(document);
@@ -202,6 +204,7 @@ function startApp() {
         syncPlaneMesh({ airplane, propeller, planeState });
         updateCamera({ camera, controls, airplane, cameraMode });
         hud.update({ planeState, cameraMode });
+        miniMap.update({ planeState });
         warningBanner.update({
             planeState,
             cameraMode,
