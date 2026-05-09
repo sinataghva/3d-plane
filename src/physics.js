@@ -137,16 +137,16 @@ export function createPlanePhysics() {
         maxThrust: 1,
         friction: 0.01,
         airDrag: 0.012,
-        pitchDrag: 0.012,
+        pitchDrag: 0.016,
         rollDrag: 0.004,
         pitchSpeed: 0.012,
         liftFactor: 0.014,
-        neutralLiftFactor: 0.31,
+        neutralLiftFactor: 0.27,
         liftPitchFactor: 2.2,
-        verticalDamping: 0.985,
+        verticalDamping: 0.965,
         maxClimbRate: 0.24,
         maxSinkRate: 0.26,
-        pitchPathFactor: 0.11,
+        pitchPathFactor: 0.22,
         gravitySpeedFactor: 0.095,
         gravity: 0.018,
         minTakeoffSpeed: 1.5,
@@ -158,8 +158,8 @@ export function createPlanePhysics() {
         rollSpeed: 0.05,
         rollRecoverySpeed: 0.018,
         pitchRecoverySpeed: 0.006,
-        crashSinkSpeed: 0.12,
-        crashPitchAngle: 0.7,
+        crashSinkSpeed: 0.18,
+        crashPitchAngle: 0.85,
         crashRollAngle: 1.35
     };
 }
@@ -332,10 +332,7 @@ export function updatePlanePhysics({
             ? planePhysics.gravity * 1.6
             : 0;
         planeState.verticalSpeed +=
-            (forwardVector.y * planeState.speed * planePhysics.pitchPathFactor +
-                planeState.lift -
-                planePhysics.gravity -
-                stallPenalty) *
+            (planeState.lift - planePhysics.gravity - stallPenalty) *
             frameScale;
         planeState.verticalSpeed *= planePhysics.verticalDamping;
         planeState.verticalSpeed = THREE.MathUtils.clamp(
@@ -357,12 +354,15 @@ export function updatePlanePhysics({
     }
 
     if (planeState.isAirborne) {
-        planeState.position.y += planeState.verticalSpeed * frameScale;
+        const pathVerticalSpeed =
+            forwardVector.y * planeState.speed * planePhysics.pitchPathFactor;
+        const totalVerticalSpeed = planeState.verticalSpeed + pathVerticalSpeed;
+        planeState.position.y += totalVerticalSpeed * frameScale;
 
         if (planeState.position.y <= groundLevel) {
-            const impactSpeed = Math.abs(planeState.verticalSpeed);
+            const impactSpeed = Math.abs(totalVerticalSpeed);
             const hasHardImpact =
-                planeState.verticalSpeed < -planePhysics.crashSinkSpeed;
+                totalVerticalSpeed < -planePhysics.crashSinkSpeed;
             const hasBadAttitude =
                 Math.abs(planeState.pitchAngle) >
                     planePhysics.crashPitchAngle ||

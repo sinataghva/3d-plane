@@ -103,7 +103,7 @@ describe('plane physics', () => {
 
     it('crashes on hard ground impact', () => {
         const planeState = createPlaneState();
-        planeState.position.y = 0.56;
+        planeState.position.y = 0.51;
         planeState.isAirborne = true;
         planeState.speed = 1.2;
         planeState.thrust = 0.4;
@@ -225,7 +225,27 @@ describe('plane physics', () => {
         update({ planeState });
 
         expect(planeState.position.y).toBeGreaterThan(initialAltitude);
-        expect(planeState.verticalSpeed).toBeGreaterThan(0);
+    });
+
+    it('dives along the nose direction instead of only settling from lift', () => {
+        const neutralState = createPlaneState();
+        neutralState.position.y = 10;
+        neutralState.isAirborne = true;
+        neutralState.speed = 1.5;
+
+        const divingState = createPlaneState();
+        divingState.position.y = 10;
+        divingState.isAirborne = true;
+        divingState.speed = 1.5;
+        divingState.pitchAngle = -0.45;
+
+        update({ planeState: neutralState });
+        update({ planeState: divingState });
+
+        expect(divingState.position.y).toBeLessThan(neutralState.position.y);
+        expect(neutralState.position.y - divingState.position.y).toBeGreaterThan(
+            0.05
+        );
     });
 
     it('trades speed for altitude when climbing', () => {
@@ -254,6 +274,21 @@ describe('plane physics', () => {
         update({ planeState });
 
         expect(planeState.speed).toBeGreaterThan(initialSpeed);
+    });
+
+    it('allows a controlled flare landing without crashing', () => {
+        const planeState = createPlaneState();
+        planeState.position.y = 0.56;
+        planeState.isAirborne = true;
+        planeState.speed = 1.1;
+        planeState.pitchAngle = 0.16;
+        planeState.verticalSpeed = -0.14;
+
+        update({ planeState });
+
+        expect(planeState.position.y).toBe(0.5);
+        expect(planeState.isAirborne).toBe(false);
+        expect(planeState.isCrashed).toBe(false);
     });
 
     it('settles gently at neutral pitch instead of climbing or dropping fast', () => {
