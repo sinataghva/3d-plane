@@ -22,6 +22,7 @@ import * as THREE from 'three';
  * @property {number} pitchAngle
  * @property {number} rollAngle
  * @property {number} lift
+ * @property {number} flapDeployment
  * @property {number} verticalSpeed
  * @property {boolean} isAirborne
  * @property {boolean} isStalling
@@ -47,6 +48,13 @@ import * as THREE from 'three';
  * @property {number} liftFactor
  * @property {number} neutralLiftFactor
  * @property {number} liftPitchFactor
+ * @property {number} flapLiftFactor
+ * @property {number} flapDrag
+ * @property {number} flapDeploySpeed
+ * @property {number} flapApproachAltitude
+ * @property {number} flapApproachSpeed
+ * @property {number} flapChangeRate
+ * @property {number} flapStallReduction
  * @property {number} verticalDamping
  * @property {number} maxClimbRate
  * @property {number} maxSinkRate
@@ -94,6 +102,7 @@ export function createPlaneState() {
         pitchAngle: 0,
         rollAngle: 0,
         lift: 0,
+        flapDeployment: 0,
         verticalSpeed: 0,
         isAirborne: false,
         isStalling: false,
@@ -117,12 +126,28 @@ export function resetPlaneState(planeState) {
     planeState.pitchAngle = nextState.pitchAngle;
     planeState.rollAngle = nextState.rollAngle;
     planeState.lift = nextState.lift;
+    planeState.flapDeployment = nextState.flapDeployment;
     planeState.verticalSpeed = nextState.verticalSpeed;
     planeState.isAirborne = nextState.isAirborne;
     planeState.isStalling = nextState.isStalling;
     planeState.isCrashed = nextState.isCrashed;
     planeState.crashImpact = nextState.crashImpact;
     planeState.propellerRotation = nextState.propellerRotation;
+}
+
+/**
+ * @param {number} current
+ * @param {number} target
+ * @param {number} maximumDelta
+ * @returns {number}
+ */
+function moveTowards(current, target, maximumDelta) {
+    const difference = target - current;
+    if (Math.abs(difference) <= maximumDelta) {
+        return target;
+    }
+
+    return current + Math.sign(difference) * maximumDelta;
 }
 
 /**
@@ -143,6 +168,13 @@ export function createPlanePhysics() {
         liftFactor: 0.014,
         neutralLiftFactor: 0.27,
         liftPitchFactor: 2.2,
+        flapLiftFactor: 0.2,
+        flapDrag: 0.001,
+        flapDeploySpeed: 1.25,
+        flapApproachAltitude: 35,
+        flapApproachSpeed: 1.35,
+        flapChangeRate: 0.035,
+        flapStallReduction: 0.18,
         verticalDamping: 0.965,
         maxClimbRate: 0.24,
         maxSinkRate: 0.26,
@@ -205,17 +237,40 @@ export function updatePlanePhysics({
         planePhysics.maxThrust
     );
 
+    const targetFlapDeployment =
+        !planeState.isAirborne ||
+        (altitude < planePhysics.flapApproachAltitude &&
+            planeState.speed < planePhysics.flapApproachSpeed)
+            ? planeState.speed < planePhysics.flapDeploySpeed
+                ? 1
+                : 0
+            : 0;
+    planeState.flapDeployment = moveTowards(
+        planeState.flapDeployment,
+        targetFlapDeployment,
+        planePhysics.flapChangeRate * frameScale
+    );
+
     const attitudeDrag =
         (Math.abs(planeState.pitchAngle) * planePhysics.pitchDrag +
             Math.abs(planeState.rollAngle) * planePhysics.rollDrag) *
         planeState.speed;
     const airDrag = planePhysics.airDrag * planeState.speed * planeState.speed;
+    const flapDrag =
+        planePhysics.flapDrag *
+        planeState.flapDeployment *
+        planeState.speed *
+        planeState.speed;
     const rollingDrag = planeState.isAirborne ? 0 : planePhysics.friction;
     const thrustAcceleration = planePhysics.acceleration * planeState.thrust;
     planeState.speed = Math.max(
         0,
         planeState.speed +
-            (thrustAcceleration - airDrag - rollingDrag - attitudeDrag) *
+            (thrustAcceleration -
+                airDrag -
+                flapDrag -
+                rollingDrag -
+                attitudeDrag) *
                 frameScale
     );
 
@@ -311,13 +366,17 @@ export function updatePlanePhysics({
     const pitchLiftFactor = Math.max(
         0.08,
         planePhysics.neutralLiftFactor +
-            planeState.pitchAngle * planePhysics.liftPitchFactor
+            planeState.pitchAngle * planePhysics.liftPitchFactor +
+            planeState.flapDeployment * planePhysics.flapLiftFactor
     );
     planeState.lift =
         liftSpeedFactor * planePhysics.liftFactor * pitchLiftFactor;
+    const effectiveStallSpeed =
+        planePhysics.stallSpeed -
+        planeState.flapDeployment * planePhysics.flapStallReduction;
     planeState.isStalling =
         altitude > 0 &&
-        (planeState.speed < planePhysics.stallSpeed ||
+        (planeState.speed < effectiveStallSpeed ||
             planeState.pitchAngle > planePhysics.stallPitchAngle);
 
     const isTryingToRotate =

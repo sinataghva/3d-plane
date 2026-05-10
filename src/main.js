@@ -200,7 +200,12 @@ function startApp() {
             }
         }
 
-        updateAirplaneControlSurfaces({ airplane, keyboard, delta });
+        updateAirplaneControlSurfaces({
+            airplane,
+            keyboard,
+            planeState,
+            delta
+        });
         syncPlaneMesh({ airplane, propeller, planeState });
         updateCamera({ camera, controls, airplane, cameraMode });
         hud.update({ planeState, cameraMode });

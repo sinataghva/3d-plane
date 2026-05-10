@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 /**
  * @typedef {import('./input.js').KeyboardState} KeyboardState
+ * @typedef {import('./physics.js').PlaneState} PlaneState
  */
 
 /**
@@ -408,20 +409,27 @@ export function createAirplane() {
 }
 
 /**
- * Moves the visible aileron, elevator, and rudder surfaces with the keyboard.
+ * Moves the visible control surfaces with the current flight controls.
  *
  * @param {object} args
  * @param {THREE.Object3D} args.airplane
  * @param {KeyboardState} args.keyboard
+ * @param {PlaneState} args.planeState
  * @param {number} args.delta
  */
-export function updateAirplaneControlSurfaces({ airplane, keyboard, delta }) {
+export function updateAirplaneControlSurfaces({
+    airplane,
+    keyboard,
+    planeState,
+    delta
+}) {
     const surfaces = airplane.userData.controlSurfaces;
     if (!surfaces) return;
 
     const aileronDeflection = 0.34;
     const elevatorDeflection = 0.3;
     const rudderDeflection = 0.36;
+    const flapDeflection = -0.42;
 
     const rollInput =
         (keyboard.arrowRight ? 1 : 0) - (keyboard.arrowLeft ? 1 : 0);
@@ -454,6 +462,17 @@ export function updateAirplaneControlSurfaces({ airplane, keyboard, delta }) {
     surfaces.rudder.rotation.y = dampSurface(
         surfaces.rudder.rotation.y,
         rudderInput * rudderDeflection,
+        delta
+    );
+
+    surfaces.leftFlap.rotation.z = dampSurface(
+        surfaces.leftFlap.rotation.z,
+        planeState.flapDeployment * flapDeflection,
+        delta
+    );
+    surfaces.rightFlap.rotation.z = dampSurface(
+        surfaces.rightFlap.rotation.z,
+        planeState.flapDeployment * flapDeflection,
         delta
     );
 }

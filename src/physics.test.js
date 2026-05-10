@@ -90,6 +90,84 @@ describe('plane physics', () => {
         expect(planeState.isAirborne).toBe(true);
     });
 
+    it('automatically deploys flaps on the runway for takeoff', () => {
+        const planeState = createPlaneState();
+        planeState.speed = 0.8;
+
+        for (let i = 0; i < 12; i++) {
+            update({ planeState });
+        }
+
+        expect(planeState.flapDeployment).toBeGreaterThan(0.3);
+    });
+
+    it('still reaches rotation speed with automatic takeoff flaps', () => {
+        const planeState = createPlaneState();
+        const planePhysics = createPlanePhysics();
+        const keyboard = createKeyboard({ w: true });
+
+        for (let i = 0; i < 220; i++) {
+            update({ planeState, planePhysics, keyboard });
+        }
+
+        expect(planeState.speed).toBeGreaterThan(
+            planePhysics.minTakeoffSpeed
+        );
+    });
+
+    it('can lift off after accelerating with automatic flaps', () => {
+        const planeState = createPlaneState();
+        const planePhysics = createPlanePhysics();
+        const keyboard = createKeyboard({ w: true });
+
+        for (let i = 0; i < 130; i++) {
+            update({ planeState, planePhysics, keyboard });
+        }
+
+        keyboard.arrowDown = true;
+        for (let i = 0; i < 40; i++) {
+            update({ planeState, planePhysics, keyboard });
+        }
+
+        expect(planeState.isAirborne).toBe(true);
+        expect(planeState.isCrashed).toBe(false);
+        expect(planeState.position.y).toBeGreaterThan(0.5);
+    });
+
+    it('automatically retracts flaps in faster cruise flight', () => {
+        const planeState = createPlaneState();
+        planeState.position.y = 80;
+        planeState.isAirborne = true;
+        planeState.speed = 1.7;
+        planeState.flapDeployment = 1;
+
+        for (let i = 0; i < 12; i++) {
+            update({ planeState });
+        }
+
+        expect(planeState.flapDeployment).toBeLessThan(0.7);
+    });
+
+    it('uses deployed flaps to reduce low-speed stall risk', () => {
+        const cleanState = createPlaneState();
+        cleanState.position.y = 12;
+        cleanState.isAirborne = true;
+        cleanState.speed = 0.75;
+        cleanState.flapDeployment = 0;
+
+        const flapState = createPlaneState();
+        flapState.position.y = 12;
+        flapState.isAirborne = true;
+        flapState.speed = 0.75;
+        flapState.flapDeployment = 1;
+
+        update({ planeState: cleanState });
+        update({ planeState: flapState });
+
+        expect(cleanState.isStalling).toBe(true);
+        expect(flapState.isStalling).toBe(false);
+    });
+
     it('keeps the plane from sinking below ground level', () => {
         const planeState = createPlaneState();
         const planePhysics = createPlanePhysics();
