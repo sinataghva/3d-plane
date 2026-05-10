@@ -8,6 +8,7 @@
  * @property {boolean} arrowRight
  * @property {boolean} arrowUp
  * @property {boolean} arrowDown
+ * @property {boolean} space
  */
 
 /**
@@ -24,7 +25,8 @@ export function createKeyboardState() {
         arrowLeft: false,
         arrowRight: false,
         arrowUp: false,
-        arrowDown: false
+        arrowDown: false,
+        space: false
     };
 
     window.addEventListener('keydown', (event) => {
@@ -44,6 +46,9 @@ export function createKeyboardState() {
             keyboard.arrowUp = true;
         } else if (event.key === 'ArrowDown') {
             keyboard.arrowDown = true;
+        } else if (event.code === 'Space') {
+            event.preventDefault();
+            keyboard.space = true;
         }
     });
 
@@ -64,6 +69,9 @@ export function createKeyboardState() {
             keyboard.arrowUp = false;
         } else if (event.key === 'ArrowDown') {
             keyboard.arrowDown = false;
+        } else if (event.code === 'Space') {
+            event.preventDefault();
+            keyboard.space = false;
         }
     });
 

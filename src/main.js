@@ -8,6 +8,7 @@ import { addClouds } from './clouds.js';
 import { createCameraModeToggle, updateCamera } from './camera.js';
 import { createHud } from './hud.js';
 import { createKeyboardState } from './input.js';
+import { createMachineGun } from './machineGun.js';
 import { createMiniMap } from './minimap.js';
 import {
     createPlanePhysics,
@@ -159,6 +160,7 @@ function startApp() {
 
     addClouds(scene);
     const crashEffect = createCrashEffect(scene);
+    const machineGun = createMachineGun(scene);
 
     const keyboard = createKeyboardState();
     const planePhysics = createPlanePhysics();
@@ -196,6 +198,7 @@ function startApp() {
                 resetPlaneState(planeState);
                 crashOverlayElement.hidden = true;
                 crashEffect.hide();
+                machineGun.clear();
                 wasCrashed = false;
             }
         }
@@ -207,6 +210,7 @@ function startApp() {
             delta
         });
         syncPlaneMesh({ airplane, propeller, planeState });
+        machineGun.update({ planeState, keyboard, delta });
         updateCamera({ camera, controls, airplane, cameraMode });
         hud.update({ planeState, cameraMode });
         miniMap.update({ planeState });
