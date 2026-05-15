@@ -24,6 +24,7 @@ body {
 .has-runtime-error #flight-data,
 .has-runtime-error #mini-map,
 .has-runtime-error #warning-banner,
+.has-runtime-error #cockpit-overlay,
 .has-runtime-error #crash-overlay {
     display: none;
 }
@@ -286,6 +287,196 @@ kbd {
     white-space: nowrap;
 }
 
+.cockpit-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.cockpit-overlay[hidden] {
+    display: none;
+}
+
+.cockpit-reticle {
+    position: absolute;
+    top: 44%;
+    left: 50%;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(216, 241, 255, 0.52);
+    border-radius: 50%;
+    translate: -50% -50%;
+}
+
+.cockpit-reticle::before,
+.cockpit-reticle::after {
+    position: absolute;
+    content: '';
+    background: rgba(216, 241, 255, 0.58);
+}
+
+.cockpit-reticle::before {
+    top: 50%;
+    left: -16px;
+    width: 66px;
+    height: 1px;
+}
+
+.cockpit-reticle::after {
+    top: -16px;
+    left: 50%;
+    width: 1px;
+    height: 66px;
+}
+
+.cockpit-instruments {
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    display: grid;
+    grid-template-columns: 74px 74px 92px;
+    gap: 6px;
+    width: min(266px, calc(100vw - 40px));
+    padding: 8px;
+    border: 1px solid rgba(142, 202, 230, 0.22);
+    border-radius: 6px;
+    background: rgba(9, 16, 23, 0.78);
+    color: #f6f8fb;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.22);
+    translate: -50% 0;
+    backdrop-filter: blur(5px);
+}
+
+.cockpit-gauge,
+.attitude-readout {
+    min-width: 0;
+    padding: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.22);
+}
+
+.cockpit-gauge span,
+.attitude-readout span {
+    display: block;
+    margin-bottom: 4px;
+    color: rgba(246, 248, 251, 0.66);
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.attitude-ball {
+    position: relative;
+    width: 54px;
+    aspect-ratio: 1;
+    margin: 0 auto;
+    overflow: hidden;
+    border: 2px solid rgba(216, 241, 255, 0.5);
+    border-radius: 50%;
+    background: #19364a;
+}
+
+.analog-gauge {
+    position: relative;
+    width: 54px;
+    aspect-ratio: 1;
+    margin: 0 auto;
+    border: 2px solid rgba(216, 241, 255, 0.42);
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at center, #0b1a24 0 13%, transparent 14%),
+        conic-gradient(
+            from 225deg,
+            rgba(142, 202, 230, 0.34) 0 10deg,
+            transparent 10deg 34deg,
+            rgba(142, 202, 230, 0.34) 34deg 44deg,
+            transparent 44deg 78deg,
+            rgba(255, 209, 102, 0.48) 78deg 88deg,
+            transparent 88deg 122deg,
+            rgba(255, 103, 67, 0.55) 122deg 135deg,
+            transparent 135deg 360deg
+        ),
+        rgba(9, 22, 32, 0.96);
+}
+
+.analog-gauge::before {
+    position: absolute;
+    inset: 7px;
+    border: 1px solid rgba(216, 241, 255, 0.12);
+    border-radius: 50%;
+    content: '';
+}
+
+.analog-gauge small {
+    position: absolute;
+    right: 0;
+    bottom: 5px;
+    left: 0;
+    color: rgba(246, 248, 251, 0.58);
+    font-size: 9px;
+    text-align: center;
+}
+
+.analog-needle {
+    position: absolute;
+    bottom: 50%;
+    left: 50%;
+    width: 2px;
+    height: 20px;
+    border-radius: 999px;
+    background: #ffd166;
+    transform: rotate(-135deg);
+    transform-origin: 50% 100%;
+}
+
+.analog-hub {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 8px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #d8f1ff;
+    translate: -50% -50%;
+}
+
+.attitude-ball::before,
+.attitude-ball::after {
+    position: absolute;
+    z-index: 2;
+    content: '';
+    background: rgba(216, 241, 255, 0.66);
+}
+
+.attitude-ball::before {
+    top: 50%;
+    left: 10px;
+    right: 10px;
+    height: 2px;
+}
+
+.attitude-ball::after {
+    top: 50%;
+    left: 50%;
+    width: 2px;
+    height: 16px;
+    translate: -50% 0;
+}
+
+.attitude-horizon {
+    position: absolute;
+    inset: -42px;
+    background: linear-gradient(
+        #6ab8ed 0 48%,
+        rgba(255, 255, 255, 0.84) 48% 51%,
+        #865f37 51% 100%
+    );
+    transform-origin: 50% 50%;
+}
+
 .crash-overlay {
     position: fixed;
     inset: 0;
@@ -430,6 +621,19 @@ kbd {
 
     .secondary-instruments {
         gap: 7px 10px;
+    }
+
+    .cockpit-instruments {
+        right: 12px;
+        bottom: 12px;
+        left: auto;
+        grid-template-columns: 1fr 1fr;
+        width: min(252px, calc(100vw - 24px));
+        translate: 0 0;
+    }
+
+    .attitude-readout {
+        grid-column: 1 / -1;
     }
 }
 

@@ -9,6 +9,17 @@ import * as THREE from 'three';
 const CAMERA_MODES = ['chase', 'cockpit', 'orbit'];
 
 /**
+ * @param {THREE.PerspectiveCamera} camera
+ * @param {number} fov
+ */
+function setCameraFov(camera, fov) {
+    if (camera.fov === fov) return;
+
+    camera.fov = fov;
+    camera.updateProjectionMatrix();
+}
+
+/**
  * @returns {CameraMode}
  */
 export function createCameraModeToggle() {
@@ -41,6 +52,8 @@ export function updateCamera({ camera, controls, airplane, cameraMode }) {
     const activeMode = cameraMode.getMode();
 
     if (activeMode === 'chase') {
+        setCameraFov(camera, 75);
+
         const cameraOffset = new THREE.Vector3(-10, 4, 0);
         cameraOffset.applyQuaternion(airplane.quaternion);
 
@@ -51,16 +64,20 @@ export function updateCamera({ camera, controls, airplane, cameraMode }) {
         const lookAtPoint = airplane.position.clone().add(lookAtOffset);
         camera.lookAt(lookAtPoint);
     } else if (activeMode === 'cockpit') {
-        const cameraOffset = new THREE.Vector3(1.9, 0.95, 0);
+        setCameraFov(camera, 68);
+
+        const cameraOffset = new THREE.Vector3(2.14, 1.03, 0);
         cameraOffset.applyQuaternion(airplane.quaternion);
 
         camera.position.copy(airplane.position).add(cameraOffset);
 
-        const lookAtOffset = new THREE.Vector3(12, 0.65, 0);
+        const lookAtOffset = new THREE.Vector3(12, 0.92, 0);
         lookAtOffset.applyQuaternion(airplane.quaternion);
         const lookAtPoint = airplane.position.clone().add(lookAtOffset);
         camera.lookAt(lookAtPoint);
     } else {
+        setCameraFov(camera, 75);
+
         controls.target.copy(airplane.position);
         controls.update();
     }

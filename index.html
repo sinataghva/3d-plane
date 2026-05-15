@@ -91,6 +91,43 @@
             <span id="warning-message" class="warning-message"></span>
         </div>
 
+        <div id="cockpit-overlay" class="cockpit-overlay" hidden>
+            <div class="cockpit-reticle" aria-hidden="true"></div>
+            <div class="cockpit-instruments" aria-label="Cockpit instruments">
+                <div class="cockpit-gauge">
+                    <span>Airspeed</span>
+                    <div class="analog-gauge" aria-hidden="true">
+                        <div
+                            id="cockpit-speed-needle"
+                            class="analog-needle"
+                        ></div>
+                        <div class="analog-hub"></div>
+                        <small>km/h</small>
+                    </div>
+                </div>
+                <div class="cockpit-gauge">
+                    <span>Altitude</span>
+                    <div class="analog-gauge" aria-hidden="true">
+                        <div
+                            id="cockpit-altitude-needle"
+                            class="analog-needle"
+                        ></div>
+                        <div class="analog-hub"></div>
+                        <small>m</small>
+                    </div>
+                </div>
+                <div class="attitude-readout">
+                    <span>Attitude</span>
+                    <div class="attitude-ball" aria-hidden="true">
+                        <div
+                            id="cockpit-horizon"
+                            class="attitude-horizon"
+                        ></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="crash-overlay" class="crash-overlay" aria-live="polite" hidden>
             <div class="crash-card">
                 <div class="crash-burst" aria-hidden="true"></div>

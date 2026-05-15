@@ -100,6 +100,15 @@ export function createAirplane() {
         specular: 0x080808,
         shininess: 12
     });
+    const cockpitPanelMaterial = new THREE.MeshBasicMaterial({
+        color: 0x111820
+    });
+    const cockpitTrimMaterial = new THREE.MeshBasicMaterial({
+        color: 0x040609
+    });
+    const cockpitDialMaterial = new THREE.MeshBasicMaterial({
+        color: 0x8ecae6
+    });
 
     const fuselageGeometry = new THREE.CylinderGeometry(0.5, 0.58, 5.4, 28);
     fuselageGeometry.rotateZ(Math.PI / 2);
@@ -395,6 +404,71 @@ export function createAirplane() {
     propellerHub.position.copy(propeller.position);
     addPart(propellerHub, airplane);
 
+    const cockpitView = new THREE.Group();
+    cockpitView.visible = false;
+
+    const glareShieldGeometry = new THREE.BoxGeometry(0.14, 0.1, 0.86);
+    const glareShield = new THREE.Mesh(
+        glareShieldGeometry,
+        cockpitTrimMaterial
+    );
+    glareShield.position.set(1.68, 0.25, 0);
+    cockpitView.add(glareShield);
+
+    const panelGeometry = new THREE.BoxGeometry(0.08, 0.3, 0.82);
+    const panel = new THREE.Mesh(panelGeometry, cockpitPanelMaterial);
+    panel.position.set(1.76, 0.1, 0);
+    cockpitView.add(panel);
+
+    const dialGeometry = new THREE.CylinderGeometry(0.085, 0.085, 0.018, 18);
+    dialGeometry.rotateZ(Math.PI / 2);
+    const dialPositions = [
+        [1.81, 0.17, 0.25],
+        [1.81, 0.17, 0],
+        [1.81, 0.17, -0.25],
+        [1.81, 0.02, 0.16],
+        [1.81, 0.02, -0.16]
+    ];
+    for (const [x, y, z] of dialPositions) {
+        const dial = new THREE.Mesh(dialGeometry, cockpitDialMaterial);
+        dial.position.set(x, y, z);
+        cockpitView.add(dial);
+    }
+
+    const windshieldPostGeometry = new THREE.BoxGeometry(0.07, 0.68, 0.055);
+    const leftWindshieldPost = new THREE.Mesh(
+        windshieldPostGeometry,
+        cockpitTrimMaterial
+    );
+    leftWindshieldPost.position.set(1.5, 0.74, 0.43);
+    leftWindshieldPost.rotation.z = -0.14;
+    cockpitView.add(leftWindshieldPost);
+
+    const rightWindshieldPost = leftWindshieldPost.clone();
+    rightWindshieldPost.position.z = -0.43;
+    cockpitView.add(rightWindshieldPost);
+
+    const yokeColumn = createStrut(
+        new THREE.Vector3(1.42, 0.08, 0),
+        new THREE.Vector3(1.28, 0.32, 0),
+        0.025,
+        cockpitTrimMaterial
+    );
+    cockpitView.add(yokeColumn);
+
+    const yokeBarGeometry = new THREE.BoxGeometry(0.05, 0.05, 0.52);
+    const yokeBar = new THREE.Mesh(yokeBarGeometry, cockpitTrimMaterial);
+    yokeBar.position.set(1.23, 0.35, 0);
+    cockpitView.add(yokeBar);
+
+    const yokeGripGeometry = new THREE.TorusGeometry(0.17, 0.018, 8, 18);
+    const yokeGrip = new THREE.Mesh(yokeGripGeometry, cockpitTrimMaterial);
+    yokeGrip.position.set(1.2, 0.35, 0);
+    yokeGrip.rotation.y = Math.PI / 2;
+    cockpitView.add(yokeGrip);
+
+    airplane.add(cockpitView);
+
     airplane.userData.controlSurfaces = {
         leftAileron,
         rightAileron,
@@ -404,8 +478,34 @@ export function createAirplane() {
         rightElevator,
         rudder
     };
+    airplane.userData.cockpitView = cockpitView;
 
     return { airplane, propeller };
+}
+
+/**
+ * Shows the simplified cockpit frame only in first-person cockpit mode.
+ *
+ * @param {object} args
+ * @param {THREE.Object3D} args.airplane
+ * @param {THREE.Mesh} args.propeller
+ * @param {boolean} args.isCockpit
+ */
+export function updateAirplaneCockpitVisibility({
+    airplane,
+    propeller,
+    isCockpit
+}) {
+    const cockpitView = airplane.userData.cockpitView;
+    if (cockpitView instanceof THREE.Object3D) {
+        cockpitView.visible = isCockpit;
+    }
+
+    if (propeller.material instanceof THREE.Material) {
+        propeller.material.transparent = isCockpit;
+        propeller.material.opacity = isCockpit ? 0.18 : 1;
+        propeller.material.depthWrite = !isCockpit;
+    }
 }
 
 /**

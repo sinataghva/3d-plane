@@ -2,10 +2,15 @@ import './styles.css';
 
 import * as THREE from 'three';
 
-import { createAirplane, updateAirplaneControlSurfaces } from './airplane.js';
+import {
+    createAirplane,
+    updateAirplaneCockpitVisibility,
+    updateAirplaneControlSurfaces
+} from './airplane.js';
 import { createAirbase } from './airbase.js';
 import { addClouds } from './clouds.js';
 import { createCameraModeToggle, updateCamera } from './camera.js';
+import { createCockpitOverlay } from './cockpitOverlay.js';
 import { createHud } from './hud.js';
 import { createKeyboardState } from './input.js';
 import { createMachineGun } from './machineGun.js';
@@ -166,6 +171,7 @@ function startApp() {
     const planePhysics = createPlanePhysics();
     const cameraMode = createCameraModeToggle();
     const hud = createHud();
+    const cockpitOverlay = createCockpitOverlay();
     const miniMap = createMiniMap();
     const warningBanner = createWarningBanner();
     const timer = new THREE.Timer();
@@ -210,9 +216,15 @@ function startApp() {
             delta
         });
         syncPlaneMesh({ airplane, propeller, planeState });
+        updateAirplaneCockpitVisibility({
+            airplane,
+            propeller,
+            isCockpit: cameraMode.getMode() === 'cockpit'
+        });
         machineGun.update({ planeState, keyboard, delta });
         updateCamera({ camera, controls, airplane, cameraMode });
         hud.update({ planeState, cameraMode });
+        cockpitOverlay.update({ planeState, cameraMode });
         miniMap.update({ planeState });
         warningBanner.update({
             planeState,
