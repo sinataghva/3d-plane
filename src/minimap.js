@@ -5,6 +5,55 @@
 const MAP_SCALE = 0.08;
 const RUNWAY_HALF_WIDTH = 10;
 const RUNWAY_HALF_LENGTH = 150;
+/** @type {Array<{ x: number, z: number, width: number, depth: number, rotation: number, color: string }>} */
+const RADAR_BUILDINGS = [
+    {
+        x: -112,
+        z: -70,
+        width: 34,
+        depth: 28,
+        rotation: Math.PI / 2,
+        color: 'rgba(142, 202, 230, 0.72)'
+    },
+    {
+        x: -112,
+        z: -18,
+        width: 29,
+        depth: 24,
+        rotation: Math.PI / 2,
+        color: 'rgba(142, 202, 230, 0.62)'
+    },
+    {
+        x: -132,
+        z: 35,
+        width: 13,
+        depth: 13,
+        rotation: 0,
+        color: 'rgba(255, 209, 102, 0.78)'
+    }
+];
+
+/** @type {Array<{ x: number, z: number, radius: number, color: string }>} */
+const RADAR_LANDMARKS = [
+    {
+        x: -88,
+        z: 56,
+        radius: 2.8,
+        color: 'rgba(183, 192, 196, 0.82)'
+    },
+    {
+        x: 145,
+        z: -92,
+        radius: 2.4,
+        color: 'rgba(230, 57, 70, 0.8)'
+    },
+    {
+        x: 210,
+        z: 105,
+        radius: 3.4,
+        color: 'rgba(13, 79, 183, 0.82)'
+    }
+];
 
 /**
  * @typedef {object} RadarPoint
@@ -135,6 +184,46 @@ export function createMiniMap() {
     /**
      * @param {PlaneState} planeState
      */
+    function drawAirportObjects(planeState) {
+        for (const object of RADAR_BUILDINGS) {
+            const halfWidth = object.width / 2;
+            const halfDepth = object.depth / 2;
+            const cos = Math.cos(object.rotation);
+            const sin = Math.sin(object.rotation);
+            const localCorners = [
+                [-halfWidth, -halfDepth],
+                [halfWidth, -halfDepth],
+                [halfWidth, halfDepth],
+                [-halfWidth, halfDepth]
+            ];
+            const points = localCorners.map(([x, z]) =>
+                project(
+                    object.x + x * cos - z * sin,
+                    object.z + x * sin + z * cos,
+                    planeState
+                )
+            );
+
+            drawPolygon(radarContext, points);
+            radarContext.fillStyle = object.color;
+            radarContext.fill();
+            radarContext.strokeStyle = 'rgba(246, 248, 251, 0.32)';
+            radarContext.lineWidth = 1;
+            radarContext.stroke();
+        }
+
+        for (const object of RADAR_LANDMARKS) {
+            const point = project(object.x, object.z, planeState);
+            radarContext.beginPath();
+            radarContext.arc(point.x, point.y, object.radius, 0, Math.PI * 2);
+            radarContext.fillStyle = object.color;
+            radarContext.fill();
+        }
+    }
+
+    /**
+     * @param {PlaneState} planeState
+     */
     function drawPlaneMarker(planeState) {
         radarContext.save();
         radarContext.translate(centerX, centerY);
@@ -189,6 +278,7 @@ export function createMiniMap() {
             radarContext.stroke();
 
             drawRunway(planeState);
+            drawAirportObjects(planeState);
             drawPlaneMarker(planeState);
         }
     };

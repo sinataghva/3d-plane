@@ -40,6 +40,24 @@ function createCloud() {
 }
 
 /**
+ * @returns {THREE.Mesh}
+ */
+function createHighCloudStreak() {
+    const geometry = new THREE.PlaneGeometry(140, 3.5);
+    const material = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.42,
+        depthWrite: false,
+        side: THREE.DoubleSide
+    });
+    const streak = new THREE.Mesh(geometry, material);
+    streak.rotation.x = -Math.PI / 2;
+    streak.rotation.z = -0.35 + Math.random() * 0.7;
+    return streak;
+}
+
+/**
  * @param {THREE.Scene} scene
  * @param {number} [cloudCount]
  */
@@ -51,5 +69,15 @@ export function addClouds(scene, cloudCount = 26) {
         const z = (Math.random() * 2 - 1) * 760;
         cloud.position.set(x, y, z);
         scene.add(cloud);
+    }
+
+    for (let i = 0; i < 6; i++) {
+        const streak = createHighCloudStreak();
+        streak.position.set(
+            (Math.random() * 2 - 1) * 950,
+            150 + Math.random() * 70,
+            (Math.random() * 2 - 1) * 950
+        );
+        scene.add(streak);
     }
 }
