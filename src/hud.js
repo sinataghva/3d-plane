@@ -5,6 +5,7 @@
 
 const RADIANS_TO_DEGREES = 180 / Math.PI;
 const INTERNAL_SPEED_TO_KMH = 90;
+const INTERNAL_VERTICAL_SPEED_TO_MS = 60;
 
 /**
  * @param {number} angle
@@ -47,13 +48,98 @@ export function formatAltitudeMeters(altitude) {
     return Math.max(0, Math.round(altitude)).toString();
 }
 
+/**
+ * @param {number} verticalSpeed
+ * @returns {string}
+ */
+export function formatVerticalSpeedMs(verticalSpeed) {
+    const metersPerSecond = Math.round(
+        verticalSpeed * INTERNAL_VERTICAL_SPEED_TO_MS
+    );
+
+    if (metersPerSecond > 0) {
+        return `+${metersPerSecond}`;
+    }
+
+    return metersPerSecond.toString();
+}
+
+/**
+ * @param {PlaneState} planeState
+ * @returns {{ flightLabel: string, energyLabel: string, level: string }}
+ */
+export function getFlightCondition(planeState) {
+    const effectiveStallSpeed = 0.85 - planeState.flapDeployment * 0.16;
+
+    if (planeState.isCrashed) {
+        return {
+            flightLabel: 'Impact',
+            energyLabel: 'Impact',
+            level: 'danger'
+        };
+    }
+
+    if (planeState.isStalling) {
+        return {
+            flightLabel: 'Stall',
+            energyLabel: 'Stall',
+            level: 'danger'
+        };
+    }
+
+    if (!planeState.isAirborne) {
+        return {
+            flightLabel: 'Ground',
+            energyLabel: planeState.thrust > 0.65 ? 'Takeoff roll' : 'Idle',
+            level: 'neutral'
+        };
+    }
+
+    const stallMargin = planeState.speed / effectiveStallSpeed;
+    if (stallMargin < 1.18) {
+        return {
+            flightLabel: 'Airborne',
+            energyLabel: 'Low energy',
+            level: 'caution'
+        };
+    }
+
+    if (planeState.verticalSpeed > 0.08) {
+        return {
+            flightLabel: 'Airborne',
+            energyLabel: 'Climb',
+            level: 'info'
+        };
+    }
+
+    if (planeState.verticalSpeed < -0.08) {
+        return {
+            flightLabel: 'Airborne',
+            energyLabel: 'Descent',
+            level: 'info'
+        };
+    }
+
+    return {
+        flightLabel: 'Airborne',
+        energyLabel: 'Cruise',
+        level: 'info'
+    };
+}
+
 export function createHud() {
     const speedValueElement = document.getElementById('speed-value');
     const altitudeValueElement = document.getElementById('altitude-value');
     const thrustValueElement = document.getElementById('thrust-value');
+    const thrustBarElement = document.getElementById('thrust-bar');
     const headingValueElement = document.getElementById('heading-value');
     const pitchValueElement = document.getElementById('pitch-value');
     const rollValueElement = document.getElementById('roll-value');
+    const verticalSpeedValueElement = document.getElementById(
+        'vertical-speed-value'
+    );
+    const energyStateValueElement =
+        document.getElementById('energy-state-value');
     const flightStateValueElement =
         document.getElementById('flight-state-value');
     const cameraModeValueElement = document.getElementById('camera-mode-value');
@@ -62,9 +148,12 @@ export function createHud() {
         !speedValueElement ||
         !altitudeValueElement ||
         !thrustValueElement ||
+        !thrustBarElement ||
         !headingValueElement ||
         !pitchValueElement ||
         !rollValueElement ||
+        !verticalSpeedValueElement ||
+        !energyStateValueElement ||
         !flightStateValueElement ||
         !cameraModeValueElement
     ) {
@@ -77,14 +166,14 @@ export function createHud() {
          */
         update({ planeState, cameraMode }) {
             const altitude = Math.max(0, planeState.position.y - 0.5);
-            const flightState = planeState.isAirborne ? 'Airborne' : 'Ground';
+            const flightCondition = getFlightCondition(planeState);
             const cameraLabel = formatCameraMode(cameraMode.getMode());
+            const thrustPercent = Math.round(planeState.thrust * 100);
 
             speedValueElement.textContent = formatSpeedKmh(planeState.speed);
             altitudeValueElement.textContent = formatAltitudeMeters(altitude);
-            thrustValueElement.textContent = Math.round(
-                planeState.thrust * 100
-            ).toString();
+            thrustValueElement.textContent = thrustPercent.toString();
+            thrustBarElement.style.width = `${thrustPercent}%`;
             headingValueElement.textContent = formatHeading(
                 planeState.yawAngle
             );
@@ -94,7 +183,13 @@ export function createHud() {
             rollValueElement.textContent = `${toSignedDegrees(
                 planeState.rollAngle
             )}°`;
-            flightStateValueElement.textContent = flightState;
+            verticalSpeedValueElement.textContent = `${formatVerticalSpeedMs(
+                planeState.verticalSpeed
+            )} m/s`;
+            energyStateValueElement.textContent =
+                flightCondition.energyLabel;
+            flightStateValueElement.textContent = flightCondition.flightLabel;
+            flightStateValueElement.dataset.state = flightCondition.level;
             cameraModeValueElement.textContent = cameraLabel;
         }
     };

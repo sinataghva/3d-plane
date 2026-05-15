@@ -46,6 +46,9 @@
                     <span class="instrument-label">Thrust</span>
                     <span class="instrument-value" id="thrust-value">0</span>
                     <span class="instrument-unit">%</span>
+                    <div class="throttle-track" aria-hidden="true">
+                        <div id="thrust-bar" class="throttle-fill"></div>
+                    </div>
                 </div>
             </div>
             <div class="secondary-instruments">
@@ -60,6 +63,14 @@
                 <div>
                     <span class="instrument-label">Roll</span>
                     <span id="roll-value">0</span>
+                </div>
+                <div>
+                    <span class="instrument-label">Vertical</span>
+                    <span id="vertical-speed-value">0 m/s</span>
+                </div>
+                <div>
+                    <span class="instrument-label">Energy</span>
+                    <span id="energy-state-value">Idle</span>
                 </div>
                 <div>
                     <span class="instrument-label">Camera</span>
