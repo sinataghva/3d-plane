@@ -56,7 +56,7 @@ function dampSurface(current, target, delta) {
 }
 
 /**
- * @returns {{ airplane: THREE.Group, propeller: THREE.Mesh }}
+ * @returns {{ airplane: THREE.Group, propeller: THREE.Group }}
  */
 export function createAirplane() {
     const airplane = new THREE.Group();
@@ -390,14 +390,17 @@ export function createAirplane() {
     spinner.position.set(3.78, 0.02, 0);
     addPart(spinner, airplane);
 
-    const propellerGeometry = new THREE.BoxGeometry(0.08, 0.05, 1.65);
-    const propeller = new THREE.Mesh(propellerGeometry, propellerMaterial);
+    const propeller = new THREE.Group();
     propeller.position.set(3.88, 0.02, 0);
-    addPart(propeller, airplane);
+    airplane.add(propeller);
 
-    const crossBladeGeometry = new THREE.BoxGeometry(0.08, 1.25, 0.05);
-    const crossBlade = new THREE.Mesh(crossBladeGeometry, propellerMaterial);
-    addPart(crossBlade, propeller);
+    const bladeGeometry = new THREE.BoxGeometry(0.07, 0.62, 0.035);
+    bladeGeometry.translate(0, 0.38, 0);
+    for (let index = 0; index < 4; index += 1) {
+        const blade = new THREE.Mesh(bladeGeometry, propellerMaterial);
+        blade.rotation.x = (index * Math.PI) / 2;
+        addPart(blade, propeller);
+    }
 
     const propellerHubGeometry = new THREE.SphereGeometry(0.13, 16, 12);
     const propellerHub = new THREE.Mesh(propellerHubGeometry, metalMaterial);
@@ -488,7 +491,7 @@ export function createAirplane() {
  *
  * @param {object} args
  * @param {THREE.Object3D} args.airplane
- * @param {THREE.Mesh} args.propeller
+ * @param {THREE.Object3D} args.propeller
  * @param {boolean} args.isCockpit
  */
 export function updateAirplaneCockpitVisibility({
@@ -501,11 +504,13 @@ export function updateAirplaneCockpitVisibility({
         cockpitView.visible = isCockpit;
     }
 
-    if (propeller.material instanceof THREE.Material) {
-        propeller.material.transparent = isCockpit;
-        propeller.material.opacity = isCockpit ? 0.18 : 1;
-        propeller.material.depthWrite = !isCockpit;
-    }
+    propeller.traverse((part) => {
+        if (part instanceof THREE.Mesh && part.material instanceof THREE.Material) {
+            part.material.transparent = isCockpit;
+            part.material.opacity = isCockpit ? 0.18 : 1;
+            part.material.depthWrite = !isCockpit;
+        }
+    });
 }
 
 /**
