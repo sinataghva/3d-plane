@@ -4,6 +4,7 @@ import * as THREE from 'three';
  * @typedef {object} CameraMode
  * @property {() => boolean} isOrbitMode
  * @property {() => string} getMode
+ * @property {(mode: string) => void} setMode
  */
 
 const CAMERA_MODES = ['chase', 'cockpit', 'orbit'];
@@ -22,8 +23,8 @@ function setCameraFov(camera, fov) {
 /**
  * @returns {CameraMode}
  */
-export function createCameraModeToggle() {
-    let cameraModeIndex = 0;
+export function createCameraModeToggle(initialMode = 'chase') {
+    let cameraModeIndex = Math.max(0, CAMERA_MODES.indexOf(initialMode));
 
     window.addEventListener('keydown', (event) => {
         if (event.key.toLowerCase() === 'c') {
@@ -37,6 +38,14 @@ export function createCameraModeToggle() {
         },
         getMode() {
             return CAMERA_MODES[cameraModeIndex];
+        },
+        setMode(mode) {
+            const nextIndex = CAMERA_MODES.indexOf(mode);
+            if (nextIndex === -1) {
+                throw new Error(`Unknown camera mode: ${mode}`);
+            }
+
+            cameraModeIndex = nextIndex;
         }
     };
 }

@@ -9,17 +9,20 @@
         "start": "vite",
         "build": "vite build",
         "preview": "vite preview",
-        "test": "vitest run",
+        "test": "vitest run src",
         "lint": "eslint .",
         "typecheck": "tsc --noEmit",
         "format": "prettier --write .",
-        "format:check": "prettier --check ."
+        "format:check": "prettier --check .",
+        "test:visual": "playwright test",
+        "test:visual:update": "playwright test --update-snapshots"
     },
     "dependencies": {
         "three": "0.184.0"
     },
     "devDependencies": {
         "@eslint/js": "10.0.1",
+        "@playwright/test": "^1.60.0",
         "@types/three": "0.184.0",
         "eslint": "10.3.0",
         "globals": "17.6.0",

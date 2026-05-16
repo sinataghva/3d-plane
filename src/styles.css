@@ -600,6 +600,13 @@ kbd {
     animation: crash-burst 900ms ease-out both;
 }
 
+.visual-test-mode *,
+.visual-test-mode *::before,
+.visual-test-mode *::after {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+}
+
 @keyframes crash-flash {
     from {
         opacity: 0;

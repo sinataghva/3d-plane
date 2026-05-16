@@ -24,6 +24,11 @@ import {
 } from './physics.js';
 import { isWebGLAvailable, showRuntimeFallback } from './runtimeFallback.js';
 import { createScene } from './scene.js';
+import {
+    applyVisualScenario,
+    getVisualScenario,
+    useSeededRandom
+} from './visualScenarios.js';
 import { createWarningBanner } from './warnings.js';
 
 /**
@@ -152,6 +157,11 @@ function startApp() {
     }
     const crashOverlayElement = crashOverlay;
 
+    const visualScenario = getVisualScenario();
+    if (visualScenario) {
+        document.documentElement.classList.add('visual-test-mode');
+    }
+
     const { scene, camera, renderer, controls } = createScene({ container });
 
     const { airplane, propeller } = createAirplane();
@@ -159,11 +169,15 @@ function startApp() {
     syncPlaneMesh({ airplane, propeller, planeState });
     scene.add(airplane);
 
+    const restoreRandom = visualScenario ? useSeededRandom(12345) : null;
     const airbase = createAirbase();
     airbase.position.y = -0.5;
     scene.add(airbase);
 
     addClouds(scene);
+    if (restoreRandom) {
+        restoreRandom();
+    }
     const crashEffect = createCrashEffect(scene);
     const machineGun = createMachineGun(scene);
 
@@ -178,6 +192,55 @@ function startApp() {
     timer.connect(document);
     let crashElapsed = 0;
     let wasCrashed = false;
+
+    if (visualScenario) {
+        applyVisualScenario({
+            planeState,
+            cameraMode,
+            visualScenario
+        });
+
+        if (visualScenario.cameraPosition) {
+            camera.position.set(
+                visualScenario.cameraPosition.x,
+                visualScenario.cameraPosition.y,
+                visualScenario.cameraPosition.z
+            );
+        }
+
+        if (visualScenario.showCrash) {
+            crashOverlayElement.hidden = false;
+            crashEffect.trigger(airplane.position);
+            crashEffect.update(CRASH_RESTART_DELAY * 0.32);
+        }
+
+        updateAirplaneControlSurfaces({
+            airplane,
+            keyboard,
+            planeState,
+            delta: 1 / 60
+        });
+        syncPlaneMesh({ airplane, propeller, planeState });
+        updateAirplaneCockpitVisibility({
+            airplane,
+            propeller,
+            isCockpit: cameraMode.getMode() === 'cockpit'
+        });
+        updateCamera({ camera, controls, airplane, cameraMode });
+        hud.update({ planeState, cameraMode });
+        cockpitOverlay.update({ planeState, cameraMode });
+        miniMap.update({ planeState });
+        warningBanner.update({
+            planeState,
+            cameraMode,
+            stallSpeed: planePhysics.stallSpeed,
+            delta: 1 / 60
+        });
+
+        renderer.render(scene, camera);
+        document.documentElement.dataset.visualReady = 'true';
+        return;
+    }
 
     /**
      * @param {number} timestamp
