@@ -111,9 +111,7 @@ describe('plane physics', () => {
             update({ planeState, planePhysics, keyboard });
         }
 
-        expect(planeState.speed).toBeGreaterThan(
-            planePhysics.minTakeoffSpeed
-        );
+        expect(planeState.speed).toBeGreaterThan(planePhysics.minTakeoffSpeed);
     });
 
     it('can lift off after accelerating with automatic flaps', () => {
@@ -322,9 +320,9 @@ describe('plane physics', () => {
         update({ planeState: divingState });
 
         expect(divingState.position.y).toBeLessThan(neutralState.position.y);
-        expect(neutralState.position.y - divingState.position.y).toBeGreaterThan(
-            0.05
-        );
+        expect(
+            neutralState.position.y - divingState.position.y
+        ).toBeGreaterThan(0.05);
     });
 
     it('trades speed for altitude when climbing', () => {

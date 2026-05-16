@@ -44,7 +44,9 @@ function getPlaneQuaternion(planeState) {
  * @returns {THREE.Vector3}
  */
 function getForwardVector(planeState) {
-    return LOCAL_FORWARD.clone().applyQuaternion(getPlaneQuaternion(planeState));
+    return LOCAL_FORWARD.clone().applyQuaternion(
+        getPlaneQuaternion(planeState)
+    );
 }
 
 /**
@@ -106,7 +108,9 @@ export function createMachineGun(scene) {
                 mesh,
                 velocity: forwardVector
                     .clone()
-                    .multiplyScalar(MACHINE_GUN_TRACER_SPEED + planeState.speed),
+                    .multiplyScalar(
+                        MACHINE_GUN_TRACER_SPEED + planeState.speed
+                    ),
                 distance: 0
             });
         }

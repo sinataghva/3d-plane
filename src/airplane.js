@@ -505,7 +505,10 @@ export function updateAirplaneCockpitVisibility({
     }
 
     propeller.traverse((part) => {
-        if (part instanceof THREE.Mesh && part.material instanceof THREE.Material) {
+        if (
+            part instanceof THREE.Mesh &&
+            part.material instanceof THREE.Material
+        ) {
             part.material.transparent = isCockpit;
             part.material.opacity = isCockpit ? 0.18 : 1;
             part.material.depthWrite = !isCockpit;

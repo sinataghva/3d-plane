@@ -186,8 +186,7 @@ export function createHud() {
             verticalSpeedValueElement.textContent = `${formatVerticalSpeedMs(
                 planeState.verticalSpeed
             )} m/s`;
-            energyStateValueElement.textContent =
-                flightCondition.energyLabel;
+            energyStateValueElement.textContent = flightCondition.energyLabel;
             flightStateValueElement.textContent = flightCondition.flightLabel;
             flightStateValueElement.dataset.state = flightCondition.level;
             cameraModeValueElement.textContent = cameraLabel;

@@ -7,8 +7,7 @@ test.describe('3D plane visual states', () => {
         test(`${scenario} view matches baseline`, async ({ page }) => {
             await page.goto(`/?visual=${scenario}`);
             await page.waitForFunction(
-                () =>
-                    document.documentElement.dataset.visualReady === 'true'
+                () => document.documentElement.dataset.visualReady === 'true'
             );
 
             await expect(page).toHaveScreenshot(`${scenario}.png`, {

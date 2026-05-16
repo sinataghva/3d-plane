@@ -36,7 +36,10 @@ function withDepthBias(material, factor, units) {
  * @returns {THREE.Mesh}
  */
 function createGroundPatch(width, depth, material, x, z, y = 0.006) {
-    const patch = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), material);
+    const patch = new THREE.Mesh(
+        new THREE.PlaneGeometry(width, depth),
+        material
+    );
     patch.rotation.x = -Math.PI / 2;
     patch.position.set(x, y, z);
     patch.receiveShadow = true;
@@ -302,7 +305,14 @@ export function createAirbase() {
         airbaseGroup.add(patch);
     }
 
-    const serviceRoad = createGroundPatch(9, 650, dirtMaterial, -70, -20, 0.012);
+    const serviceRoad = createGroundPatch(
+        9,
+        650,
+        dirtMaterial,
+        -70,
+        -20,
+        0.012
+    );
     serviceRoad.rotation.z = 0.14;
     airbaseGroup.add(serviceRoad);
 
@@ -322,14 +332,7 @@ export function createAirbase() {
     runway.receiveShadow = true;
     airbaseGroup.add(runway);
 
-    const apron = createGroundPatch(
-        105,
-        74,
-        concreteMaterial,
-        -86,
-        -48,
-        0.018
-    );
+    const apron = createGroundPatch(105, 74, concreteMaterial, -86, -48, 0.018);
     airbaseGroup.add(apron);
 
     const taxiway = createGroundPatch(36, 92, runwayMaterial, -42, -48, 0.019);
@@ -398,7 +401,10 @@ export function createAirbase() {
     });
     for (let z = -138; z <= 138; z += 18) {
         for (const x of [-11.2, 11.2]) {
-            const light = new THREE.Mesh(runwayLightGeometry, runwayLightMaterial);
+            const light = new THREE.Mesh(
+                runwayLightGeometry,
+                runwayLightMaterial
+            );
             light.position.set(x, 0.16, z);
             airbaseGroup.add(light);
         }
@@ -442,7 +448,11 @@ export function createAirbase() {
     hangarB.scale.set(0.86, 0.9, 0.86);
     airbaseGroup.add(hangarB);
 
-    const tower = createControlTower(buildingMaterial, glassMaterial, roofMaterial);
+    const tower = createControlTower(
+        buildingMaterial,
+        glassMaterial,
+        roofMaterial
+    );
     tower.position.set(-132, 0, 35);
     airbaseGroup.add(tower);
 
