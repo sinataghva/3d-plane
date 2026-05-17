@@ -24,7 +24,7 @@
 
             <h2>Camera</h2>
             <p>Press <kbd>C</kbd> to cycle chase, cockpit, and orbit views</p>
-            <p>On mobile landscape, use on-screen touch controls.</p>
+            <p>On mobile landscape, use the stick and touch controls.</p>
         </div>
 
         <div id="flight-data" class="hud-panel">
@@ -182,14 +182,6 @@
                 >
                     Throttle -
                 </button>
-                <button class="touch-btn" data-key="a" aria-label="Yaw left">
-                    Yaw ◀
-                </button>
-                <button class="touch-btn" data-key="d" aria-label="Yaw right">
-                    Yaw ▶
-                </button>
-            </div>
-            <div class="touch-cluster touch-center">
                 <button
                     class="touch-btn touch-fire"
                     data-key="space"
@@ -198,35 +190,27 @@
                     Fire
                 </button>
             </div>
-            <div class="touch-cluster touch-right">
-                <button
-                    class="touch-btn"
-                    data-key="arrowUp"
-                    aria-label="Pitch down"
-                >
-                    Pitch ▼
-                </button>
-                <button
-                    class="touch-btn"
-                    data-key="arrowDown"
-                    aria-label="Pitch up"
-                >
-                    Pitch ▲
-                </button>
-                <button
-                    class="touch-btn"
-                    data-key="arrowLeft"
-                    aria-label="Bank left"
-                >
-                    Bank ◀
-                </button>
-                <button
-                    class="touch-btn"
-                    data-key="arrowRight"
-                    aria-label="Bank right"
-                >
-                    Bank ▶
-                </button>
+
+            <div class="touch-flight-stick" aria-label="Pitch and bank stick">
+                <div class="stick-base" data-stick>
+                    <div class="stick-knob" aria-hidden="true"></div>
+                </div>
+                <div class="touch-pedals" aria-label="Yaw pedals">
+                    <button
+                        class="touch-btn"
+                        data-key="a"
+                        aria-label="Yaw left"
+                    >
+                        Yaw ◀
+                    </button>
+                    <button
+                        class="touch-btn"
+                        data-key="d"
+                        aria-label="Yaw right"
+                    >
+                        Yaw ▶
+                    </button>
+                </div>
             </div>
         </div>
         <div id="runtime-fallback" role="alert" hidden>

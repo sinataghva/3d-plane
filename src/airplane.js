@@ -539,10 +539,20 @@ export function updateAirplaneControlSurfaces({
     const rudderDeflection = 0.36;
     const flapDeflection = -0.42;
 
-    const rollInput =
-        (keyboard.arrowRight ? 1 : 0) - (keyboard.arrowLeft ? 1 : 0);
-    const pitchInput =
-        (keyboard.arrowDown ? 1 : 0) - (keyboard.arrowUp ? 1 : 0);
+    const rollInput = THREE.MathUtils.clamp(
+        (keyboard.arrowRight ? 1 : 0) -
+            (keyboard.arrowLeft ? 1 : 0) +
+            (keyboard.stickRoll || 0),
+        -1,
+        1
+    );
+    const pitchInput = THREE.MathUtils.clamp(
+        (keyboard.arrowDown ? 1 : 0) -
+            (keyboard.arrowUp ? 1 : 0) +
+            (keyboard.stickPitch || 0),
+        -1,
+        1
+    );
     const rudderInput = (keyboard.a ? 1 : 0) - (keyboard.d ? 1 : 0);
 
     surfaces.leftAileron.rotation.z = dampSurface(

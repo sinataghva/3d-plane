@@ -20,6 +20,8 @@ function createKeyboard(overrides = {}) {
         arrowUp: false,
         arrowDown: false,
         space: false,
+        stickRoll: 0,
+        stickPitch: 0,
         ...overrides
     };
 }
@@ -423,6 +425,56 @@ describe('plane physics', () => {
         }
 
         expect(planeState.pitchAngle).toBeGreaterThan(0.5);
+    });
+
+    it('uses partial analog stick pitch input instead of full keyboard pitch', () => {
+        const keyboardState = createPlaneState();
+        keyboardState.isAirborne = true;
+        keyboardState.speed = createPlanePhysics().maxSpeed;
+        keyboardState.thrust = 1;
+
+        const stickState = createPlaneState();
+        stickState.isAirborne = true;
+        stickState.speed = createPlanePhysics().maxSpeed;
+        stickState.thrust = 1;
+
+        update({
+            planeState: keyboardState,
+            keyboard: createKeyboard({ arrowDown: true })
+        });
+        update({
+            planeState: stickState,
+            keyboard: createKeyboard({ stickPitch: 0.34 })
+        });
+
+        expect(stickState.pitchAngle).toBeGreaterThan(0);
+        expect(stickState.pitchAngle).toBeLessThan(
+            keyboardState.pitchAngle * 0.5
+        );
+    });
+
+    it('uses partial analog stick roll input instead of full keyboard roll', () => {
+        const keyboardState = createPlaneState();
+        keyboardState.isAirborne = true;
+        keyboardState.speed = createPlanePhysics().maxSpeed;
+
+        const stickState = createPlaneState();
+        stickState.isAirborne = true;
+        stickState.speed = createPlanePhysics().maxSpeed;
+
+        update({
+            planeState: keyboardState,
+            keyboard: createKeyboard({ arrowRight: true })
+        });
+        update({
+            planeState: stickState,
+            keyboard: createKeyboard({ stickRoll: 0.46 })
+        });
+
+        expect(stickState.rollAngle).toBeGreaterThan(0);
+        expect(stickState.rollAngle).toBeLessThan(
+            keyboardState.rollAngle * 0.6
+        );
     });
 
     it('scales updates by elapsed time', () => {

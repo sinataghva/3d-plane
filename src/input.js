@@ -9,6 +9,8 @@
  * @property {boolean} arrowUp
  * @property {boolean} arrowDown
  * @property {boolean} space
+ * @property {number} stickRoll
+ * @property {number} stickPitch
  */
 
 const KEY_BINDINGS = {
@@ -21,6 +23,106 @@ const KEY_BINDINGS = {
     arrowup: 'arrowUp',
     arrowdown: 'arrowDown'
 };
+
+const STICK_DEADZONE = 0.18;
+const STICK_ROLL_AUTHORITY = 0.46;
+const STICK_PITCH_AUTHORITY = 0.34;
+
+export function applyStickCurve(value, authority) {
+    const magnitude = Math.abs(value);
+    if (magnitude <= STICK_DEADZONE) {
+        return 0;
+    }
+
+    const curved = (magnitude - STICK_DEADZONE) / (1 - STICK_DEADZONE);
+    return Math.sign(value) * curved * curved * authority;
+}
+
+/**
+ * @param {KeyboardState} keyboard
+ */
+function resetStickInput(keyboard) {
+    keyboard.stickRoll = 0;
+    keyboard.stickPitch = 0;
+}
+
+/**
+ * @param {KeyboardState} keyboard
+ */
+function createVirtualStick(keyboard) {
+    const stick = document.querySelector('[data-stick]');
+    if (!(stick instanceof HTMLElement)) {
+        return;
+    }
+
+    const knob = stick.querySelector('.stick-knob');
+    let activePointerId = null;
+
+    const setStickInput = (event) => {
+        const rect = stick.getBoundingClientRect();
+        const radius = rect.width / 2;
+        const maxTravel = radius * 0.62;
+        const centerX = rect.left + radius;
+        const centerY = rect.top + radius;
+        const rawX = event.clientX - centerX;
+        const rawY = event.clientY - centerY;
+        const distance = Math.hypot(rawX, rawY);
+        const scale = distance > maxTravel ? maxTravel / distance : 1;
+        const x = rawX * scale;
+        const y = rawY * scale;
+        const normalizedX = x / maxTravel;
+        const normalizedY = y / maxTravel;
+
+        keyboard.stickRoll = applyStickCurve(normalizedX, STICK_ROLL_AUTHORITY);
+        keyboard.stickPitch = applyStickCurve(
+            normalizedY,
+            STICK_PITCH_AUTHORITY
+        );
+        stick.dataset.active = 'true';
+        stick.dataset.x = normalizedX.toFixed(2);
+        stick.dataset.y = normalizedY.toFixed(2);
+
+        if (knob instanceof HTMLElement) {
+            knob.style.translate = `${Math.round(x)}px ${Math.round(y)}px`;
+        }
+    };
+
+    const releaseStick = (event) => {
+        if (event.pointerId !== activePointerId) {
+            return;
+        }
+
+        activePointerId = null;
+        resetStickInput(keyboard);
+        stick.dataset.active = 'false';
+        stick.dataset.x = '0';
+        stick.dataset.y = '0';
+
+        if (knob instanceof HTMLElement) {
+            knob.style.translate = '0 0';
+        }
+    };
+
+    stick.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        activePointerId = event.pointerId;
+        stick.setPointerCapture(event.pointerId);
+        setStickInput(event);
+    });
+
+    stick.addEventListener('pointermove', (event) => {
+        if (event.pointerId !== activePointerId) {
+            return;
+        }
+
+        event.preventDefault();
+        setStickInput(event);
+    });
+
+    stick.addEventListener('pointerup', releaseStick);
+    stick.addEventListener('pointercancel', releaseStick);
+    stick.addEventListener('lostpointercapture', releaseStick);
+}
 
 /**
  * @param {KeyboardState} keyboard
@@ -85,7 +187,9 @@ export function createKeyboardState() {
         arrowRight: false,
         arrowUp: false,
         arrowDown: false,
-        space: false
+        space: false,
+        stickRoll: 0,
+        stickPitch: 0
     };
 
     window.addEventListener('keydown', (event) => {
@@ -113,6 +217,7 @@ export function createKeyboardState() {
     });
 
     createVirtualControls(keyboard);
+    createVirtualStick(keyboard);
 
     return keyboard;
 }
