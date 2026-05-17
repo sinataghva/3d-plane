@@ -25,7 +25,8 @@ body {
 .has-runtime-error #mini-map,
 .has-runtime-error #warning-banner,
 .has-runtime-error #cockpit-overlay,
-.has-runtime-error #crash-overlay {
+.has-runtime-error #crash-overlay,
+.has-runtime-error #orientation-warning {
     display: none;
 }
 
@@ -41,6 +42,65 @@ body {
 
 #runtime-fallback[hidden] {
     display: none;
+}
+
+#orientation-warning {
+    position: fixed;
+    inset: 0;
+    z-index: 6;
+    display: none;
+    place-items: center;
+    padding: 24px;
+    background: linear-gradient(
+        180deg,
+        rgba(139, 200, 240, 0.92),
+        rgba(246, 248, 251, 0.92)
+    );
+}
+
+.orientation-card {
+    display: grid;
+    justify-items: center;
+    width: min(320px, 100%);
+    padding: 22px;
+    border: 1px solid rgba(16, 24, 32, 0.16);
+    border-radius: 8px;
+    background: rgba(246, 248, 251, 0.9);
+    color: #20252c;
+    text-align: center;
+    box-shadow: 0 14px 42px rgba(16, 24, 32, 0.18);
+}
+
+.orientation-card h2 {
+    margin: 14px 0 8px;
+    font-size: 24px;
+}
+
+.orientation-card p {
+    max-width: 24ch;
+    color: rgba(32, 37, 44, 0.72);
+    font-size: 15px;
+}
+
+.orientation-phone {
+    position: relative;
+    width: 44px;
+    height: 72px;
+    border: 4px solid #18384c;
+    border-radius: 10px;
+    rotate: 90deg;
+}
+
+.orientation-phone::after {
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #18384c;
+    content: '';
+    translate: -50% 0;
 }
 
 .runtime-fallback-panel {
@@ -691,5 +751,150 @@ kbd {
 
     .secondary-instruments {
         grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+    #instructions-panel,
+    #flight-data,
+    #mini-map,
+    #warning-banner,
+    #cockpit-overlay,
+    #crash-overlay,
+    #touch-controls {
+        display: none;
+    }
+
+    #orientation-warning {
+        display: grid;
+    }
+}
+
+#touch-controls {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 5;
+    display: none;
+    justify-content: space-between;
+    align-items: end;
+    gap: 10px;
+    padding: 10px;
+    pointer-events: none;
+}
+
+.touch-cluster {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(58px, 1fr));
+    gap: 8px;
+    pointer-events: auto;
+}
+
+.touch-center {
+    grid-template-columns: 1fr;
+    align-self: center;
+}
+
+.touch-btn {
+    min-height: 44px;
+    border: 1px solid rgba(220, 235, 247, 0.45);
+    border-radius: 8px;
+    background: rgba(9, 20, 30, 0.74);
+    color: #d8f1ff;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    touch-action: none;
+    user-select: none;
+}
+
+.touch-btn[data-active='true'] {
+    border-color: rgba(255, 209, 102, 0.82);
+    background: rgba(146, 105, 19, 0.78);
+    color: #fff2bf;
+}
+
+.touch-fire {
+    min-width: 76px;
+    min-height: 52px;
+    border-color: rgba(255, 103, 67, 0.75);
+    background: rgba(112, 24, 16, 0.74);
+    color: #ffe0d8;
+}
+
+@media (orientation: landscape) and (pointer: coarse),
+    (orientation: landscape) and (max-width: 900px) and (max-height: 500px) {
+    #touch-controls {
+        display: flex;
+        padding: 8px;
+    }
+
+    #instructions-panel {
+        display: none;
+    }
+
+    #flight-data {
+        top: 10px;
+        left: 10px;
+        bottom: auto;
+        width: min(280px, 38vw);
+        padding: 10px;
+    }
+
+    #flight-data .instrument-header {
+        margin-bottom: 8px;
+    }
+
+    #flight-data .primary-instruments {
+        gap: 6px;
+    }
+
+    #flight-data .instrument-readout {
+        padding: 7px;
+    }
+
+    #flight-data .instrument-value {
+        font-size: 20px;
+    }
+
+    #flight-data .instrument-unit {
+        font-size: 11px;
+    }
+
+    #flight-data .secondary-instruments {
+        display: none;
+    }
+
+    #mini-map {
+        top: 10px;
+        right: 10px;
+        bottom: auto;
+        width: 150px;
+        padding: 8px;
+    }
+
+    #mini-map h2 {
+        font-size: 18px;
+    }
+
+    #mini-map .status-pill {
+        min-height: 20px;
+        font-size: 10px;
+    }
+
+    #mini-map-canvas {
+        width: 112px;
+        height: 112px;
+    }
+
+    .touch-cluster {
+        grid-template-columns: repeat(2, minmax(52px, 1fr));
+        gap: 7px;
+    }
+
+    .touch-btn {
+        min-height: 42px;
+        font-size: 11px;
     }
 }

@@ -24,6 +24,7 @@
 
             <h2>Camera</h2>
             <p>Press <kbd>C</kbd> to cycle chase, cockpit, and orbit views</p>
+            <p>On mobile landscape, use on-screen touch controls.</p>
         </div>
 
         <div id="flight-data" class="hud-panel">
@@ -149,6 +150,85 @@
         </div>
 
         <div id="canvas-container"></div>
+
+        <div
+            id="orientation-warning"
+            aria-live="polite"
+            aria-label="Rotate device"
+        >
+            <div class="orientation-card">
+                <div class="orientation-phone" aria-hidden="true"></div>
+                <h2>Rotate your phone</h2>
+                <p>
+                    3D Plane Model needs landscape mode for flight controls and
+                    radar.
+                </p>
+            </div>
+        </div>
+
+        <div id="touch-controls" aria-label="Touch flight controls">
+            <div class="touch-cluster touch-left">
+                <button
+                    class="touch-btn"
+                    data-key="w"
+                    aria-label="Increase thrust"
+                >
+                    Throttle +
+                </button>
+                <button
+                    class="touch-btn"
+                    data-key="s"
+                    aria-label="Decrease thrust"
+                >
+                    Throttle -
+                </button>
+                <button class="touch-btn" data-key="a" aria-label="Yaw left">
+                    Yaw ◀
+                </button>
+                <button class="touch-btn" data-key="d" aria-label="Yaw right">
+                    Yaw ▶
+                </button>
+            </div>
+            <div class="touch-cluster touch-center">
+                <button
+                    class="touch-btn touch-fire"
+                    data-key="space"
+                    aria-label="Fire tracers"
+                >
+                    Fire
+                </button>
+            </div>
+            <div class="touch-cluster touch-right">
+                <button
+                    class="touch-btn"
+                    data-key="arrowUp"
+                    aria-label="Pitch down"
+                >
+                    Pitch ▼
+                </button>
+                <button
+                    class="touch-btn"
+                    data-key="arrowDown"
+                    aria-label="Pitch up"
+                >
+                    Pitch ▲
+                </button>
+                <button
+                    class="touch-btn"
+                    data-key="arrowLeft"
+                    aria-label="Bank left"
+                >
+                    Bank ◀
+                </button>
+                <button
+                    class="touch-btn"
+                    data-key="arrowRight"
+                    aria-label="Bank right"
+                >
+                    Bank ▶
+                </button>
+            </div>
+        </div>
         <div id="runtime-fallback" role="alert" hidden>
             <div class="runtime-fallback-panel">
                 <h1>3D Plane Model</h1>
