@@ -124,6 +124,16 @@ export function createMiniMap() {
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
 
+    const gradient = radarContext.createRadialGradient(
+        centerX,
+        centerY,
+        8,
+        centerX,
+        centerY,
+        centerX
+    );
+    gradient.addColorStop(0, 'rgba(31, 55, 68, 0.95)');
+    gradient.addColorStop(1, 'rgba(10, 18, 26, 0.95)');
     /**
      * @param {number} worldX
      * @param {number} worldZ
@@ -248,16 +258,6 @@ export function createMiniMap() {
         update({ planeState }) {
             radarContext.clearRect(0, 0, canvas.width, canvas.height);
 
-            const gradient = radarContext.createRadialGradient(
-                centerX,
-                centerY,
-                8,
-                centerX,
-                centerY,
-                centerX
-            );
-            gradient.addColorStop(0, 'rgba(31, 55, 68, 0.95)');
-            gradient.addColorStop(1, 'rgba(10, 18, 26, 0.95)');
             radarContext.fillStyle = gradient;
             radarContext.fillRect(0, 0, canvas.width, canvas.height);
 

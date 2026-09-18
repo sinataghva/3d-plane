@@ -1,11 +1,16 @@
+import {
+    GROUND_LEVEL,
+    INTERNAL_SPEED_TO_KMH,
+    INTERNAL_VERTICAL_SPEED_TO_MS,
+    getVerticalSpeed,
+    getEffectiveStallSpeed
+} from './flightMetrics.js';
 /**
  * @typedef {import('./physics.js').PlaneState} PlaneState
  * @typedef {import('./camera.js').CameraMode} CameraMode
  */
 
 const RADIANS_TO_DEGREES = 180 / Math.PI;
-const INTERNAL_SPEED_TO_KMH = 90;
-const INTERNAL_VERTICAL_SPEED_TO_MS = 60;
 
 /**
  * @param {number} angle
@@ -19,9 +24,10 @@ function toSignedDegrees(angle) {
  * @param {number} yawAngle
  * @returns {string}
  */
-function formatHeading(yawAngle) {
-    const heading = (90 - yawAngle * RADIANS_TO_DEGREES + 360) % 360;
-    return Math.round(heading).toString().padStart(3, '0');
+export function formatHeading(yawAngle) {
+    const heading =
+        ((Math.round(90 - yawAngle * RADIANS_TO_DEGREES) % 360) + 360) % 360;
+    return heading.toString().padStart(3, '0');
 }
 
 /**
@@ -69,7 +75,7 @@ export function formatVerticalSpeedMs(verticalSpeed) {
  * @returns {{ flightLabel: string, energyLabel: string, level: string }}
  */
 export function getFlightCondition(planeState) {
-    const effectiveStallSpeed = 0.85 - planeState.flapDeployment * 0.16;
+    const effectiveStallSpeed = getEffectiveStallSpeed(planeState);
 
     if (planeState.isCrashed) {
         return {
@@ -104,7 +110,7 @@ export function getFlightCondition(planeState) {
         };
     }
 
-    if (planeState.verticalSpeed > 0.08) {
+    if (getVerticalSpeed(planeState) > 0.08) {
         return {
             flightLabel: 'Airborne',
             energyLabel: 'Climb',
@@ -112,7 +118,7 @@ export function getFlightCondition(planeState) {
         };
     }
 
-    if (planeState.verticalSpeed < -0.08) {
+    if (getVerticalSpeed(planeState) < -0.08) {
         return {
             flightLabel: 'Airborne',
             energyLabel: 'Descent',
@@ -125,6 +131,11 @@ export function getFlightCondition(planeState) {
         energyLabel: 'Cruise',
         level: 'info'
     };
+}
+
+/** @param {HTMLElement} element @param {string} value */
+function setText(element, value) {
+    if (element.textContent !== value) element.textContent = value;
 }
 
 export function createHud() {
@@ -165,31 +176,35 @@ export function createHud() {
          * @param {{ planeState: PlaneState, cameraMode: CameraMode }} args
          */
         update({ planeState, cameraMode }) {
-            const altitude = Math.max(0, planeState.position.y - 0.5);
+            const altitude = Math.max(0, planeState.position.y - GROUND_LEVEL);
             const flightCondition = getFlightCondition(planeState);
             const cameraLabel = formatCameraMode(cameraMode.getMode());
             const thrustPercent = Math.round(planeState.thrust * 100);
 
-            speedValueElement.textContent = formatSpeedKmh(planeState.speed);
-            altitudeValueElement.textContent = formatAltitudeMeters(altitude);
-            thrustValueElement.textContent = thrustPercent.toString();
-            thrustBarElement.style.width = `${thrustPercent}%`;
-            headingValueElement.textContent = formatHeading(
-                planeState.yawAngle
+            setText(speedValueElement, formatSpeedKmh(planeState.speed));
+            setText(altitudeValueElement, formatAltitudeMeters(altitude));
+            setText(thrustValueElement, thrustPercent.toString());
+            const width = `${thrustPercent}%`;
+            if (thrustBarElement.style.width !== width)
+                thrustBarElement.style.width = width;
+            setText(headingValueElement, formatHeading(planeState.yawAngle));
+            setText(
+                pitchValueElement,
+                `${toSignedDegrees(planeState.pitchAngle)}°`
             );
-            pitchValueElement.textContent = `${toSignedDegrees(
-                planeState.pitchAngle
-            )}°`;
-            rollValueElement.textContent = `${toSignedDegrees(
-                planeState.rollAngle
-            )}°`;
-            verticalSpeedValueElement.textContent = `${formatVerticalSpeedMs(
-                planeState.verticalSpeed
-            )} m/s`;
-            energyStateValueElement.textContent = flightCondition.energyLabel;
-            flightStateValueElement.textContent = flightCondition.flightLabel;
-            flightStateValueElement.dataset.state = flightCondition.level;
-            cameraModeValueElement.textContent = cameraLabel;
+            setText(
+                rollValueElement,
+                `${toSignedDegrees(planeState.rollAngle)}°`
+            );
+            setText(
+                verticalSpeedValueElement,
+                `${formatVerticalSpeedMs(getVerticalSpeed(planeState))} m/s`
+            );
+            setText(energyStateValueElement, flightCondition.energyLabel);
+            setText(flightStateValueElement, flightCondition.flightLabel);
+            if (flightStateValueElement.dataset.state !== flightCondition.level)
+                flightStateValueElement.dataset.state = flightCondition.level;
+            setText(cameraModeValueElement, cameraLabel);
         }
     };
 }

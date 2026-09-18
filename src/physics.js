@@ -1,4 +1,11 @@
 import * as THREE from 'three';
+import {
+    GROUND_LEVEL,
+    STALL_SPEED,
+    FLAP_STALL_REDUCTION,
+    PITCH_PATH_FACTOR,
+    getEffectiveStallSpeed
+} from './flightMetrics.js';
 
 /**
  * @typedef {import('./input.js').KeyboardState} KeyboardState
@@ -95,7 +102,7 @@ import * as THREE from 'three';
  */
 export function createPlaneState() {
     return {
-        position: { x: 0, y: 0.5, z: -120 },
+        position: { x: 0, y: GROUND_LEVEL, z: -120 },
         speed: 0,
         thrust: 0,
         yawAngle: -Math.PI / 2,
@@ -174,16 +181,16 @@ export function createPlanePhysics() {
         flapApproachAltitude: 35,
         flapApproachSpeed: 1.35,
         flapChangeRate: 0.035,
-        flapStallReduction: 0.18,
+        flapStallReduction: FLAP_STALL_REDUCTION,
         verticalDamping: 0.965,
         maxClimbRate: 0.24,
         maxSinkRate: 0.26,
-        pitchPathFactor: 0.22,
+        pitchPathFactor: PITCH_PATH_FACTOR,
         gravitySpeedFactor: 0.095,
         gravity: 0.018,
         minTakeoffSpeed: 1.5,
         takeoffThreshold: 0.1,
-        stallSpeed: 0.85,
+        stallSpeed: STALL_SPEED,
         stallPitchAngle: 0.44,
         controlAuthoritySpeed: 1.1,
         rotationSpeed: 0.02,
@@ -212,7 +219,7 @@ export function updatePlanePhysics({
     }
 
     const frameScale = Math.min(delta * 60, 3);
-    const groundLevel = 0.5;
+    const groundLevel = GROUND_LEVEL;
     const altitude = Math.max(0, planeState.position.y - groundLevel);
     const airspeedAuthority = THREE.MathUtils.clamp(
         planeState.speed / planePhysics.controlAuthoritySpeed,
@@ -288,7 +295,13 @@ export function updatePlanePhysics({
         -1,
         1
     );
-    const rudderInput = (keyboard.a ? 1 : 0) - (keyboard.d ? 1 : 0);
+    const rudderInput = THREE.MathUtils.clamp(
+        (keyboard.a ? 1 : 0) -
+            (keyboard.d ? 1 : 0) -
+            (keyboard.stickRudder || 0),
+        -1,
+        1
+    );
 
     const rollAuthority = planeState.isAirborne ? airspeedAuthority : 0;
     if (rollInput) {
@@ -381,9 +394,11 @@ export function updatePlanePhysics({
     );
     planeState.lift =
         liftSpeedFactor * planePhysics.liftFactor * pitchLiftFactor;
-    const effectiveStallSpeed =
-        planePhysics.stallSpeed -
-        planeState.flapDeployment * planePhysics.flapStallReduction;
+    const effectiveStallSpeed = getEffectiveStallSpeed(
+        planeState,
+        planePhysics.stallSpeed,
+        planePhysics.flapStallReduction
+    );
     planeState.isStalling =
         altitude > 0 &&
         (planeState.speed < effectiveStallSpeed ||

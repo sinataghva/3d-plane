@@ -6,9 +6,10 @@
         <title>3D Plane Model</title>
     </head>
     <body>
-        <div id="instructions-panel" class="hud-panel">
-            <h1>3D Plane Model</h1>
-            <p>Third-person view of a plane on a runway</p>
+        <details id="instructions-panel" class="hud-panel">
+            <summary>Flight guide &amp; controls</summary>
+            <h1>Open Skies</h1>
+            <p>Take off, explore, and return whenever you like.</p>
             <h2>Controls</h2>
             <ul>
                 <li><kbd>W</kbd> / <kbd>S</kbd>: Thrust up/down</li>
@@ -17,6 +18,7 @@
                 <li><kbd>↓</kbd>: Pitch up</li>
                 <li><kbd>↑</kbd>: Pitch down</li>
                 <li><kbd>Space</kbd>: Fire tracers</li>
+                <li>Hold <kbd>M</kbd>: Full map</li>
             </ul>
 
             <h2>Takeoff</h2>
@@ -25,7 +27,7 @@
             <h2>Camera</h2>
             <p>Press <kbd>C</kbd> to cycle chase, cockpit, and orbit views</p>
             <p>On mobile landscape, use the stick and touch controls.</p>
-        </div>
+        </details>
 
         <div id="flight-data" class="hud-panel">
             <div class="instrument-header">
@@ -80,7 +82,14 @@
             </div>
         </div>
 
-        <div id="mini-map" class="hud-panel">
+        <div
+            id="mini-map"
+            class="hud-panel"
+            role="button"
+            tabindex="0"
+            aria-label="Open full map"
+            aria-haspopup="dialog"
+        >
             <div class="instrument-header mini-map-header">
                 <h2>Radar</h2>
                 <span class="status-pill">Heading up</span>
@@ -92,6 +101,28 @@
                 aria-label="Plane-centered radar map"
             ></canvas>
         </div>
+
+        <dialog id="world-map" aria-labelledby="world-map-title">
+            <header class="world-map-header">
+                <div>
+                    <h2 id="world-map-title">Flight map</h2>
+                    <p>North up · whole world · live position</p>
+                </div>
+                <button id="close-world-map" aria-label="Close full map">
+                    ×
+                </button>
+            </header>
+            <canvas
+                id="world-map-canvas"
+                aria-label="Whole world map with your aircraft position and heading"
+            ></canvas>
+            <footer>
+                <span id="world-map-position"></span
+                ><span
+                    >Hold M to view · release to close · tap × on mobile</span
+                >
+            </footer>
+        </dialog>
 
         <div
             id="warning-banner"
@@ -145,10 +176,44 @@
                 <div class="crash-burst" aria-hidden="true"></div>
                 <span class="crash-label">Impact</span>
                 <h2>Crash Landing</h2>
-                <p>Restarting from the runway</p>
+                <p id="crash-reason">
+                    Reduce descent rate and level your wings before touchdown.
+                </p>
+                <button id="crash-retry">Return to runway</button>
             </div>
         </div>
 
+        <div class="flight-toolbar" aria-label="Flight options">
+            <button id="camera-button">Camera: Chase</button>
+            <button id="pause-button" aria-pressed="false">Pause</button>
+            <button id="restart-button">Restart</button>
+            <label for="guide-mode">Guide</label>
+            <select id="guide-mode">
+                <option value="free">Free flight</option>
+                <option value="takeoff">Takeoff tips</option>
+                <option value="circuit">Circuit challenge</option>
+                <option value="landing">Landing help</option>
+            </select>
+        </div>
+        <div id="guide-card" class="experience-card" hidden>
+            <p id="guide-message"></p>
+            <button id="dismiss-guide" aria-label="Dismiss guide">×</button>
+        </div>
+        <div
+            id="flight-feedback"
+            class="experience-card"
+            role="status"
+            hidden
+        ></div>
+        <div id="pause-overlay" hidden>Paused · press Resume to continue</div>
+        <div class="graphics-settings">
+            <label for="graphics-quality">Graphics</label>
+            <select id="graphics-quality">
+                <option value="low">Low</option>
+                <option value="balanced">Balanced</option>
+                <option value="high" selected>High</option>
+            </select>
+        </div>
         <div id="canvas-container"></div>
 
         <div
@@ -168,6 +233,17 @@
 
         <div id="touch-controls" aria-label="Touch flight controls">
             <div class="touch-cluster touch-left">
+                <label class="touch-throttle"
+                    >Thrust <output id="touch-thrust-value">0%</output>
+                    <input
+                        id="touch-throttle"
+                        type="range"
+                        min="0"
+                        max="100"
+                        value="0"
+                        aria-label="Thrust percent"
+                    />
+                </label>
                 <button
                     class="touch-btn"
                     data-key="w"

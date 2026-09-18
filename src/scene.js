@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getRenderQuality } from './renderQuality.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 /**
@@ -99,12 +100,12 @@ export function createScene({ container }) {
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     container.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -129,7 +130,56 @@ export function createScene({ container }) {
     directionalLight.shadow.camera.bottom = -140;
     scene.add(directionalLight);
 
+    const qualitySelect = document.getElementById('graphics-quality');
+    let quality = 'high';
+    try {
+        const saved = localStorage.getItem('plane-graphics-quality');
+        if (saved && ['low', 'balanced', 'high'].includes(saved))
+            quality = saved;
+    } catch {
+        /* Storage may be disabled. */
+    }
+    // Keep screenshot fixtures independent of a user's persisted graphics setting.
+    if (new URLSearchParams(location.search).has('visual')) quality = 'high';
+    const applyQuality = () => {
+        const settings = getRenderQuality(quality, window.devicePixelRatio);
+        renderer.setPixelRatio(settings.pixelRatio);
+        if (renderer.shadowMap.enabled !== settings.shadows) {
+            renderer.shadowMap.enabled = settings.shadows;
+            scene.traverse((object) => {
+                if (!(object instanceof THREE.Mesh)) return;
+                const materials = Array.isArray(object.material)
+                    ? object.material
+                    : [object.material];
+                for (const material of materials) material.needsUpdate = true;
+            });
+        }
+        if (directionalLight.shadow.mapSize.width !== settings.shadowSize) {
+            directionalLight.shadow.map?.dispose();
+            directionalLight.shadow.map = null;
+            directionalLight.shadow.mapSize.set(
+                settings.shadowSize,
+                settings.shadowSize
+            );
+        }
+        renderer.shadowMap.needsUpdate = true;
+    };
+    applyQuality();
+    if (qualitySelect instanceof HTMLSelectElement) {
+        qualitySelect.value = quality;
+        qualitySelect.addEventListener('change', () => {
+            quality = qualitySelect.value;
+            applyQuality();
+            try {
+                localStorage.setItem('plane-graphics-quality', quality);
+            } catch {
+                /* Optional persistence. */
+            }
+        });
+    }
+
     window.addEventListener('resize', () => {
+        applyQuality();
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);

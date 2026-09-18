@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { instanceStaticScenery } from './instancing.js';
 
 const WORLD_WIDTH = 4200;
 const WORLD_LENGTH = 5200;
@@ -61,29 +62,23 @@ function createPart(geometry, material, x, y, z) {
     return mesh;
 }
 
-/**
- * @returns {THREE.Group}
- */
-function createTree() {
-    const tree = new THREE.Group();
-
+/** Build trees from a single pair of shared geometries/materials. */
+function createTreeFactory() {
     const trunkGeometry = new THREE.CylinderGeometry(0.35, 0.45, 3.5, 10);
     const trunkMaterial = new THREE.MeshPhongMaterial({ color: 0x8b5a2b });
-    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-    trunk.position.y = 1.75;
-    trunk.castShadow = true;
-    trunk.receiveShadow = true;
-    tree.add(trunk);
-
     const foliageGeometry = new THREE.ConeGeometry(2, 4.5, 16);
     const foliageMaterial = new THREE.MeshPhongMaterial({ color: 0x2e8b57 });
-    const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
-    foliage.position.y = 4.5;
-    foliage.castShadow = true;
-    foliage.receiveShadow = true;
-    tree.add(foliage);
-
-    return tree;
+    return () => {
+        const tree = new THREE.Group();
+        const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+        trunk.position.y = 1.75;
+        enableShadows(trunk);
+        const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+        foliage.position.y = 4.5;
+        enableShadows(foliage);
+        tree.add(trunk, foliage);
+        return tree;
+    };
 }
 
 /**
@@ -279,6 +274,37 @@ export function createAirbase() {
     const orangeMaterial = new THREE.MeshPhongMaterial({ color: 0xff7a24 });
     const blueMaterial = new THREE.MeshPhongMaterial({ color: 0x0d4fb7 });
 
+    // A single repeated texture adds ground motion cues without extra meshes.
+    if (typeof document !== 'undefined') {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 128;
+        const context = canvas.getContext('2d');
+        if (context) {
+            context.fillStyle = '#d3dbbf';
+            context.fillRect(0, 0, 128, 128);
+            let seed = 314159;
+            const noise = () => {
+                seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+                return seed / 4294967296;
+            };
+            for (let i = 0; i < 1800; i++) {
+                context.fillStyle = i % 2 ? '#c7d0b6' : '#dce2cf';
+                context.fillRect(
+                    Math.floor(noise() * 128),
+                    Math.floor(noise() * 128),
+                    2,
+                    1
+                );
+            }
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(210, 260);
+            texture.colorSpace = THREE.SRGBColorSpace;
+            if (grassMaterial instanceof THREE.MeshPhongMaterial)
+                grassMaterial.map = texture;
+        }
+    }
+
     const grass = createGroundPatch(
         WORLD_WIDTH,
         WORLD_LENGTH,
@@ -367,31 +393,63 @@ export function createAirbase() {
     barrier.receiveShadow = true;
     airbaseGroup.add(barrier);
 
-    const centerLineGeometry = new THREE.PlaneGeometry(0.5, 290);
     const centerLineMaterial = withDepthBias(
-        new THREE.MeshBasicMaterial({ color: 0xffffff }),
+        new THREE.MeshBasicMaterial({ color: 0xf7f4dd }),
         -4,
         -4
     );
-    const centerLine = new THREE.Mesh(centerLineGeometry, centerLineMaterial);
-    centerLine.rotation.x = -Math.PI / 2;
-    centerLine.position.y = 0.02;
-    airbaseGroup.add(centerLine);
-
-    for (let i = -140; i <= 140; i += 10) {
-        if (i % 20 !== 0) {
-            const edgeMarkGeometry = new THREE.PlaneGeometry(0.5, 2);
-            const edgeMark = new THREE.Mesh(
-                edgeMarkGeometry,
-                centerLineMaterial
+    // Dashed centerline and solid edges make distance and alignment readable.
+    const markings = [];
+    for (let z = -120; z <= 120; z += 20) {
+        markings.push(
+            createGroundPatch(0.65, 10, centerLineMaterial, 0, z, 0.025)
+        );
+    }
+    for (const x of [-9.4, 9.4]) {
+        markings.push(
+            createGroundPatch(0.3, 280, centerLineMaterial, x, 0, 0.025)
+        );
+    }
+    for (const z of [-105, 105]) {
+        for (const x of [-5, 5]) {
+            markings.push(
+                createGroundPatch(2, 10, centerLineMaterial, x, z, 0.025)
             );
-            edgeMark.rotation.x = -Math.PI / 2;
-            edgeMark.position.set(9.5, 0.02, i);
-            airbaseGroup.add(edgeMark);
+        }
+    }
+    airbaseGroup.add(...markings);
+    instanceStaticScenery(airbaseGroup, markings, 500);
 
-            const edgeMark2 = edgeMark.clone();
-            edgeMark2.position.set(-9.5, 0.02, i);
-            airbaseGroup.add(edgeMark2);
+    if (typeof document !== 'undefined') {
+        for (const [label, z, rotation] of [
+            ['18', -130, 0],
+            ['36', 130, Math.PI]
+        ]) {
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 128;
+            const context = canvas.getContext('2d');
+            if (!context) continue;
+            context.fillStyle = '#f7f4dd';
+            context.font = 'bold 88px sans-serif';
+            context.textAlign = 'center';
+            context.fillText(String(label), 64, 100);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.colorSpace = THREE.SRGBColorSpace;
+            const material = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+                depthWrite: false
+            });
+            const number = createGroundPatch(
+                7,
+                10,
+                material,
+                0,
+                Number(z),
+                0.03
+            );
+            number.rotation.z = Number(rotation);
+            airbaseGroup.add(number);
         }
     }
 
@@ -536,6 +594,8 @@ export function createAirbase() {
         airbaseGroup.add(hill);
     }
 
+    const createTree = createTreeFactory();
+    const trees = [];
     const treeCount = 320;
     const gridSize = 10;
     const grassLimitX = WORLD_WIDTH / 2 - 120;
@@ -566,9 +626,11 @@ export function createAirbase() {
         const scale = 0.72 + Math.random() * 0.65;
         tree.scale.setScalar(scale);
         airbaseGroup.add(tree);
+        trees.push(tree);
         placed++;
         attempts++;
     }
 
+    instanceStaticScenery(airbaseGroup, trees, 500);
     return airbaseGroup;
 }

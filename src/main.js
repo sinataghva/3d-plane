@@ -1,4 +1,8 @@
+import { createWorldMap } from './worldMap.js';
+import { createExperience } from './experience.js';
 import './styles.css';
+import { createSimulationClock } from './simulationClock.js';
+import { createFlightAutomation, registerFlightTools } from './automation.js';
 
 import * as THREE from 'three';
 
@@ -187,11 +191,34 @@ function startApp() {
     const hud = createHud();
     const cockpitOverlay = createCockpitOverlay();
     const miniMap = createMiniMap();
+    const worldMap = createWorldMap(planeState);
     const warningBanner = createWarningBanner();
+    const simulationClock = createSimulationClock();
+    document.addEventListener('visibilitychange', () =>
+        simulationClock.reset()
+    );
     const timer = new THREE.Timer();
     timer.connect(document);
     let crashElapsed = 0;
     let wasCrashed = false;
+
+    const resetFlight = () => {
+        resetPlaneState(planeState);
+        crashElapsed = 0;
+        wasCrashed = false;
+        crashOverlayElement.hidden = true;
+        crashEffect.hide();
+        machineGun.clear();
+        simulationClock.reset();
+    };
+    const experience = createExperience({
+        planeState,
+        cameraMode,
+        onRestart: resetFlight,
+        onTakeControl: () => {
+            if (automation?.active) automation.release();
+        }
+    });
 
     if (visualScenario) {
         applyVisualScenario({
@@ -227,6 +254,7 @@ function startApp() {
             isCockpit: cameraMode.getMode() === 'cockpit'
         });
         updateCamera({ camera, controls, airplane, cameraMode });
+        experience.update();
         hud.update({ planeState, cameraMode });
         cockpitOverlay.update({ planeState, cameraMode });
         miniMap.update({ planeState });
@@ -243,14 +271,15 @@ function startApp() {
     }
 
     /**
-     * @param {number} timestamp
+     * @param {number} delta
+     * @param {import('./input.js').KeyboardState} keyboard
      */
-    function animate(timestamp) {
-        requestAnimationFrame(animate);
-
-        timer.update(timestamp);
-        const delta = timer.getDelta();
+    function simulate(delta, keyboard) {
+        const before = planeState.isAirborne
+            ? { ...planeState, position: { ...planeState.position } }
+            : null;
         updatePlanePhysics({ planeState, keyboard, planePhysics, delta });
+        if (before) experience.afterStep(before);
 
         if (planeState.isCrashed) {
             if (!wasCrashed) {
@@ -262,14 +291,6 @@ function startApp() {
 
             crashElapsed += delta;
             crashEffect.update(crashElapsed);
-
-            if (crashElapsed >= CRASH_RESTART_DELAY) {
-                resetPlaneState(planeState);
-                crashOverlayElement.hidden = true;
-                crashEffect.hide();
-                machineGun.clear();
-                wasCrashed = false;
-            }
         }
 
         updateAirplaneControlSurfaces({
@@ -278,27 +299,101 @@ function startApp() {
             planeState,
             delta
         });
-        syncPlaneMesh({ airplane, propeller, planeState });
-        updateAirplaneCockpitVisibility({
-            airplane,
-            propeller,
-            isCockpit: cameraMode.getMode() === 'cockpit'
-        });
         machineGun.update({ planeState, keyboard, delta });
-        updateCamera({ camera, controls, airplane, cameraMode });
-        hud.update({ planeState, cameraMode });
-        cockpitOverlay.update({ planeState, cameraMode });
-        miniMap.update({ planeState });
         warningBanner.update({
             planeState,
             cameraMode,
             stallSpeed: planePhysics.stallSpeed,
             delta
         });
-
-        renderer.render(scene, camera);
     }
 
+    // Tool commands and fixed physics steps request a frame; only RAF draws it.
+    let lastHudUpdate = -Infinity;
+    let lastRadarUpdate = -Infinity;
+    let lastCameraMode = '';
+    const render = () => {
+        // RAF consumes the latest state; do not submit duplicate frames here.
+    };
+    const automation =
+        new URLSearchParams(location.search).get('automation') === '1'
+            ? createFlightAutomation({
+                  planeState,
+                  advance: simulate,
+                  render,
+                  reset() {
+                      resetFlight();
+                      experience.reset();
+                  }
+              })
+            : null;
+    if (automation) {
+        Object.assign(window, { planeAutomation: automation });
+        const status = document.createElement('div');
+        status.className = 'automation-status';
+        const statusText = document.createTextNode(
+            'Agent control • connecting browser tools'
+        );
+        status.append(statusText);
+        const release = document.createElement('button');
+        release.textContent = 'Take control';
+        release.onclick = () => automation.release();
+        status.append(release);
+        container.append(status);
+        registerFlightTools(automation)
+            .then((available) => {
+                statusText.textContent = available
+                    ? 'Agent control • browser tools ready '
+                    : 'Agent control • JavaScript API ready (WebMCP unavailable) ';
+            })
+            .catch((error) => {
+                console.warn('Flight tools unavailable:', error);
+                statusText.textContent =
+                    'Agent control • JavaScript API ready (tool registration failed) ';
+            });
+    }
+    /** @param {number} timestamp */
+    function animate(timestamp) {
+        requestAnimationFrame(animate);
+        timer.update(timestamp);
+        if (automation?.active) automation.update(timer.getDelta());
+        if (!automation?.active && !experience.paused) {
+            simulationClock.update(timer.getDelta(), (delta) =>
+                simulate(delta, keyboard)
+            );
+            document.querySelector('.automation-status')?.remove();
+        }
+        syncPlaneMesh({ airplane, propeller, planeState });
+        const mode = cameraMode.getMode();
+        const modeChanged = mode !== lastCameraMode;
+        lastCameraMode = mode;
+        updateAirplaneCockpitVisibility({
+            airplane,
+            propeller,
+            isCockpit: mode === 'cockpit'
+        });
+        updateCamera({
+            camera,
+            controls,
+            airplane,
+            cameraMode,
+            delta: timer.getDelta()
+        });
+        cockpitOverlay.update({ planeState, cameraMode });
+        if (modeChanged || timestamp - lastHudUpdate >= 100) {
+            experience.update();
+            hud.update({ planeState, cameraMode });
+            lastHudUpdate = timestamp;
+        }
+        if (timestamp - lastRadarUpdate >= 1000 / 15) {
+            miniMap.update({ planeState });
+            worldMap.update();
+            lastRadarUpdate = timestamp;
+        }
+        // Render at most once per browser frame, including automation substeps.
+        renderer.render(scene, camera);
+    }
+    render();
     requestAnimationFrame(animate);
 }
 

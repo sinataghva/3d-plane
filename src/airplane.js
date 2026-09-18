@@ -499,6 +499,8 @@ export function updateAirplaneCockpitVisibility({
     propeller,
     isCockpit
 }) {
+    if (airplane.userData.lastCockpitVisibility === isCockpit) return;
+    airplane.userData.lastCockpitVisibility = isCockpit;
     const cockpitView = airplane.userData.cockpitView;
     if (cockpitView instanceof THREE.Object3D) {
         cockpitView.visible = isCockpit;

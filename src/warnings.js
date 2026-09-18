@@ -1,3 +1,8 @@
+import {
+    GROUND_LEVEL,
+    getVerticalSpeed,
+    getEffectiveStallSpeed
+} from './flightMetrics.js';
 /**
  * @typedef {import('./physics.js').PlaneState} PlaneState
  * @typedef {import('./camera.js').CameraMode} CameraMode
@@ -30,7 +35,7 @@ function formatMode(mode) {
  * @returns {WarningState | null}
  */
 export function getActiveFlightWarning({ planeState, stallSpeed }) {
-    const altitude = Math.max(0, planeState.position.y - 0.5);
+    const altitude = Math.max(0, planeState.position.y - GROUND_LEVEL);
 
     if (planeState.isCrashed) {
         return null;
@@ -47,7 +52,7 @@ export function getActiveFlightWarning({ planeState, stallSpeed }) {
     if (
         planeState.isAirborne &&
         altitude < TERRAIN_WARNING_ALTITUDE &&
-        planeState.verticalSpeed < TERRAIN_WARNING_SINK_RATE
+        getVerticalSpeed(planeState) < TERRAIN_WARNING_SINK_RATE
     ) {
         return {
             level: 'danger',
@@ -58,7 +63,8 @@ export function getActiveFlightWarning({ planeState, stallSpeed }) {
 
     if (
         planeState.isAirborne &&
-        planeState.speed < stallSpeed * LOW_SPEED_MARGIN
+        planeState.speed <
+            getEffectiveStallSpeed(planeState, stallSpeed) * LOW_SPEED_MARGIN
     ) {
         return {
             level: 'caution',

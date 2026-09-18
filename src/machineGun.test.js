@@ -19,6 +19,8 @@ function createKeyboard(overrides = {}) {
         arrowUp: false,
         arrowDown: false,
         space: false,
+        stickRoll: 0,
+        stickPitch: 0,
         ...overrides
     };
 }
