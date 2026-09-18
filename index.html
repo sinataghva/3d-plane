@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>3D Plane Model</title>
+        <title>Saint-Cyr · Versailles Flight</title>
     </head>
     <body>
         <details id="instructions-panel" class="hud-panel">
@@ -106,7 +106,7 @@
             <header class="world-map-header">
                 <div>
                     <h2 id="world-map-title">Flight map</h2>
-                    <p>North up · whole world · live position</p>
+                    <p>Saint-Cyr · Versailles · north up · live position</p>
                 </div>
                 <button id="close-world-map" aria-label="Close full map">
                     ×
@@ -117,6 +117,9 @@
                 aria-label="Whole world map with your aircraft position and heading"
             ></canvas>
             <footer>
+                <a href="data/saint-cyr.json" download
+                    >© OpenStreetMap · ODbL data</a
+                >
                 <span id="world-map-position"></span
                 ><span
                     >Hold M to view · release to close · tap × on mobile</span
@@ -213,6 +216,21 @@
                 <option value="balanced">Balanced</option>
                 <option value="high" selected>High</option>
             </select>
+        </div>
+        <div id="scenery-loading" role="status">
+            Loading Saint-Cyr · Versailles…
+        </div>
+        <div class="scenery-credit">
+            <a
+                href="https://www.openstreetmap.org/copyright"
+                target="_blank"
+                rel="noreferrer"
+                >© OpenStreetMap contributors</a
+            >
+            ·
+            <a href="data/terrain-attribution.md" target="_blank"
+                >Elevation credits</a
+            >
         </div>
         <div id="canvas-container"></div>
 

@@ -60,3 +60,6 @@ test-results/
 # Lock files (uncomment if you want to ignore them)
 # package-lock.json
 # yarn.lock 
+
+# Rebuilt from the preserved per-layer source cache
+data/cache/osm.json.gz

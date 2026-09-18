@@ -1183,7 +1183,9 @@ input:focus-visible {
         bottom: 90px;
     }
     .automation-status {
-        top: 145px;
+        top: auto;
+        bottom: 10px;
+        max-width: calc(100vw - 350px);
         padding: 6px;
         font-size: 11px;
     }
@@ -1298,5 +1300,41 @@ body:has(.automation-status) .warning-banner {
     }
     #world-map footer {
         font-size: 10px;
+    }
+}
+#scenery-loading {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-items: center;
+    background: #10242d;
+    color: #f2f3db;
+    font: 18px system-ui;
+}
+.has-runtime-error #scenery-loading {
+    display: none;
+}
+.scenery-credit {
+    position: fixed;
+    bottom: 2px;
+    right: 8px;
+    z-index: 4;
+    font: 9px system-ui;
+    background: #10242dcc;
+    padding: 2px 4px;
+}
+.scenery-credit a,
+#world-map footer a {
+    color: #c4dcd5;
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+    .scenery-credit {
+        left: 50%;
+        right: auto;
+        bottom: 0;
+        transform: translateX(-50%);
+        white-space: nowrap;
     }
 }

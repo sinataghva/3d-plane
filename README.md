@@ -1,8 +1,8 @@
-# 3D Plane Model
+# 3D Plane — Saint-Cyr & Versailles
 
 An educational browser-based 3D airplane simulator built with Three.js and Vite.
 
-The project started as a simple third-person airplane on a runway and now includes arcade flight physics, a procedural Cessna-style plane model, camera modes, live instruments, radar, warnings, crash handling, and tracer fire.
+Take off from Saint-Cyr-l’École airfield, explore the Palace of Versailles and its gardens, and fly over nearby towns in a real-world-inspired landscape. The simulator combines a procedural Cessna-style aircraft, arcade flight physics, three camera modes, live instruments, radar, and a full-screen regional map. Free flight is the default; guides and landing challenges are optional.
 
 ## Features
 
@@ -16,8 +16,77 @@ The project started as a simple third-person airplane on a runway and now includ
 - Warning banners for low altitude, stall risk, and crash states
 - Crash handling with visual feedback and restart flow
 - Machine-gun tracer fire with space bar
-- Larger procedural world with runway, airfield elements, trees, clouds, sky, lighting, and atmosphere
+- Saint-Cyr–Versailles scenery from cached OpenStreetMap geometry and regional elevation
+- Real runway alignment, town labels, palace, Grand Canal, roads, woodland and terrain collisions
 - Unit tests and visual regression tests
+
+## Saint-Cyr–Versailles scenery
+
+The detailed area covers approximately 10.3 × 7.8 km. The aircraft starts on the
+mapped grass runway at Saint-Cyr (LFPZ), heading approximately 113°. The map and
+3D scene share coordinates and feature data. Explore the stylized Château de
+Versailles, Grand Canal, formal garden paths, woodland, fields, and surrounding
+neighborhoods. The map labels Versailles, Saint-Cyr-l’École, Fontenay-le-Fleury,
+Bois-d’Arcy, Bailly, Rennemoulin, Noisy-le-Roi, and Le Chesnay-Rocquencourt;
+labels are decluttered on smaller screens.
+
+Hold **M** for the north-up map and release it to return to flight. On mobile,
+tap the radar to open the map and **×** to close it. The map shows the entire
+region with a live aircraft icon indicating your position and heading.
+
+Altitude is above local ground.
+Buildings and water can cause crashes; grass and fields remain usable for
+forgiving off-field landings. Free flight continues beyond the detailed area.
+
+All source downloads are cached in `data/cache/`. Normal play and builds use
+only local `data/saint-cyr.json` and `data/saint-cyr-elevation.json`; no API token
+or runtime Overpass/elevation connection is needed. Existing cached layers are
+reused. To reproduce the scenery from the cache:
+
+```bash
+python3 scripts/download-scenery.py
+python3 scripts/import-osm.py data/cache/osm.json.gz
+python3 scripts/import-elevation.py
+```
+
+The elevation import requires Python Pillow. The downloader fetches only missing
+source layers; preserve the cache to avoid repeated requests to public services.
+`node scripts/plan-flight.mjs` generates a reproducible banked sightseeing flight
+using the actual flight physics, ending back on the runway. It saves controls to
+`data/scenic-tour.json` for local automation testing.
+
+Buildings are simplified and heights are estimated where OSM has no height;
+the palace is a stylized footprint-based model. Real elevation is resampled onto
+a 129 × 129 grid, with runway corridors flattened for gameplay. This is coarse
+regional relief, not a surveyed airfield. See [DECISIONS.md](DECISIONS.md) for
+scope, tradeoffs, and validation results.
+
+### Map and terrain credits
+
+Thank you to the contributors and projects that make this scenery possible:
+
+- **© [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)** —
+  airfield geometry, building footprints, roads, land cover, waterways, and place
+  names. The map data is available under the **Open Database License (ODbL 1.0)**.
+  Our simplified, projected [derived database](data/saint-cyr.json) is distributed
+  with the project and linked from the in-game full map.
+- **[Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API)** — the
+  open-source query service used to extract the OSM features. Thanks to its
+  maintainers and public instance operators. Extraction happens during data
+  preparation; gameplay uses the local cache.
+- **[Mapzen / Tilezen Terrain Tiles](https://registry.opendata.aws/terrain-tiles/)** —
+  regional elevation, downloaded as Terrarium tiles from the public AWS-hosted
+  dataset. The collection credits providers including **Copernicus / European
+  Union EU-DEM** and the **U.S. Geological Survey** for global SRTM and GMTED2010
+  data. Provider-specific attribution and license notices are preserved in
+  [terrain-attribution.md](data/terrain-attribution.md), from the
+  [upstream attribution document](https://github.com/tilezen/joerd/blob/master/docs/attribution.md).
+
+Original downloads are preserved in [data/cache/](data/cache/), with OSM source
+snapshot timestamps and checksums in the [manifest](data/cache/manifest.json).
+Source dates can differ between layers; this is a cached scenery snapshot,
+not a live map. These data-source credits and licenses apply to the geographic
+data separately from the application code.
 
 ## Getting Started
 
@@ -41,7 +110,7 @@ npm start
 The Vite development server runs at:
 
 ```text
-http://127.0.0.1:5173
+http://127.0.0.1:5173/3d-plane/
 ```
 
 ### Build
@@ -59,7 +128,7 @@ npm run preview
 The preview server runs at:
 
 ```text
-http://127.0.0.1:4173
+http://127.0.0.1:4173/3d-plane/
 ```
 
 ## Controls
@@ -71,6 +140,8 @@ http://127.0.0.1:4173
 - **Arrow Up**: Pitch nose down
 - **Space**: Fire tracer rounds
 - **C**: Cycle camera mode between chase, cockpit, and orbit
+- **Hold M**: Show the full regional map; release to close
+- **Click/tap radar**: Keep the map open; close with **×** or **Escape**
 
 In orbit camera mode:
 
@@ -150,14 +221,17 @@ npm run test:visual:update
 - `src/cockpitOverlay.js`: Cockpit instrument overlay
 - `src/minimap.js`: Radar/minimap rendering
 - `src/machineGun.js`: Tracer firing behavior
-- `src/airbase.js`: Runway, airfield, and world details
+- `src/terrain.js`: Geographic scenery and batched buildings/trees
+- `src/geography.js`: Shared projection, terrain heights, runway and collision queries
+- `data/`: Local scenery, elevation and download cache
 - `src/clouds.js`: Procedural clouds
 - `src/warnings.js`: Flight warning logic
 - `tests/visual/`: Playwright visual regression tests and baselines
 
 ## Customization
 
-The airplane and world are currently built with procedural Three.js geometry.
+The aircraft uses procedural Three.js geometry. The world combines cached OSM
+footprints and land cover, real elevation, and generated building/tree meshes.
 
 To change the plane model, edit:
 
@@ -174,12 +248,14 @@ src/physics.js
 To add larger world objects such as buildings or future targets, start with:
 
 ```text
-src/airbase.js
+src/terrain.js
 ```
 
 ## Asset Conventions
 
-The app currently uses procedural Three.js geometry for the airplane, runway, trees, clouds, and airfield objects. Keep that as the default unless a future change intentionally swaps in model assets.
+The app generates aircraft, building, tree, and cloud meshes in Three.js.
+Geographic source data and processed scenery live in `data/`; the build packages
+the processed map, elevation, and attribution files for local loading.
 
 Use these locations for future static assets:
 
@@ -280,7 +356,7 @@ automatically pause it. Keyboard/touch still require **Take control**.
 For uninterrupted demonstrations with precise timing, call
 `flight.flyRoute({ stages: [{ seconds: 1, controls: { throttle: 1 } }, ...] })`
 or `fly_route`. Stages execute back-to-back in real time without tool latency
-between them. Limits: 1–30 stages, up to 10 seconds each, 60 seconds total.
+between them. Limits: 1–360 stages, up to 10 seconds each, 180 seconds total.
 The whole route is validated first and stops on a crash or human takeover.
 
 The WebMCP `fly_route` command starts in the background and returns immediately
@@ -295,8 +371,9 @@ High (default) caps pixel ratio at 2 and uses 2048px shadows. Balanced caps it
 at 1.5 with 1024px shadows. Low caps it at 1 and disables shadows. Standard-DPI
 screens keep their native resolution. Settings update without restarting.
 
-Trees and cloud puffs share geometry/materials and use spatial instancing
-batches, preserving culling of off-screen regions. The HUD updates at 10 Hz
+Trees share geometry/materials in spatial instancing batches, preserving culling
+of off-screen regions. Soft cloud billboards share one instanced draw call; wind
+is applied in the shader without per-frame instance uploads. The HUD updates at 10 Hz
 and radar at 15 Hz, while cameras, cockpit instruments and flight animation
 follow the browser frame rate. Automation substeps no longer submit duplicate
 render frames. Flight physics and automatic wing leveling are unchanged.
@@ -332,10 +409,23 @@ and mobile. The touch throttle slider sets thrust directly, including immediate
 Crashes now wait for **Return to runway**; feedback explains excessive descent or
 attitude. Successful touchdowns report runway/off-field location and descent rate.
 The chase camera eases its position while cockpit view follows the aircraft bank.
-Runway markings and subtle tiled grass texture improve alignment and motion cues.
+Grass runway markings and edge boards help alignment; roads, field boundaries,
+and woodland provide geographic landmarks and motion cues.
 
 Hold **M** to view the full-screen, north-up world map; release it to close.
 Click or tap the radar to keep the map open, then use **×** (or Escape) to close.
 The map keeps fixed world bounds while the aircraft icon tracks position and
 heading live. Flight continues while viewing the map. Outside the mapped terrain,
 the icon stays at the map edge and the position readout indicates this explicitly.
+
+### Clouds and wind
+
+Cloud banks cover the whole region and continue beyond the detailed map. Varied
+cumulus banks sit roughly 420–1,100 m above the airfield datum, with sparse,
+stretched high clouds above them. Locally generated soft silhouettes replace the
+old faceted spheres and straight cloud strips; no cloud images are downloaded.
+
+A light westerly wind moves the clouds 3 m/s east and 1 m/s north. This is visual
+weather and does not change aircraft handling. Clouds fade into the distance and
+wrap outside visibility, so long flights do not exhaust the cloud field. Pause
+freezes their movement; visual regression fixtures use a fixed cloud state.

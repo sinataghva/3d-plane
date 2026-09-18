@@ -1,4 +1,4 @@
-import { GROUND_LEVEL, INTERNAL_SPEED_TO_KMH } from './flightMetrics.js';
+import { getAltitude, INTERNAL_SPEED_TO_KMH } from './flightMetrics.js';
 /**
  * @typedef {import('./physics.js').PlaneState} PlaneState
  * @typedef {import('./camera.js').CameraMode} CameraMode
@@ -55,7 +55,7 @@ export function createCockpitOverlay() {
 
             if (!isCockpit) return;
 
-            const altitude = Math.max(0, planeState.position.y - GROUND_LEVEL);
+            const altitude = getAltitude(planeState);
             const speedKmh = Math.max(
                 0,
                 planeState.speed * INTERNAL_SPEED_TO_KMH

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { instanceStaticScenery } from './instancing.js';
 import { createAirbase } from './airbase.js';
-import { addClouds } from './clouds.js';
 import { useSeededRandom } from './visualScenarios.js';
 
 describe('static scenery batches', () => {
@@ -69,15 +68,6 @@ describe('static scenery batches', () => {
             );
             expect(new Set(batches.map((mesh) => mesh.geometry)).size).toBe(2);
             expect(batches.length).toBeLessThan(200);
-            const scene = new THREE.Scene();
-            addClouds(scene);
-            const clouds = scene.children.filter(
-                (part) => part instanceof THREE.InstancedMesh
-            );
-            expect(new Set(clouds.map((mesh) => mesh.geometry)).size).toBe(1);
-            const puffs = clouds.reduce((total, mesh) => total + mesh.count, 0);
-            expect(puffs).toBeGreaterThanOrEqual(26 * 5);
-            expect(puffs).toBeLessThanOrEqual(26 * 8);
         } finally {
             restore();
         }

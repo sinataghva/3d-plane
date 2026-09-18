@@ -1,0 +1,17 @@
+[out:json][timeout:120][bbox:48.775,2.015,48.845,2.155];
+(
+  way["aeroway"];
+  way["highway"~"^(motorway|trunk|primary|secondary|tertiary|residential|unclassified|service|track|path|footway)$"];
+  way["railway"="rail"];
+  way["waterway"~"^(river|stream|canal)$"];
+  way["natural"~"^(water|wood)$"];
+  relation["natural"~"^(water|wood)$"];
+  way["landuse"~"^(forest|farmland|meadow|grass|residential|industrial|orchard)$"];
+  relation["landuse"~"^(forest|farmland|meadow|grass|residential|industrial|orchard)$"];
+  way["leisure"~"^(park|garden)$"];
+  relation["leisure"~"^(park|garden)$"];
+  way["building"];
+  relation["building"];
+  node["place"~"^(city|town|village|hamlet|suburb)$"];
+);
+out geom;

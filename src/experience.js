@@ -1,7 +1,11 @@
-import { getVerticalSpeed, GROUND_LEVEL } from './flightMetrics.js';
+import { getGeography } from './geography.js';
+import { getAltitude } from './flightMetrics.js';
+import { getVerticalSpeed } from './flightMetrics.js';
 
 /** @param {import('./physics.js').PlaneState} state */
 export function isOnRunway(state) {
+    const world = getGeography();
+    if (world) return world.onRunway(state.position.x, state.position.z);
     return (
         Math.abs(state.position.x) <= 10 && Math.abs(state.position.z) <= 150
     );
@@ -13,6 +17,10 @@ export function isOnRunway(state) {
  */
 export function describeTouchdown(before, after) {
     const sink = Math.max(0, -getVerticalSpeed(before) * 60);
+    if (after.crashReason === 'water')
+        return 'Water landing. Return to the grass runway for a safe touchdown.';
+    if (after.crashReason === 'building')
+        return 'Building impact. Climb above rooftops before crossing the town.';
     if (after.isCrashed) {
         return Math.abs(before.rollAngle) > 1.35
             ? 'Wings struck the ground. Level your bank before touchdown.'
@@ -113,11 +121,8 @@ export function createExperience({
         reset: resetProgress,
         /** @param {import('./physics.js').PlaneState} before */
         afterStep(before) {
-            maxAltitude = Math.max(
-                maxAltitude,
-                planeState.position.y - GROUND_LEVEL
-            );
-            if (planeState.position.y - GROUND_LEVEL >= 2) landingArmed = true;
+            maxAltitude = Math.max(maxAltitude, getAltitude(planeState));
+            if (getAltitude(planeState) >= 2) landingArmed = true;
             if (
                 before.isAirborne &&
                 !planeState.isAirborne &&
@@ -158,7 +163,10 @@ export function createExperience({
                 planeState.isCrashed ||
                 !feedback.hidden;
             const distance = Math.round(
-                Math.hypot(planeState.position.x, planeState.position.z)
+                Math.hypot(
+                    planeState.position.x - (getGeography()?.spawn.x || 0),
+                    planeState.position.z - (getGeography()?.spawn.z || 0)
+                )
             );
             let hint;
             if (guide.value === 'landing') {

@@ -1,5 +1,5 @@
 import {
-    GROUND_LEVEL,
+    getAltitude,
     INTERNAL_SPEED_TO_KMH,
     INTERNAL_VERTICAL_SPEED_TO_MS,
     getVerticalSpeed
@@ -58,7 +58,7 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
         simulationSeconds: ticks / 60,
         controls: { ...controls },
         plane: { ...planeState, position: { ...planeState.position } },
-        altitudeMeters: Math.max(0, planeState.position.y - GROUND_LEVEL),
+        altitudeMeters: getAltitude(planeState),
         speedKmh: planeState.speed * INTERNAL_SPEED_TO_KMH,
         verticalSpeedMs:
             getVerticalSpeed(planeState) * INTERNAL_VERTICAL_SPEED_TO_MS
@@ -218,9 +218,9 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
             if (
                 !Array.isArray(stages) ||
                 stages.length < 1 ||
-                stages.length > 30
+                stages.length > 360
             )
-                throw new Error('Expected 1..30 stages.');
+                throw new Error('Expected 1..360 stages.');
             let duration = 0;
             for (const stage of stages) {
                 if (
@@ -233,8 +233,8 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
                 validateControls(stage.controls);
                 duration += stage.seconds;
             }
-            if (duration > 60)
-                throw new Error('Routes must last at most 60 seconds.');
+            if (duration > 180)
+                throw new Error('Routes must last at most 180 seconds.');
             for (const stage of stages) {
                 if (!active || planeState.isCrashed) break;
                 this.setControls(stage.controls);
@@ -351,7 +351,7 @@ export async function registerFlightTools(api) {
         {
             name: 'fly_route',
             description:
-                'Animate a planned sequence without tool-call pauses between stages. 1..30 stages, each 1/60..10 seconds, total <=60 seconds. Each stage applies partial controls. Uses real physics, stops on crash or human takeover. Returns immediately; read get_flight_state routeStatus for completion.',
+                'Animate a planned sequence without tool-call pauses between stages. 1..360 stages, each 1/60..10 seconds, total <=180 seconds. Each stage applies partial controls. Uses real physics, stops on crash or human takeover. Returns immediately; read get_flight_state routeStatus for completion.',
             inputSchema: {
                 type: 'object',
                 additionalProperties: false,
@@ -360,7 +360,7 @@ export async function registerFlightTools(api) {
                     stages: {
                         type: 'array',
                         minItems: 1,
-                        maxItems: 30,
+                        maxItems: 360,
                         items: {
                             type: 'object',
                             additionalProperties: false,

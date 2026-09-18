@@ -1,3 +1,4 @@
+import { groundLevel } from './geography.js';
 export const GROUND_LEVEL = 0.5;
 export const INTERNAL_SPEED_TO_KMH = 90;
 export const INTERNAL_VERTICAL_SPEED_TO_MS = 60;
@@ -20,4 +21,12 @@ export function getEffectiveStallSpeed(
     flapReduction = FLAP_STALL_REDUCTION
 ) {
     return stallSpeed - state.flapDeployment * flapReduction;
+}
+
+/** @param {import('./physics.js').PlaneState} state */
+export function getAltitude(state) {
+    return Math.max(
+        0,
+        state.position.y - groundLevel(state.position.x, state.position.z)
+    );
 }

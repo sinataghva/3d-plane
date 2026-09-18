@@ -1,3 +1,4 @@
+import { getGeography } from './geography.js';
 /**
  * @typedef {import('./physics.js').PlaneState} PlaneState
  * @typedef {import('./camera.js').CameraMode} CameraMode
@@ -125,6 +126,20 @@ export function applyVisualScenario({
         Object.assign(planeState.position, position);
     }
 
+    const world = getGeography();
+    if (world) {
+        const dx = planeState.position.x,
+            dz = planeState.position.z + 120;
+        const fx = Math.cos(world.spawn.yaw),
+            fz = -Math.sin(world.spawn.yaw);
+        planeState.position.x = world.spawn.x + dx * fz + dz * fx;
+        planeState.position.z = world.spawn.z - dx * fx + dz * fz;
+        planeState.position.y += world.height(
+            planeState.position.x,
+            planeState.position.z
+        );
+        planeState.yawAngle += world.spawn.yaw + Math.PI / 2;
+    }
     cameraMode.setMode(visualScenario.cameraMode);
 }
 

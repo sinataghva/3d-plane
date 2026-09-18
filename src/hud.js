@@ -1,5 +1,5 @@
 import {
-    GROUND_LEVEL,
+    getAltitude,
     INTERNAL_SPEED_TO_KMH,
     INTERNAL_VERTICAL_SPEED_TO_MS,
     getVerticalSpeed,
@@ -176,7 +176,7 @@ export function createHud() {
          * @param {{ planeState: PlaneState, cameraMode: CameraMode }} args
          */
         update({ planeState, cameraMode }) {
-            const altitude = Math.max(0, planeState.position.y - GROUND_LEVEL);
+            const altitude = getAltitude(planeState);
             const flightCondition = getFlightCondition(planeState);
             const cameraLabel = formatCameraMode(cameraMode.getMode());
             const thrustPercent = Math.round(planeState.thrust * 100);

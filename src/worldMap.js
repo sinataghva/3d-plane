@@ -1,3 +1,5 @@
+import { getGeography } from './geography.js';
+import { drawOverview } from './geographicMap.js';
 import { formatHeading } from './hud.js';
 
 const WORLD_WIDTH = 4200;
@@ -27,6 +29,16 @@ export function createWorldMap(planeState) {
     const canvas = /** @type {HTMLCanvasElement} */ (
         document.getElementById('world-map-canvas')
     );
+    const geography = getGeography();
+    if (geography)
+        canvas.setAttribute(
+            'aria-label',
+            'North-up Saint-Cyr–Versailles map with your aircraft position and heading. Landmarks: Château de Versailles, Saint-Cyr airfield. Towns: ' +
+                geography.data.places
+                    .filter((p) => ['city', 'town', 'village'].includes(p.kind))
+                    .map((p) => p.name)
+                    .join(', ')
+        );
     const context = canvas.getContext('2d');
     if (!context) throw new Error('World map canvas unavailable');
     const ctx = context;
@@ -115,6 +127,17 @@ export function createWorldMap(planeState) {
             canvas.height = Math.round(height * dpr);
         }
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const world = getGeography();
+        if (world) {
+            readout.textContent = drawOverview(
+                ctx,
+                width,
+                height,
+                planeState,
+                world
+            );
+            return;
+        }
         ctx.fillStyle = '#10242d';
         ctx.fillRect(0, 0, width, height);
         const { scale, point } = mapProjection(width, height);

@@ -1,5 +1,7 @@
+import { createGeography, setGeography } from './geography.js';
+import { createTerrain } from './terrain.js';
 import { createWorldMap } from './worldMap.js';
-import { createExperience } from './experience.js';
+import { createExperience, describeTouchdown } from './experience.js';
 import './styles.css';
 import { createSimulationClock } from './simulationClock.js';
 import { createFlightAutomation, registerFlightTools } from './automation.js';
@@ -11,7 +13,6 @@ import {
     updateAirplaneCockpitVisibility,
     updateAirplaneControlSurfaces
 } from './airplane.js';
-import { createAirbase } from './airbase.js';
 import { addClouds } from './clouds.js';
 import { createCameraModeToggle, updateCamera } from './camera.js';
 import { createCockpitOverlay } from './cockpitOverlay.js';
@@ -104,7 +105,7 @@ function createCrashEffect(scene) {
          */
         trigger(position) {
             group.position.copy(position);
-            group.position.y = 0.52;
+            group.position.y = position.y;
             group.visible = true;
             shockwave.scale.setScalar(0.4);
             shockwaveMaterial.opacity = 0.85;
@@ -145,7 +146,7 @@ function createCrashEffect(scene) {
     };
 }
 
-function startApp() {
+async function startApp() {
     if (!isWebGLAvailable()) {
         showRuntimeFallback('WebGL is not available in this browser.');
         return;
@@ -166,6 +167,17 @@ function startApp() {
         document.documentElement.classList.add('visual-test-mode');
     }
 
+    const loadData = async (/** @type {string} */ name) => {
+        const response = await fetch(`${import.meta.env.BASE_URL}data/${name}`);
+        if (!response.ok) throw new Error(`Unable to load scenery: ${name}`);
+        return response.json();
+    };
+    const [geoData, elevationData] = await Promise.all([
+        loadData('saint-cyr.json'),
+        loadData('saint-cyr-elevation.json')
+    ]);
+    const world = createGeography(geoData, elevationData);
+    setGeography(world);
     const { scene, camera, renderer, controls } = createScene({ container });
 
     const { airplane, propeller } = createAirplane();
@@ -174,11 +186,10 @@ function startApp() {
     scene.add(airplane);
 
     const restoreRandom = visualScenario ? useSeededRandom(12345) : null;
-    const airbase = createAirbase();
-    airbase.position.y = -0.5;
+    const airbase = createTerrain(world);
     scene.add(airbase);
 
-    addClouds(scene);
+    const clouds = addClouds(scene);
     if (restoreRandom) {
         restoreRandom();
     }
@@ -229,9 +240,9 @@ function startApp() {
 
         if (visualScenario.cameraPosition) {
             camera.position.set(
-                visualScenario.cameraPosition.x,
-                visualScenario.cameraPosition.y,
-                visualScenario.cameraPosition.z
+                planeState.position.x - 18,
+                planeState.position.y + 8,
+                planeState.position.z + 10
             );
         }
 
@@ -265,7 +276,13 @@ function startApp() {
             delta: 1 / 60
         });
 
+        clouds.update(
+            visualScenario || experience.paused ? 0 : timer.getDelta(),
+            camera.position
+        );
+        scene.userData.followSun(airplane.position);
         renderer.render(scene, camera);
+        document.getElementById('scenery-loading')?.remove();
         document.documentElement.dataset.visualReady = 'true';
         return;
     }
@@ -286,6 +303,12 @@ function startApp() {
                 crashElapsed = 0;
                 wasCrashed = true;
                 crashOverlayElement.hidden = false;
+                const reason = document.getElementById('crash-reason');
+                if (reason)
+                    reason.textContent = describeTouchdown(
+                        before || planeState,
+                        planeState
+                    );
                 crashEffect.trigger(airplane.position);
             }
 
@@ -312,6 +335,8 @@ function startApp() {
     let lastHudUpdate = -Infinity;
     let lastRadarUpdate = -Infinity;
     let lastCameraMode = '';
+    let statsAt = 0,
+        frames = 0;
     const render = () => {
         // RAF consumes the latest state; do not submit duplicate frames here.
     };
@@ -391,14 +416,31 @@ function startApp() {
             lastRadarUpdate = timestamp;
         }
         // Render at most once per browser frame, including automation substeps.
+        clouds.update(
+            visualScenario || experience.paused ? 0 : timer.getDelta(),
+            camera.position
+        );
+        scene.userData.followSun(airplane.position);
         renderer.render(scene, camera);
+        document.getElementById('scenery-loading')?.remove();
+        frames++;
+        if (import.meta.env.DEV && timestamp - statsAt > 1000) {
+            document.documentElement.dataset.sceneryStats = JSON.stringify({
+                fps: Math.round((frames * 1000) / (timestamp - statsAt)),
+                calls: renderer.info.render.calls,
+                triangles: renderer.info.render.triangles,
+                ...airbase.userData.summary
+            });
+            statsAt = timestamp;
+            frames = 0;
+        }
     }
     render();
     requestAnimationFrame(animate);
 }
 
 try {
-    startApp();
+    startApp().catch(reportRuntimeError);
 } catch (error) {
     reportRuntimeError(error);
 }

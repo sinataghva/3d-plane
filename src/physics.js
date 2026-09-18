@@ -1,3 +1,4 @@
+import { getGeography, groundLevel as terrainGround } from './geography.js';
 import * as THREE from 'three';
 import {
     GROUND_LEVEL,
@@ -34,6 +35,7 @@ import {
  * @property {boolean} isAirborne
  * @property {boolean} isStalling
  * @property {boolean} isCrashed
+ * @property {string} [crashReason]
  * @property {number} crashImpact
  * @property {number} propellerRotation
  */
@@ -101,11 +103,14 @@ import {
  * @returns {PlaneState}
  */
 export function createPlaneState() {
+    const spawn = getGeography()?.spawn;
     return {
-        position: { x: 0, y: GROUND_LEVEL, z: -120 },
+        position: spawn
+            ? { x: spawn.x, y: spawn.y, z: spawn.z }
+            : { x: 0, y: GROUND_LEVEL, z: -120 },
         speed: 0,
         thrust: 0,
-        yawAngle: -Math.PI / 2,
+        yawAngle: spawn?.yaw ?? -Math.PI / 2,
         pitchAngle: 0,
         rollAngle: 0,
         lift: 0,
@@ -139,6 +144,7 @@ export function resetPlaneState(planeState) {
     planeState.isStalling = nextState.isStalling;
     planeState.isCrashed = nextState.isCrashed;
     planeState.crashImpact = nextState.crashImpact;
+    planeState.crashReason = undefined;
     planeState.propellerRotation = nextState.propellerRotation;
 }
 
@@ -219,7 +225,10 @@ export function updatePlanePhysics({
     }
 
     const frameScale = Math.min(delta * 60, 3);
-    const groundLevel = GROUND_LEVEL;
+    let groundLevel = terrainGround(
+        planeState.position.x,
+        planeState.position.z
+    );
     const altitude = Math.max(0, planeState.position.y - groundLevel);
     const airspeedAuthority = THREE.MathUtils.clamp(
         planeState.speed / planePhysics.controlAuthoritySpeed,
@@ -437,6 +446,9 @@ export function updatePlanePhysics({
             forwardVector.z * planeState.speed * frameScale;
     }
 
+    groundLevel = terrainGround(planeState.position.x, planeState.position.z);
+    if (!planeState.isAirborne) planeState.position.y = groundLevel;
+
     if (planeState.isAirborne) {
         const pathVerticalSpeed =
             forwardVector.y * planeState.speed * planePhysics.pitchPathFactor;
@@ -469,7 +481,7 @@ export function updatePlanePhysics({
         }
     }
 
-    if (!planeState.isAirborne) {
+    if (!getGeography() && !planeState.isAirborne) {
         const isNearBarrier =
             Math.abs(planeState.position.z - 144.5) < 2 &&
             Math.abs(planeState.position.x) < 10;
@@ -482,6 +494,20 @@ export function updatePlanePhysics({
         if (planeState.position.z < -145) {
             planeState.position.z = -145;
         }
+    }
+
+    const obstacle = getGeography()?.obstacle(
+        planeState.position.x,
+        planeState.position.z,
+        planeState.position.y
+    );
+    if (obstacle && !planeState.isCrashed) {
+        planeState.isCrashed = true;
+        planeState.isAirborne = false;
+        planeState.speed = 0;
+        planeState.thrust = 0;
+        planeState.crashImpact = 1;
+        planeState.crashReason = obstacle;
     }
 
     if (planeState.speed === 0 && !isRolling && !planeState.isAirborne) {

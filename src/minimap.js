@@ -1,3 +1,5 @@
+import { getGeography } from './geography.js';
+import { drawRadar } from './geographicMap.js';
 /**
  * @typedef {import('./physics.js').PlaneState} PlaneState
  */
@@ -256,6 +258,11 @@ export function createMiniMap() {
          * @param {{ planeState: PlaneState }} args
          */
         update({ planeState }) {
+            const world = getGeography();
+            if (world) {
+                drawRadar(radarContext, canvas.width, planeState, world);
+                return;
+            }
             radarContext.clearRect(0, 0, canvas.width, canvas.height);
 
             radarContext.fillStyle = gradient;

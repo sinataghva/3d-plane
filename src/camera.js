@@ -124,6 +124,15 @@ export function updateCamera({
         setCameraFov(camera, 75);
 
         camera.up.copy(worldUp);
+        if (camera.userData.flightMode !== 'orbit') {
+            // Orbit follows cockpit in the cycle; do not inherit its close-up.
+            offset.set(-14, 0, 12).applyQuaternion(airplane.quaternion);
+            offset.y = 0;
+            if (offset.lengthSq() < 0.01) offset.set(-14, 0, 12);
+            offset.setLength(18);
+            offset.y = 7;
+            camera.position.copy(airplane.position).add(offset);
+        }
         controls.target.copy(airplane.position);
         controls.update();
     }

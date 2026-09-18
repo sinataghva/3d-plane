@@ -1,5 +1,5 @@
 import {
-    GROUND_LEVEL,
+    getAltitude,
     getVerticalSpeed,
     getEffectiveStallSpeed
 } from './flightMetrics.js';
@@ -35,7 +35,7 @@ function formatMode(mode) {
  * @returns {WarningState | null}
  */
 export function getActiveFlightWarning({ planeState, stallSpeed }) {
-    const altitude = Math.max(0, planeState.position.y - GROUND_LEVEL);
+    const altitude = getAltitude(planeState);
 
     if (planeState.isCrashed) {
         return null;

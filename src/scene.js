@@ -87,14 +87,14 @@ function createSunSprite() {
 export function createScene({ container }) {
     const scene = new THREE.Scene();
     scene.background = createSkyBackground();
-    scene.fog = new THREE.Fog(0xd9edf7, 180, 900);
+    scene.fog = new THREE.Fog(0xd9edf7, 2400, 12000);
     scene.add(createSunSprite());
 
     const camera = new THREE.PerspectiveCamera(
         75,
         window.innerWidth / window.innerHeight,
         0.1,
-        5000
+        18000
     );
     camera.position.set(10, 5, -120);
 
@@ -128,7 +128,12 @@ export function createScene({ container }) {
     directionalLight.shadow.camera.right = 140;
     directionalLight.shadow.camera.top = 140;
     directionalLight.shadow.camera.bottom = -140;
-    scene.add(directionalLight);
+    scene.add(directionalLight, directionalLight.target);
+    const sunOffset = new THREE.Vector3(70, 110, -80);
+    scene.userData.followSun = (/** @type {THREE.Vector3} */ position) => {
+        directionalLight.position.copy(position).add(sunOffset);
+        directionalLight.target.position.copy(position);
+    };
 
     const qualitySelect = document.getElementById('graphics-quality');
     let quality = 'high';
