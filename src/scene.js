@@ -184,12 +184,19 @@ export function createScene({ container }) {
         });
     }
 
-    window.addEventListener('resize', () => {
+    const resize = () => {
         applyQuality();
-        camera.aspect = window.innerWidth / window.innerHeight;
+        const rect = renderer.domElement.parentElement?.getBoundingClientRect();
+        const width = rect?.width || window.innerWidth;
+        const height = rect?.height || window.innerHeight;
+        camera.aspect = width / height;
         camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+        renderer.setSize(width, height);
+    };
+    window.addEventListener('resize', resize);
+    window.visualViewport?.addEventListener('resize', resize);
+    window.addEventListener('pageshow', resize);
+    resize();
 
     return { scene, camera, renderer, controls };
 }

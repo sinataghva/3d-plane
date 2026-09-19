@@ -1,3 +1,4 @@
+import { setupMobileViewport } from './mobileViewport.js';
 import { createGroundDetail } from './groundDetail.js';
 import { createDestinationBeacon, clearDestination } from './destination.js';
 import { selectFlight } from './missions.js';
@@ -40,6 +41,8 @@ import {
     useSeededRandom
 } from './visualScenarios.js';
 import { createWarningBanner } from './warnings.js';
+
+setupMobileViewport();
 
 /**
  * @param {unknown} error
@@ -328,7 +331,11 @@ async function startApp() {
 
         // Static screenshot scenes need fully built and faded-in detail tiles.
         for (let step = 0; step < 120; step++) {
-            groundDetail.update(planeState.position, scene.userData.quality, 0.1);
+            groundDetail.update(
+                planeState.position,
+                scene.userData.quality,
+                0.1
+            );
         }
 
         if (visualScenario.cameraPosition) {

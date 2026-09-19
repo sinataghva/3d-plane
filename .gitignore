@@ -67,3 +67,6 @@ data/cache/osm.json.gz
 # Reproducible scenery intermediates
 data/luxeuil/cache/osm.json.gz
 scripts/__pycache__/
+
+# Local working notes and temporary plans
+/note/

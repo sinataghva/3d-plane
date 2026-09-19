@@ -128,8 +128,8 @@ using the actual flight physics, ending back on the runway. It saves controls to
 Buildings are simplified and heights are estimated where OSM has no height;
 the palace is a stylized footprint-based model. Real elevation is resampled onto
 a 129 × 129 grid, with runway corridors flattened for gameplay. This is coarse
-regional relief, not a surveyed airfield. See [DECISIONS.md](DECISIONS.md) for
-scope, tradeoffs, and validation results.
+regional relief, not a surveyed airfield. The sections below describe sources,
+rendering tradeoffs, and validation commands.
 
 ### Map and terrain credits
 
@@ -572,3 +572,17 @@ For local comparative measurements, run `node scripts/benchmark-ground.mjs curre
 with the dev server running. Results and ground screenshots go into
 `test-results/ground-benchmark/`. Headless software-rendered timings are not
 representative of native GPU performance.
+
+### iPhone / mobile Home Screen
+
+Use Safari's Share menu → **Add to Home Screen** to launch Open Skies without
+Safari's address bar. The app includes its own aircraft icon and a standalone
+web manifest. Network access is still needed to load the app: offline caching
+is not included. Re-add an older shortcut if iOS retains its old icon/settings.
+
+Mobile flight uses a compact Flight Data panel; tap **Flight details** for the
+secondary instruments. The smaller radar still rotates with heading and opens
+the full map on tap. Game surfaces suppress text selection, long-press callouts
+and browser zoom gestures while the map retains its own pinch zoom. Safe-area
+padding keeps touch controls away from the notch and home indicator. Desktop
+Flight Data is unchanged; radar headings are removed on both layouts.

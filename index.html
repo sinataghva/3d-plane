@@ -2,7 +2,18 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+        />
+        <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
+        <link
+            rel="apple-touch-icon"
+            href="%BASE_URL%icons/apple-touch-icon.png"
+        />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="Open Skies" />
+        <meta name="theme-color" content="#142e40" />
         <title>Open Skies · Choose your flight</title>
     </head>
     <body>
@@ -91,10 +102,6 @@
             aria-label="Open full map"
             aria-haspopup="dialog"
         >
-            <div class="instrument-header mini-map-header">
-                <h2>Radar</h2>
-                <span class="status-pill">Heading up</span>
-            </div>
             <canvas
                 id="mini-map-canvas"
                 width="170"

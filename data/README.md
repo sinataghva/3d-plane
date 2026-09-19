@@ -17,7 +17,8 @@ The processed OSM database is linked from the full-screen map. Geometry is
 simplified and reprojected; building heights may be estimated. Elevation is
 resampled and runway corridors are flattened in the runtime representation.
 Source snapshot timestamps are stored separately from the download date.
-See the import scripts and [DECISIONS.md](../DECISIONS.md) for exact processing choices.
+See the import scripts in `scripts/` and [project README](../README.md) for
+processing details.
 
 ## Luxeuil
 
