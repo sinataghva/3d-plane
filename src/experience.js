@@ -4,6 +4,30 @@ import { getGeography } from './geography.js';
 import { getAltitude } from './flightMetrics.js';
 import { getVerticalSpeed } from './flightMetrics.js';
 
+/** Show a short, nonblocking landing notification; repeated landings reset it. */
+const landingTimers = new WeakMap();
+/** @param {HTMLElement} element @param {string} message */
+export function showLandingFeedback(element, message) {
+    clearTimeout(landingTimers.get(element));
+    element.textContent = message;
+    element.hidden = false;
+    for (const animation of element.getAnimations()) animation.cancel();
+    element.animate(
+        [
+            { opacity: 1, offset: 0 },
+            { opacity: 1, offset: 0.85 },
+            { opacity: 0, offset: 1 }
+        ],
+        { duration: 3000, fill: 'forwards' }
+    );
+    landingTimers.set(
+        element,
+        setTimeout(() => {
+            element.hidden = true;
+        }, 3000)
+    );
+}
+
 /** @param {import('./physics.js').PlaneState} state */
 export function isOnRunway(state) {
     const world = getGeography();
@@ -34,7 +58,7 @@ export function describeTouchdown(before, after) {
               ? 'Pitch was too steep at impact. Ease the nose toward the horizon.'
               : 'Descent was too fast. Add thrust and gently raise the nose earlier.';
     }
-    return `${isOnRunway(after) ? 'Runway landing' : 'Off-field landing'} · ${sink < 2 ? 'Smooth' : sink < 5 ? 'Firm' : 'Hard'} touchdown · ${sink.toFixed(1)} m/s descent. Reduce thrust to stop, or take off again.`;
+    return `${isOnRunway(after) ? 'Runway landing' : 'Off-field landing'} · ${sink < 2 ? 'Smooth' : sink < 5 ? 'Firm' : 'Hard'} touchdown · ${sink.toFixed(1)} m/s descent.`;
 }
 
 /**
@@ -90,7 +114,6 @@ export function createExperience({
     const waypoints = jet && world ? jetWaypoints(world) : [];
     let waypoint = 0;
     let paused = false;
-    let feedbackUntil = 0;
     let maxAltitude = 0;
     let startYaw = planeState.yawAngle;
     let completed = false;
@@ -233,10 +256,10 @@ export function createExperience({
                             : turn >= Math.PI * 1.9) &&
                         headingError < 0.2 &&
                         isOnRunway(planeState);
-                    feedback.textContent =
-                        (completed ? 'Circuit complete! ' : '') + result;
-                    feedback.hidden = false;
-                    feedbackUntil = performance.now() + 12000;
+                    showLandingFeedback(
+                        feedback,
+                        (completed ? 'Circuit complete! ' : '') + result
+                    );
                 }
             }
         },
@@ -250,7 +273,6 @@ export function createExperience({
             const output = document.getElementById('touch-thrust-value');
             if (output)
                 output.textContent = `${Math.round(planeState.thrust * 100)}%`;
-            if (performance.now() > feedbackUntil) feedback.hidden = true;
             card.hidden =
                 guide.value === 'free' ||
                 planeState.isCrashed ||

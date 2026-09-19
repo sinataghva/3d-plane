@@ -366,6 +366,15 @@ async function startApp() {
         });
         updateCamera({ camera, controls, airplane, cameraMode });
         updateMirage(airplane, planeState, keyboard, 0);
+        if (visualScenario.name === 'exhaust') {
+            airplane.updateMatrixWorld(true);
+            camera.position.copy(
+                airplane.localToWorld(new THREE.Vector3(-14, 3, 3))
+            );
+            camera.lookAt(
+                airplane.localToWorld(new THREE.Vector3(-5, 0.85, 0))
+            );
+        }
         if (visualScenario.name === 'card') {
             camera.position
                 .copy(airplane.position)

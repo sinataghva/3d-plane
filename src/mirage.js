@@ -41,7 +41,7 @@ export function createMirage() {
     );
     nose.rotation.z = -Math.PI / 2;
     const rear = mesh(
-        new THREE.CylinderGeometry(0.85, 0.56, 2.2, 16),
+        new THREE.CylinderGeometry(0.85, 0.56, 2.2, 24, 1, true),
         paint,
         [-4.8, 0.85, 0]
     );
@@ -52,6 +52,31 @@ export function createMirage() {
         [-6, 0.85, 0]
     );
     exhaust.rotation.z = -Math.PI / 2;
+    // End the recessed chamber aft of the fin root (-5.5) and wings,
+    // so their internal geometry cannot be seen through the nozzle.
+    const interior = mesh(
+        new THREE.CylinderGeometry(0.38, 0.5, 0.75, 24, 1, true),
+        new THREE.MeshStandardMaterial({
+            color: 0x14191d,
+            roughness: 0.95,
+            side: THREE.BackSide
+        }),
+        [-5.975, 0.85, 0]
+    );
+    interior.rotation.z = -Math.PI / 2;
+    const throat = mesh(
+        new THREE.CircleGeometry(0.38, 24),
+        new THREE.MeshBasicMaterial({ color: 0x050709 }),
+        [-5.6, 0.85, 0]
+    );
+    throat.rotation.y = -Math.PI / 2;
+    const lip = mesh(
+        new THREE.RingGeometry(0.5, 0.6, 24),
+        dark,
+        [-6.35, 0.85, 0]
+    );
+    lip.rotation.y = -Math.PI / 2;
+
     const canopy = mesh(
         new THREE.SphereGeometry(1, 20, 12),
         glass,

@@ -15,6 +15,35 @@ import { getGeography } from './geography.js';
 
 /** @type {Record<string, VisualScenario>} */
 const VISUAL_SCENARIOS = {
+    exhaust: {
+        name: 'exhaust',
+        cameraMode: 'chase',
+        plane: {
+            position: { x: 0, y: 8, z: -112 },
+            yawAngle: -Math.PI / 2,
+            pitchAngle: 0,
+            rollAngle: 0,
+            afterburner: false,
+            gearDown: false,
+            gearExtension: 0,
+            isAirborne: true
+        }
+    },
+    exhaustBoost: {
+        name: 'exhaust',
+        cameraMode: 'chase',
+        plane: {
+            position: { x: 0, y: 8, z: -112 },
+            yawAngle: -Math.PI / 2,
+            pitchAngle: 0,
+            rollAngle: 0,
+            thrust: 1.1,
+            afterburner: true,
+            gearDown: false,
+            gearExtension: 0,
+            isAirborne: true
+        }
+    },
     afterburner: {
         name: 'afterburner',
         cameraMode: 'chase',
