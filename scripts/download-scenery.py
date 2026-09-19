@@ -2,6 +2,7 @@
 Run from repository root. Existing layers are never fetched again. A complete
 cache can be merged offline into data/cache/osm.json.gz for import-osm.py.
 """
+import os
 import gzip
 import hashlib
 import json
@@ -10,10 +11,11 @@ import subprocess
 import time
 import urllib.parse
 
-cache = pathlib.Path('data/cache')
+from scenery_regions import CACHE, BOUNDS, REGION
+cache = CACHE
 cache.mkdir(parents=True, exist_ok=True)
-bbox = '(48.775,2.015,48.845,2.155)'
-endpoint = 'https://overpass-api.de/api/interpreter'
+bbox = '(' + ','.join(map(str, BOUNDS)) + ')'
+endpoint = os.environ.get('OVERPASS_ENDPOINT', 'https://overpass-api.de/api/interpreter')
 layers = {
     'palace': 'relation[wikidata=Q2946];',
     'airfield-places': f'(way[aeroway]{bbox};node[place]{bbox};);',
@@ -27,6 +29,21 @@ layers = {
     **{f'land-{tag}': f'way[landuse={tag}]{bbox};' for tag in
        ['forest', 'farmland', 'meadow', 'grass', 'residential', 'industrial', 'commercial']}
 }
+if REGION == 'luxeuil':
+    del layers['palace']
+    # Bound dense geometry requests rather than repeatedly timing out one large layer.
+    del layers['buildings']
+    south, west, north, east = BOUNDS
+    middle_lat, middle_lon = (south+north)/2, (west+east)/2
+    for row, (s,n) in enumerate([(south,middle_lat),(middle_lat,north)]):
+        for col, (w,e) in enumerate([(west,middle_lon),(middle_lon,east)]):
+            if row == 1 and col == 0:
+                mid = round((s+n)/2, 6)
+                layers['buildings-1-0-south'] = f'way[building]({s},{w},{mid},{e});'
+                layers['buildings-1-0-north'] = f'way[building]({mid},{w},{n},{e});'
+            else:
+                layers[f'buildings-{row}-{col}'] = f'way[building]({s},{w},{n},{e});'
+
 missing = []
 for name, body in layers.items():
     path = cache / f'{name}.json.gz'
@@ -37,13 +54,13 @@ for name, body in layers.items():
     if plain.exists():
         content = plain.read_bytes()
     else:
-        query = '[out:json][timeout:25];' + body + 'out geom qt;'
+        query = '[out:json][timeout:90];' + body + 'out geom qt;'
         url = endpoint + '?' + urllib.parse.urlencode({'data': query})
         print('Fetch', name, flush=True)
         try:
             content = subprocess.check_output([
                 'curl', '-A', '3d-plane-scenery/1.0 (github.com/sinataghva/3d-plane)',
-                '-sS', '--fail', '--max-time', '60', url])
+                '-sS', '--fail', '--max-time', '120', url])
             result = json.loads(content)
             if 'remark' in result:
                 raise ValueError(result['remark'])

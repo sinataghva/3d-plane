@@ -1,12 +1,80 @@
-# 3D Plane — Saint-Cyr & Versailles
+# Open Skies — Saint-Cyr & Luxeuil
 
 An educational browser-based 3D airplane simulator built with Three.js and Vite.
 
-Take off from Saint-Cyr-l’École airfield, explore the Palace of Versailles and its gardens, and fly over nearby towns in a real-world-inspired landscape. The simulator combines a procedural Cessna-style aircraft, arcade flight physics, three camera modes, live instruments, radar, and a full-screen regional map. Free flight is the default; guides and landing challenges are optional.
+Choose a Cessna-style light aircraft at Saint-Cyr-l’École near Versailles, or a Mirage 2000 at Luxeuil–Saint-Sauveur. Explore cached, real-world-inspired scenery with arcade flight physics, three camera modes, live instruments, radar and a full-screen regional map. Free flight is the default; guides and landing challenges are optional.
+
+## Choose your flight
+
+The startup screen offers two visual cards captured from the game itself:
+
+| Experience             | Aircraft                    | Flying style                                             |
+| ---------------------- | --------------------------- | -------------------------------------------------------- |
+| Saint-Cyr · Versailles | Cessna-style light aircraft | Relaxed sightseeing, gardens and villages                |
+| Luxeuil · Haute-Saône  | Mirage 2000                 | Jet flight, banked turns and optional navigation circuit |
+
+Select a card and press **Fly**. **Change flight** returns to selection with a
+fresh simulation. Find it in the settings menu. The picker fits phone screens in
+portrait and landscape; flying on phones uses landscape. Both experiences default to unrestricted free flight.
+
+### Mirage controls and handling
+
+- **W/S** adjust thrust. Hold **W** at 100% to engage **110% afterburner**;
+  release W to return to 100%. The orange/red exhaust lights only during boost.
+- On mobile, hold the throttle slider beyond **100%** in the right end zone
+  for afterburner. Release or cancel the touch to spring back to 100%.
+  Hold the left end zone below **0%** for braking; release returns to 0%.
+- **G** toggles gear in flight. Hold **S** to reduce thrust; at 0% it deploys
+  airbrakes/wheel braking. Release S to retract, keeping zero thrust. Mobile
+  has a **Gear** toggle button. Gear folds smoothly over 1.6 seconds; wait
+  for **Gear: down** before touchdown. Retract gear after departure.
+- Rotate around **260 km/h**. Approach at **260–340 km/h**, with gear down,
+  wings level, and a gentle descent below 5 m/s. Reduce thrust and use airbrakes
+  to stop. These are game operating targets, not real Mirage flight instructions.
+- **Bank, then pull the elevator** to tighten a turn. Full rolls and loops are
+  supported, with speed-dependent authority, up to 9 G of positive lift and
+  energy loss under load. Rudder provides yaw correction. The mobile stick
+  offers the same maximum control authority as the keyboard.
+- Holding elevator preserves bank after releasing roll input. Release both
+  elevator and bank to resume automatic wing leveling. This applies to ordinary
+  turns as well as loops.
+- The jet has engine spool-up, **Mach** (speed relative to sound) and estimated
+  normal G-force readouts.
+- Chase view keeps the horizon upright and follows turns with a little lag;
+  cockpit view rotates with the aircraft.
+- **Space** fires the visual-only rapid cannon (touch: Fire). Jet tracers and
+  brief muzzle flashes use a bounded pool. No audio is included.
+- **P** or the settings icon opens a paused menu for camera, graphics, guides,
+  restart and changing flight. Close with P, Esc or × to resume. **C** still
+  cycles cameras directly. Desktop jet buttons are hidden; Mach, G and gear/
+  brake/afterburner status appear in Flight Data.
+- Optional **Circuit challenge** adds four map waypoints and navigation hints.
+  Fly through them above 150 m AGL, then return whenever you choose.
+
+### Luxeuil scenery
+
+A roughly **25.4 × 22.3 km** cached region surrounds Luxeuil–Saint-Sauveur (LFSX).
+The north-up map labels Luxeuil-les-Bains, Abelcourt, Saint-Sauveur and surrounding
+towns. Runways, taxiways, roads, woodland, water and relief share the same
+coordinates as flight and collision detection. This is stylized scenery, not a
+navigation chart or a representation of current base operations.
+
+```bash
+python3 scripts/download-scenery.py --luxeuil
+python3 scripts/import-osm.py data/luxeuil/cache/osm.json.gz --luxeuil
+python3 scripts/import-elevation.py --luxeuil
+node scripts/validate-jet-flight.mjs
+```
+
+Source layers and nine original elevation tiles stay in `data/luxeuil/cache/`.
+Normal play loads only local `data/luxeuil/map.json` and `elevation.json`.
+Credits below apply to both maps. Successful downloads are reused; the importer
+works offline once the cache is complete. `OVERPASS_ENDPOINT` can select another
+public instance if the default is unavailable; no authentication is required.
 
 ## Features
 
-- Procedural high-wing airplane model inspired by a small Cessna-style aircraft
+- Procedural Cessna-style light aircraft and Mirage 2000 models
 - Arcade flight physics with thrust, lift, gravity, stalls, banking, rudder, and landing behavior
 - Animated propeller and animated control surfaces for ailerons, elevator, rudder, and automatic flaps
 - Chase, cockpit, and orbit camera modes
@@ -16,7 +84,9 @@ Take off from Saint-Cyr-l’École airfield, explore the Palace of Versailles an
 - Warning banners for low altitude, stall risk, and crash states
 - Crash handling with visual feedback and restart flow
 - Machine-gun tracer fire with space bar
-- Saint-Cyr–Versailles scenery from cached OpenStreetMap geometry and regional elevation
+- Saint-Cyr–Versailles and Luxeuil scenery from cached OpenStreetMap geometry and regional elevation
+- Zoomable full map with a selectable destination and a red world-space beacon
+- Distance-based road/runway surface detail and three graphics presets
 - Real runway alignment, town labels, palace, Grand Canal, roads, woodland and terrain collisions
 - Unit tests and visual regression tests
 
@@ -38,7 +108,7 @@ Altitude is above local ground.
 Buildings and water can cause crashes; grass and fields remain usable for
 forgiving off-field landings. Free flight continues beyond the detailed area.
 
-All source downloads are cached in `data/cache/`. Normal play and builds use
+Saint-Cyr source downloads are cached in `data/cache/`. Normal play and builds use
 only local `data/saint-cyr.json` and `data/saint-cyr-elevation.json`; no API token
 or runtime Overpass/elevation connection is needed. Existing cached layers are
 reused. To reproduce the scenery from the cache:
@@ -68,8 +138,9 @@ Thank you to the contributors and projects that make this scenery possible:
 - **© [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)** —
   airfield geometry, building footprints, roads, land cover, waterways, and place
   names. The map data is available under the **Open Database License (ODbL 1.0)**.
-  Our simplified, projected [derived database](data/saint-cyr.json) is distributed
-  with the project and linked from the in-game full map.
+  Our simplified, projected derived databases for [Saint-Cyr](data/saint-cyr.json)
+  and [Luxeuil](data/luxeuil/map.json) are distributed with the project and
+  linked from each in-game full map.
 - **[Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API)** — the
   open-source query service used to extract the OSM features. Thanks to its
   maintainers and public instance operators. Extraction happens during data
@@ -82,8 +153,9 @@ Thank you to the contributors and projects that make this scenery possible:
   [terrain-attribution.md](data/terrain-attribution.md), from the
   [upstream attribution document](https://github.com/tilezen/joerd/blob/master/docs/attribution.md).
 
-Original downloads are preserved in [data/cache/](data/cache/), with OSM source
-snapshot timestamps and checksums in the [manifest](data/cache/manifest.json).
+Original downloads are preserved in [Saint-Cyr cache](data/cache/) and
+[Luxeuil cache](data/luxeuil/cache/), with source timestamps and checksums in
+their respective `manifest.json` files.
 Source dates can differ between layers; this is a cached scenery snapshot,
 not a live map. These data-source credits and licenses apply to the geographic
 data separately from the application code.
@@ -92,7 +164,7 @@ data separately from the application code.
 
 ### Prerequisites
 
-- Node.js
+- Node.js 24 (the version used by deployment)
 - npm
 
 ### Installation
@@ -139,6 +211,8 @@ http://127.0.0.1:4173/3d-plane/
 - **Arrow Down**: Pitch nose up
 - **Arrow Up**: Pitch nose down
 - **Space**: Fire tracer rounds
+- **G**: Toggle Mirage landing gear in flight
+- **P**: Open/close settings and pause/resume
 - **C**: Cycle camera mode between chase, cockpit, and orbit
 - **Hold M**: Show the full regional map; release to close
 - **Click/tap radar**: Keep the map open; close with **×** or **Escape**
@@ -199,9 +273,10 @@ Format the project:
 npm run format
 ```
 
-Run visual regression tests:
+Install the browser once, then run visual regression tests:
 
 ```bash
+npx playwright install chromium
 npm run test:visual
 ```
 
@@ -215,7 +290,12 @@ npm run test:visual:update
 
 - `src/main.js`: App setup, render loop, and scene wiring
 - `src/airplane.js`: Procedural airplane model and animated control surfaces
-- `src/physics.js`: Arcade flight physics and plane state updates
+- `src/physics.js`: Light-aircraft physics and shared plane state
+- `src/mirage.js`, `src/jetPhysics.js`, `src/jetAttitude.js`: Jet model and handling
+- `src/missions.js`: Scenario picker and mission definitions
+- `src/experience.js`, `src/jetControls.js`: Settings, guides and throttle/gear controls
+- `src/worldMap.js`, `src/mapViewport.js`, `src/destination.js`: Full map and destination
+- `src/groundDetail.js`: Nearby road/runway surfaces and tile cache
 - `src/camera.js`: Chase, cockpit, and orbit camera handling
 - `src/hud.js`: Flight data HUD
 - `src/cockpitOverlay.js`: Cockpit instrument overlay
@@ -236,13 +316,15 @@ footprints and land cover, real elevation, and generated building/tree meshes.
 To change the plane model, edit:
 
 ```text
-src/airplane.js
+src/airplane.js  # Light aircraft
+src/mirage.js    # Mirage 2000
 ```
 
 To change flight behavior, edit:
 
 ```text
-src/physics.js
+src/physics.js     # Light aircraft
+src/jetPhysics.js  # Mirage 2000
 ```
 
 To add larger world objects such as buildings or future targets, start with:
@@ -269,10 +351,10 @@ Files in `public/` are served from the site root. For example:
 public/models/airplane.glb
 ```
 
-should be loaded with:
+should be loaded relative to Vite’s configured base so GitHub Pages works:
 
-```text
-/models/airplane.glb
+```js
+loadGltfModel(`${import.meta.env.BASE_URL}models/airplane.glb`);
 ```
 
 Use `loadGltfModel()` from `src/assets/modelLoader.js` for future GLTF/GLB loading.
@@ -366,7 +448,7 @@ JavaScript callers can use `startRoute` for the same behavior or await `flyRoute
 
 ## Rendering performance
 
-Use the **Graphics** selector in the top right; the choice is saved locally.
+Open the settings icon, then use **Graphics**; the choice is saved locally.
 High (default) caps pixel ratio at 2 and uses 2048px shadows. Balanced caps it
 at 1.5 with 1024px shadows. Low caps it at 1 and disables shadows. Standard-DPI
 screens keep their native resolution. Settings update without restarting.
@@ -399,12 +481,13 @@ ignores key repeat, and flight keys leave focused form controls alone.
 ### Flight experience
 
 Free flight is the default. The Guide menu offers dismissible takeoff tips,
-landing help, and an optional circuit challenge (climb to 50 m, fly a full turn,
-and land on the runway in the original direction). There is no timer or forced
+landing help, and optional circuit challenges: Saint-Cyr asks for a climb to
+50 m and a full turn before landing in the takeoff direction; Luxeuil uses four
+waypoints above 150 m AGL. There is no timer or forced
 landing. Collapsible controls leave more room for the view.
 
-The flight toolbar provides camera, pause/resume, and restart controls on desktop
-and mobile. The touch throttle slider sets thrust directly, including immediate
+The settings menu pauses flight and provides camera, graphics, guide, restart
+and change-flight controls on desktop and mobile. The touch throttle slider sets thrust directly, including immediate
 100%. Using pause, restart, or the slider takes control from an automation flight.
 Crashes now wait for **Return to runway**; feedback explains excessive descent or
 attitude. Successful touchdowns report runway/off-field location and descent rate.
@@ -429,3 +512,63 @@ A light westerly wind moves the clouds 3 m/s east and 1 m/s north. This is visua
 weather and does not change aircraft handling. Clouds fade into the distance and
 wrap outside visibility, so long flights do not exhaust the cloud field. Pause
 freezes their movement; visual regression fixtures use a fixed cloud state.
+
+## Experience development and automation
+
+`src/missions.js` defines experiences; `src/mirage.js` creates the jet, and
+`src/jetPhysics.js` implements its handling. Use `?mission=luxeuil&automation=1`
+for opt-in machine control. `setControls` accepts `boost`, `gearDown`, and
+`airbrake` booleans in addition to the existing inputs. Hold boost with
+`{throttle: 1, boost: true}` and release with `{boost: false}`. Pausing, human
+takeover, reset, focus loss, or the end of a bounded animated flight clears boost.
+Telemetry includes `plane.aircraft`, `plane.mission`, engine power and gear state.
+
+To regenerate the selection artwork, run the dev server on port 5174 and then
+`node scripts/capture-previews.mjs`. It captures the actual local scene with the
+HUD hidden at 2× pixel density. Pass `luxeuil` or `saint-cyr` to capture only
+one card; `PREVIEW_ORIGIN` overrides the default `http://127.0.0.1:5174`.
+Artwork is stored in `public/previews/` and uses the same map credits.
+Run `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:visual` and
+`npm run build` locally before pushing. GitHub Actions only builds and deploys.
+
+### Custom destination
+
+Open the full map by holding **M** or clicking/tapping the minimap. Click or tap
+inside the mapped terrain to choose one destination. A red pin appears on both
+maps and a red terrain-anchored beacon appears in the world, with a distance
+label and an edge arrow when off screen. Click elsewhere to replace it. Closing
+the map keeps it active; **Clear destination**, restart, or changing flights
+removes it. Reaching it never forces a landing or changes your controls.
+
+The full map supports zoom and pan: scroll down to zoom in, up to zoom out;
+click and drag to pan. On touchscreens, pinch to zoom and drag with one finger.
+The +/− buttons change zoom by 20 percentage points, and **Fit map** resets zoom and pan. Zoom cannot go
+below the whole-region view or above **400% (4×)**. Zoom/pan persist when closing the map;
+restart or changing missions resets them. Dragging and pinching never place a
+destination. Short clicks/taps still select accurately at the current zoom.
+
+### Ground surface detail
+
+Nearby roads, taxiways and runways now use separate terrain-aligned geometry.
+Luxeuil has sharp runway edges, centre lines, threshold stripes and numbers;
+Saint-Cyr retains grass strips with sparse boundary indicators. Markings are
+stylized from cached map geometry and runway references. Asphalt/grass grain
+and restrained tyre wear are generated locally; there are no new image downloads.
+
+| Preset   | Nearby ground detail                                                  | Maximum requested tiles |
+| -------- | --------------------------------------------------------------------- | ----------------------- |
+| Low      | Regional texture only                                                 | 0                       |
+| Balanced | Road/runway surfaces and crisp markings within 850 m; simple grain    | 20                      |
+| High     | Detail within 1,700 m; finer grain, subtle bump shading and tyre wear | 48                      |
+
+Distance includes altitude. Detail fades through the outer 40% of the range and
+blends over time. A shared pool keeps at most 80 cached tiles, building at most
+two per frame. Recently used tiles remain available beyond the activation
+range to avoid rebuilding when crossing a boundary. The original physics and
+collision terrain remain authoritative. Distant fields and forests still use
+the regional texture; this is a focused road/runway upgrade, not satellite scenery.
+
+For local comparative measurements, run `node scripts/benchmark-ground.mjs current`
+with the dev server running. Results and ground screenshots go into
+`test-results/ground-benchmark/`. Headless software-rendered timings are not
+representative of native GPU performance.

@@ -29,6 +29,10 @@ const CYLINDER_UP = new THREE.Vector3(0, 1, 0);
  * @returns {THREE.Quaternion}
  */
 function getPlaneQuaternion(planeState) {
+    if (planeState.attitude) {
+        const q = planeState.attitude;
+        return new THREE.Quaternion(q.x, q.y, q.z, q.w);
+    }
     return new THREE.Quaternion().setFromEuler(
         new THREE.Euler(
             planeState.rollAngle,
@@ -61,7 +65,14 @@ function getMuzzlePositions(planeState) {
         planeState.position.z
     );
 
-    return MUZZLE_LOCAL_POSITIONS.map((localPosition) =>
+    const muzzles =
+        planeState.aircraft === 'mirage'
+            ? [
+                  new THREE.Vector3(2.8, 0.1, 0.85),
+                  new THREE.Vector3(2.8, 0.1, -0.85)
+              ]
+            : MUZZLE_LOCAL_POSITIONS;
+    return muzzles.map((localPosition) =>
         localPosition.clone().applyQuaternion(quaternion).add(planePosition)
     );
 }
@@ -84,6 +95,17 @@ export function createMachineGun(scene) {
     /** @type {Tracer[]} */
     const tracers = [];
     let fireCooldown = 0;
+    /** @type {Tracer[]} */
+    const pool = [];
+    /** @type {THREE.Mesh[]} */
+    const flashes = [];
+    let flashTime = 0;
+    const flashGeometry = new THREE.SphereGeometry(0.22, 6, 4);
+    const flashMaterial = new THREE.MeshBasicMaterial({ color: 0xffd486 });
+    const recycle = (/** @type {Tracer} */ tracer) => {
+        scene.remove(tracer.mesh);
+        pool.push(tracer);
+    };
 
     /**
      * @param {PlaneState} planeState
@@ -96,8 +118,12 @@ export function createMachineGun(scene) {
         );
 
         for (const muzzlePosition of getMuzzlePositions(planeState)) {
-            const material = tracerMaterial.clone();
-            const mesh = new THREE.Mesh(tracerGeometry, material);
+            if (tracers.length >= 160) break;
+            const reused = pool.pop();
+            const mesh =
+                reused?.mesh ??
+                new THREE.Mesh(tracerGeometry, tracerMaterial.clone());
+            mesh.material.opacity = 1;
             mesh.quaternion.copy(tracerQuaternion);
             mesh.position
                 .copy(muzzlePosition)
@@ -109,7 +135,10 @@ export function createMachineGun(scene) {
                 velocity: forwardVector
                     .clone()
                     .multiplyScalar(
-                        MACHINE_GUN_TRACER_SPEED + planeState.speed
+                        (planeState.aircraft === 'mirage'
+                            ? 650
+                            : MACHINE_GUN_TRACER_SPEED) +
+                            planeState.speed * 60
                     ),
                 distance: 0
             });
@@ -126,13 +155,36 @@ export function createMachineGun(scene) {
          * @param {number} args.delta
          */
         update({ planeState, keyboard, delta }) {
+            if (delta <= 0) return;
+            flashTime = Math.max(0, flashTime - delta);
+            if (
+                planeState.aircraft === 'mirage' &&
+                keyboard.space &&
+                !planeState.isCrashed
+            ) {
+                while (flashes.length < 2) {
+                    const flash = new THREE.Mesh(flashGeometry, flashMaterial);
+                    flashes.push(flash);
+                    scene.add(flash);
+                }
+            }
             fireCooldown = Math.max(0, fireCooldown - delta);
 
             if (keyboard.space && !planeState.isCrashed && fireCooldown === 0) {
                 fireBurst(planeState);
-                fireCooldown = MACHINE_GUN_FIRE_INTERVAL;
+                fireCooldown =
+                    planeState.aircraft === 'mirage'
+                        ? 0.025
+                        : MACHINE_GUN_FIRE_INTERVAL;
+                flashTime = 0.022;
             }
 
+            const muzzles = getMuzzlePositions(planeState);
+            flashes.forEach((flash, i) => {
+                flash.visible =
+                    keyboard.space && flashTime > 0 && !planeState.isCrashed;
+                flash.position.copy(muzzles[i]);
+            });
             for (let index = tracers.length - 1; index >= 0; index--) {
                 const tracer = tracers[index];
                 const distanceStep = tracer.velocity.length() * delta;
@@ -144,18 +196,28 @@ export function createMachineGun(scene) {
                 );
 
                 if (tracer.distance >= MACHINE_GUN_RANGE) {
-                    scene.remove(tracer.mesh);
-                    tracer.mesh.material.dispose();
+                    recycle(tracer);
                     tracers.splice(index, 1);
                 }
             }
         },
 
+        dispose() {
+            this.clear();
+            for (const tracer of pool) tracer.mesh.material.dispose();
+            pool.length = 0;
+            for (const flash of flashes) scene.remove(flash);
+            flashes.length = 0;
+            flashGeometry.dispose();
+            flashMaterial.dispose();
+            tracerGeometry.dispose();
+            tracerMaterial.dispose();
+        },
         clear() {
             for (const tracer of tracers) {
-                scene.remove(tracer.mesh);
-                tracer.mesh.material.dispose();
+                recycle(tracer);
             }
+            for (const flash of flashes) flash.visible = false;
             tracers.length = 0;
             fireCooldown = 0;
         }

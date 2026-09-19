@@ -1,3 +1,4 @@
+import { clearAfterburner } from './jetPhysics.js';
 import {
     getAltitude,
     INTERNAL_SPEED_TO_KMH,
@@ -5,7 +6,7 @@ import {
     getVerticalSpeed
 } from './flightMetrics.js';
 /**
- * @typedef {{throttle: number, pitch: number, roll: number, rudder: number, fire: boolean}} FlightControls
+ * @typedef {{throttle: number, pitch: number, roll: number, rudder: number, fire: boolean, boost?: boolean, gearDown?: boolean, airbrake?: boolean}} FlightControls
  * @typedef {import('./physics.js').PlaneState} PlaneState
  */
 
@@ -22,7 +23,16 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
     let routeStatus = 'idle';
     let routeError = '';
     /** @type {FlightControls} */
-    let controls = { throttle: 0, pitch: 0, roll: 0, rudder: 0, fire: false };
+    let controls = {
+        throttle: 0,
+        pitch: 0,
+        roll: 0,
+        rudder: 0,
+        fire: false,
+        boost: false,
+        gearDown: true,
+        airbrake: false
+    };
     const assertActive = () => {
         if (!active)
             throw new Error(
@@ -36,9 +46,9 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
         for (const [key, value] of Object.entries(values)) {
             if (!Object.hasOwn(controls, key))
                 throw new Error(`Unknown control: ${key}`);
-            if (key === 'fire') {
+            if (['fire', 'boost', 'gearDown', 'airbrake'].includes(key)) {
                 if (typeof value !== 'boolean')
-                    throw new Error('fire must be boolean.');
+                    throw new Error(`${key} must be boolean.`);
             } else if (
                 typeof value !== 'number' ||
                 !Number.isFinite(value) ||
@@ -57,9 +67,18 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
         routeError,
         simulationSeconds: ticks / 60,
         controls: { ...controls },
-        plane: { ...planeState, position: { ...planeState.position } },
+        plane: {
+            ...planeState,
+            position: { ...planeState.position },
+            ...(planeState.attitude
+                ? { attitude: { ...planeState.attitude } }
+                : {})
+        },
         altitudeMeters: getAltitude(planeState),
-        speedKmh: planeState.speed * INTERNAL_SPEED_TO_KMH,
+        speedKmh:
+            planeState.speed *
+            INTERNAL_SPEED_TO_KMH *
+            (planeState.aircraft === 'mirage' ? 2.4 : 1),
         verticalSpeedMs:
             getVerticalSpeed(planeState) * INTERNAL_VERTICAL_SPEED_TO_MS
     });
@@ -77,6 +96,8 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
             return getState();
         },
         pause() {
+            controls.boost = false;
+            clearAfterburner(planeState);
             continuous = false;
             accumulator = 0;
             return getState();
@@ -99,6 +120,12 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
             validateControls(values);
             controls = { ...controls, ...values };
             planeState.thrust = controls.throttle;
+            if (!controls.boost) clearAfterburner(planeState);
+            if (planeState.aircraft === 'mirage') {
+                if (planeState.isAirborne || controls.gearDown)
+                    planeState.gearDown = controls.gearDown;
+                planeState.airbrake = controls.airbrake;
+            }
             render();
             return getState();
         },
@@ -113,6 +140,8 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
                 throw new Error('seconds must be between 1/60 and 10.');
             const count = Math.round(seconds * 60);
             const input = {
+                boost: Boolean(controls.boost),
+                brake: Boolean(controls.airbrake),
                 w: false,
                 s: false,
                 a: false,
@@ -176,6 +205,8 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
                             ticks >= endTick
                         ) {
                             running = false;
+                            controls.boost = false;
+                            clearAfterburner(planeState);
                             resolve(getState());
                         } else requestAnimationFrame(frame);
                     } catch (error) {
@@ -253,7 +284,10 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
                 pitch: 0,
                 roll: 0,
                 rudder: 0,
-                fire: false
+                fire: false,
+                boost: false,
+                gearDown: true,
+                airbrake: false
             };
             ticks = 0;
             routeStatus = 'idle';
@@ -265,6 +299,7 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
             return getState();
         },
         release() {
+            clearAfterburner(planeState);
             active = false;
             continuous = false;
             accumulator = 0;
@@ -273,7 +308,10 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
                 pitch: 0,
                 roll: 0,
                 rudder: 0,
-                fire: false
+                fire: false,
+                boost: false,
+                gearDown: true,
+                airbrake: false
             };
             render();
             return getState();
@@ -305,7 +343,7 @@ export async function registerFlightTools(api) {
         {
             name: 'set_flight_controls',
             description:
-                'Set persistent flight controls. Throttle 0..1 (1 = full); pitch -1..1 (positive nose up); roll/rudder -1..1 (positive right). Simulation stays paused until fly_flight (animated) or step_flight (instant).',
+                'Set persistent flight controls. Throttle 0..1 (1 = full); pitch -1..1 (positive nose up); roll/rudder -1..1 (positive right). Jet boost is a held boolean at full throttle; clear it to release. Pause, bounded flight completion and takeover release boost. gearDown and airbrake are jet toggles. Simulation stays paused until fly_flight (animated) or step_flight (instant).',
             inputSchema: {
                 type: 'object',
                 additionalProperties: false,
@@ -314,7 +352,10 @@ export async function registerFlightTools(api) {
                     pitch: { type: 'number', minimum: -1, maximum: 1 },
                     roll: { type: 'number', minimum: -1, maximum: 1 },
                     rudder: { type: 'number', minimum: -1, maximum: 1 },
-                    fire: { type: 'boolean' }
+                    fire: { type: 'boolean' },
+                    boost: { type: 'boolean' },
+                    gearDown: { type: 'boolean' },
+                    airbrake: { type: 'boolean' }
                 }
             },
             execute: (/** @type {Partial<FlightControls>} */ input) =>
@@ -395,7 +436,10 @@ export async function registerFlightTools(api) {
                                             minimum: -1,
                                             maximum: 1
                                         },
-                                        fire: { type: 'boolean' }
+                                        fire: { type: 'boolean' },
+                                        boost: { type: 'boolean' },
+                                        gearDown: { type: 'boolean' },
+                                        airbrake: { type: 'boolean' }
                                     }
                                 }
                             }

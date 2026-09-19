@@ -58,14 +58,24 @@ export function createCockpitOverlay() {
             const altitude = getAltitude(planeState);
             const speedKmh = Math.max(
                 0,
-                planeState.speed * INTERNAL_SPEED_TO_KMH
+                planeState.speed *
+                    INTERNAL_SPEED_TO_KMH *
+                    (planeState.aircraft === 'mirage' ? 2.4 : 1)
             );
             const pitchDegrees = planeState.pitchAngle * RADIANS_TO_DEGREES;
             const rollDegrees = planeState.rollAngle * RADIANS_TO_DEGREES;
             const pitchOffset = clamp(pitchDegrees * 1.3, -32, 32);
 
-            updateNeedle(speedNeedle, speedKmh, MAX_AIRSPEED_KMH);
-            updateNeedle(altitudeNeedle, altitude, MAX_ALTITUDE_METERS);
+            updateNeedle(
+                speedNeedle,
+                speedKmh,
+                planeState.aircraft === 'mirage' ? 1400 : MAX_AIRSPEED_KMH
+            );
+            updateNeedle(
+                altitudeNeedle,
+                altitude,
+                planeState.aircraft === 'mirage' ? 5000 : MAX_ALTITUDE_METERS
+            );
             horizon.style.transform = `translateY(${pitchOffset}px) rotate(${-rollDegrees}deg)`;
         }
     };

@@ -9,7 +9,9 @@ test('guides are optional, dismissible, and do not alter flight state', async ({
     ).toBeVisible();
     await expect(page.locator('#guide-mode')).toHaveValue('free');
     await expect(page.locator('#guide-card')).toBeHidden();
+    await page.locator('#settings-button').click();
     await page.getByLabel('Guide', { exact: true }).selectOption('circuit');
+    await page.locator('#close-settings').click();
     await expect(page.locator('#guide-card')).toBeVisible();
     await page.getByRole('button', { name: 'Dismiss guide' }).click();
     await expect(page.locator('#guide-mode')).toHaveValue('free');
@@ -28,8 +30,8 @@ test('mobile throttle, camera, pause and restart work', async ({ page }) => {
     ).toBeVisible();
     await page.getByLabel('Thrust percent').fill('100');
     await expect(page.locator('#thrust-value')).toHaveText('100');
-    await page.getByRole('button', { name: 'Pause', exact: true }).click();
-    await expect(page.locator('#pause-overlay')).toBeVisible();
+    await page.locator('#settings-button').click();
+    await expect(page.locator('#settings-dialog')).toBeVisible();
     const position = await page.evaluate(
         () => window.planeAutomation.getState().plane.position
     );
@@ -43,7 +45,7 @@ test('mobile throttle, camera, pause and restart work', async ({ page }) => {
         )
     ).toEqual(position);
     await page.getByRole('button', { name: 'Restart', exact: true }).click();
-    await expect(page.locator('#pause-overlay')).toBeHidden();
+    await expect(page.locator('#settings-dialog')).toBeHidden();
     await expect(page.locator('#thrust-value')).toHaveText('0');
 });
 
@@ -83,7 +85,6 @@ test('takeoff bounce is not reported as a landing and cockpit guide clears gauge
     await expect(
         page.getByRole('button', { name: 'Take control' })
     ).toBeVisible();
-    await page.getByLabel('Guide', { exact: true }).selectOption('circuit');
     await page.evaluate(() => {
         const api = window.planeAutomation;
         api.setControls({ throttle: 1 });
@@ -94,7 +95,10 @@ test('takeoff bounce is not reported as a landing and cockpit guide clears gauge
         api.step({ seconds: 5 });
     });
     await expect(page.locator('#flight-feedback')).toBeHidden();
+    await page.locator('#settings-button').click();
+    await page.getByLabel('Guide', { exact: true }).selectOption('circuit');
     await page.getByRole('button', { name: 'Camera: Chase' }).click();
+    await page.locator('#close-settings').click();
     await expect(page.locator('#cockpit-overlay')).toBeVisible();
     const hint = await page.locator('#guide-card').boundingBox();
     const gauges = await page.locator('.cockpit-instruments').boundingBox();

@@ -11,6 +11,8 @@ export default defineConfig({
             name: 'local-scenery-data',
             generateBundle() {
                 for (const file of [
+                    'luxeuil/map.json',
+                    'luxeuil/elevation.json',
                     'saint-cyr.json',
                     'saint-cyr-elevation.json',
                     'terrain-attribution.md'

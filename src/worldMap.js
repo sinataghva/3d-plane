@@ -1,3 +1,10 @@
+import { createMapViewport } from './mapViewport.js';
+import {
+    getDestination,
+    setDestination,
+    clearDestination,
+    drawDestinationPin
+} from './destination.js';
 import { getGeography } from './geography.js';
 import { drawOverview } from './geographicMap.js';
 import { formatHeading } from './hud.js';
@@ -33,7 +40,7 @@ export function createWorldMap(planeState) {
     if (geography)
         canvas.setAttribute(
             'aria-label',
-            'North-up Saint-Cyr–Versailles map with your aircraft position and heading. Landmarks: Château de Versailles, Saint-Cyr airfield. Towns: ' +
+            `North-up ${geography.data.airfield?.includes('LFSX') ? 'Luxeuil · LFSX' : 'Saint-Cyr–Versailles · Château de Versailles · Saint-Cyr airfield'} map with your aircraft position and heading. Towns: ` +
                 geography.data.places
                     .filter((p) => ['city', 'town', 'village'].includes(p.kind))
                     .map((p) => p.name)
@@ -48,12 +55,199 @@ export function createWorldMap(planeState) {
     const readout = /** @type {HTMLElement} */ (
         document.getElementById('world-map-position')
     );
+    const clear = document.createElement('button');
+    clear.id = 'clear-destination';
+    clear.textContent = 'Clear destination';
+    clear.disabled = true;
+    dialog
+        .querySelector('header')
+        ?.insertBefore(clear, document.getElementById('close-world-map'));
+    const hint = document.createElement('span');
+    hint.id = 'destination-map-status';
+    hint.textContent = 'Click or tap the map to choose a destination';
+    dialog.querySelector('footer')?.append(hint);
+    clear.onclick = () => {
+        clearDestination();
+        draw();
+    };
+    const bounds = geography ?? {
+        minX: -WORLD_WIDTH / 2,
+        minZ: -WORLD_LENGTH / 2,
+        width: WORLD_WIDTH,
+        depth: WORLD_LENGTH
+    };
+    const viewport = createMapViewport(800, 600, bounds);
+    const navigation = document.createElement('div');
+    navigation.id = 'map-navigation';
+    navigation.innerHTML =
+        '<button id="map-zoom-out" aria-label="Zoom out">−</button><output id="map-zoom-level"></output><button id="map-zoom-in" aria-label="Zoom in">+</button><button id="map-fit">Fit map</button>';
+    dialog.querySelector('header')?.append(navigation);
+    const zoomIn = /** @type {HTMLButtonElement} */ (
+        navigation.querySelector('#map-zoom-in')
+    );
+    const zoomOut = /** @type {HTMLButtonElement} */ (
+        navigation.querySelector('#map-zoom-out')
+    );
+    const zoomLevel = /** @type {HTMLOutputElement} */ (
+        navigation.querySelector('output')
+    );
+    function resizeView() {
+        viewport.resize(canvas.clientWidth, canvas.clientHeight);
+    }
+    function zoom(
+        /** @type {number} */ factor,
+        x = canvas.clientWidth / 2,
+        y = canvas.clientHeight / 2
+    ) {
+        resizeView();
+        viewport.zoomAt(factor, x, y);
+        draw();
+    }
+    zoomIn.onclick = () =>
+        zoom((viewport.view.zoom + 0.2) / viewport.view.zoom);
+    zoomOut.onclick = () =>
+        zoom((viewport.view.zoom - 0.2) / viewport.view.zoom);
+    navigation.querySelector('#map-fit')?.addEventListener('click', () => {
+        viewport.reset();
+        draw();
+    });
+    const pointers = new Map();
+    let moved = false;
+    canvas.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        if (!pointers.size) moved = false;
+        pointers.set(e.pointerId, {
+            x: e.clientX,
+            y: e.clientY,
+            startX: e.clientX,
+            startY: e.clientY
+        });
+        if (pointers.size > 1) moved = true;
+        canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener('pointermove', (e) => {
+        const previous = pointers.get(e.pointerId);
+        if (!previous) return;
+        const before = [...pointers.values()];
+        const oldCenter =
+            before.length === 2
+                ? {
+                      x: (before[0].x + before[1].x) / 2,
+                      y: (before[0].y + before[1].y) / 2
+                  }
+                : null;
+        const oldDistance =
+            before.length === 2
+                ? Math.hypot(
+                      before[0].x - before[1].x,
+                      before[0].y - before[1].y
+                  )
+                : 0;
+        if (
+            Math.hypot(
+                e.clientX - previous.startX,
+                e.clientY - previous.startY
+            ) > 6
+        )
+            moved = true;
+        const dx = e.clientX - previous.x,
+            dy = e.clientY - previous.y;
+        pointers.set(e.pointerId, { ...previous, x: e.clientX, y: e.clientY });
+        if (!moved) return;
+        resizeView();
+        const points = [...pointers.values()];
+        if (points.length === 2 && oldCenter && oldDistance > 0) {
+            const x = (points[0].x + points[1].x) / 2,
+                y = (points[0].y + points[1].y) / 2;
+            viewport.pan(x - oldCenter.x, y - oldCenter.y);
+            const rect = canvas.getBoundingClientRect();
+            viewport.zoomAt(
+                Math.hypot(
+                    points[0].x - points[1].x,
+                    points[0].y - points[1].y
+                ) / oldDistance,
+                x - rect.left,
+                y - rect.top
+            );
+        } else viewport.pan(dx, dy);
+        draw();
+    });
+    canvas.addEventListener('pointerup', (e) => {
+        pointers.delete(e.pointerId);
+    });
+    for (const event of ['pointercancel', 'lostpointercapture'])
+        canvas.addEventListener(event, (e) => {
+            if (!(e instanceof PointerEvent)) return;
+            if (pointers.has(e.pointerId)) {
+                moved = true;
+                pointers.delete(e.pointerId);
+            }
+        });
+    canvas.addEventListener(
+        'wheel',
+        (e) => {
+            e.preventDefault();
+            moved = true;
+            const rect = canvas.getBoundingClientRect();
+            const delta =
+                e.deltaY *
+                (e.deltaMode === 1
+                    ? 16
+                    : e.deltaMode === 2
+                      ? canvas.clientHeight
+                      : 1);
+            zoom(
+                Math.exp(
+                    Math.max(
+                        -0.5,
+                        Math.min(0.5, delta * (e.ctrlKey ? -0.008 : 0.002))
+                    )
+                ),
+                e.clientX - rect.left,
+                e.clientY - rect.top
+            );
+        },
+        { passive: false }
+    );
+    // Safari trackpad pinch uses gesture events rather than Ctrl-wheel.
+    let gestureScale = 1;
+    canvas.addEventListener('gesturestart', (e) => {
+        e.preventDefault();
+        moved = true;
+        gestureScale = 1;
+    });
+    canvas.addEventListener('gesturechange', (e) => {
+        e.preventDefault();
+        const scale = Number(Reflect.get(e, 'scale'));
+        if (!Number.isFinite(scale) || scale <= 0) return;
+        const rect = canvas.getBoundingClientRect();
+        zoom(
+            scale / gestureScale,
+            Number(Reflect.get(e, 'clientX') ?? rect.left + rect.width / 2) -
+                rect.left,
+            Number(Reflect.get(e, 'clientY') ?? rect.top + rect.height / 2) -
+                rect.top
+        );
+        gestureScale = scale;
+    });
+    canvas.addEventListener('click', (event) => {
+        if (moved) return;
+        resizeView();
+        const rect = canvas.getBoundingClientRect();
+        const p = viewport
+            .projection()
+            .unproject(event.clientX - rect.left, event.clientY - rect.top);
+        if (p) setDestination(p.x, p.z, (x, z) => geography?.height(x, z) ?? 0);
+        draw();
+    });
     let held = false;
     let keyOpened = false;
     /** @type {HTMLElement | null} */
     let previousFocus = null;
     function close() {
         keyOpened = false;
+        pointers.clear();
+        moved = true;
         dialog.close();
         previousFocus?.focus({ preventScroll: true });
     }
@@ -115,9 +309,22 @@ export function createWorldMap(planeState) {
 
     function draw() {
         if (!dialog.open) return;
+        const destination = getDestination();
+        clear.disabled = !destination;
+        hint.textContent = destination
+            ? 'Destination selected · click elsewhere to move it'
+            : 'Click or tap the map to choose a destination';
+        canvas.dataset.destination = destination
+            ? JSON.stringify(destination)
+            : '';
         const width = canvas.clientWidth;
         const height = canvas.clientHeight;
         if (width < 80 || height < 80) return;
+        resizeView();
+        zoomIn.disabled = viewport.view.zoom >= viewport.maxZoom() - 0.001;
+        zoomOut.disabled = viewport.view.zoom <= 1.001;
+        zoomLevel.textContent = `${Math.round(viewport.view.zoom * 100)}%`;
+        canvas.dataset.zoom = String(viewport.view.zoom);
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
         if (
             canvas.width !== Math.round(width * dpr) ||
@@ -134,13 +341,14 @@ export function createWorldMap(planeState) {
                 width,
                 height,
                 planeState,
-                world
+                world,
+                viewport.view
             );
             return;
         }
         ctx.fillStyle = '#10242d';
         ctx.fillRect(0, 0, width, height);
-        const { scale, point } = mapProjection(width, height);
+        const { scale, point } = viewport.projection();
         /** @param {number} x @param {number} z @param {number} w @param {number} h @param {string} color */
         const rect = (x, z, w, h, color) => {
             const p = point(x - w / 2, z - h / 2);
@@ -251,7 +459,17 @@ export function createWorldMap(planeState) {
         ctx.lineWidth = 1;
         ctx.stroke();
         ctx.restore();
+        if (destination) {
+            const p = point(destination.x, destination.z);
+            drawDestinationPin(ctx, p.x, p.y);
+        }
         readout.textContent = `You · heading ${formatHeading(planeState.yawAngle)}° · ${Math.round(planeState.position.x)} m E / ${Math.round(-planeState.position.z)} m N${outside ? ' · Outside mapped terrain (marker at edge)' : ''}`;
     }
-    return { update: draw };
+    return {
+        update: draw,
+        resetView() {
+            viewport.reset();
+            draw();
+        }
+    };
 }

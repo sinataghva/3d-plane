@@ -7,7 +7,7 @@ import { instanceStaticScenery } from './instancing.js';
 /** @param {import('./geography.js').Geography} world */
 export function createTerrain(world) {
     const group = new THREE.Group();
-    group.name = 'Saint-Cyr – Versailles';
+    group.name = world.data.airfield || 'Saint-Cyr – Versailles';
     const surface = createGeographicCanvas(world, 4096);
     const texture = new THREE.CanvasTexture(surface);
     texture.colorSpace = THREE.SRGBColorSpace;

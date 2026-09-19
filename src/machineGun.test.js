@@ -85,3 +85,25 @@ describe('machine gun tracers', () => {
         expect(scene.children).toHaveLength(0);
     });
 });
+
+it('jet cannon fires faster, follows quaternion attitude, and caps sustained tracers', () => {
+    const jet = createPlaneState('mirage'),
+        prop = createPlaneState();
+    jet.attitude = { x: 0, y: 0, z: 0, w: 1 };
+    const a = createMachineGun(new THREE.Scene()),
+        b = createMachineGun(new THREE.Scene());
+    const keyboard = createKeyboard({ space: true });
+    for (let i = 0; i < 30; i++) {
+        a.update({ planeState: jet, keyboard, delta: 1 / 60 });
+        b.update({ planeState: prop, keyboard, delta: 1 / 60 });
+    }
+    expect(a.tracers.length).toBeGreaterThan(b.tracers.length);
+    expect(a.tracers[0].velocity.x).toBeGreaterThan(600);
+    expect(a.tracers[0].velocity.z).toBe(0);
+    for (let i = 0; i < 600; i++)
+        a.update({ planeState: jet, keyboard, delta: 1 / 60 });
+    expect(a.tracers.length).toBeLessThanOrEqual(160);
+    a.dispose();
+    b.dispose();
+    expect(a.tracers.length).toBe(0);
+});

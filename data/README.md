@@ -1,7 +1,7 @@
 # Cached geographic scenery
 
 All geography is downloaded once and kept here. The game does not call external
-map or elevation APIs. Vite packages the two processed JSON files and elevation
+map or elevation APIs. Vite packages both regions’ processed map/elevation JSON files and elevation
 credits in the production build.
 
 - `saint-cyr.json`: simplified, projected OpenStreetMap-derived database.
@@ -17,4 +17,13 @@ The processed OSM database is linked from the full-screen map. Geometry is
 simplified and reprojected; building heights may be estimated. Elevation is
 resampled and runway corridors are flattened in the runtime representation.
 Source snapshot timestamps are stored separately from the download date.
-See the import scripts and `DECISIONS.md` for exact processing choices.
+See the import scripts and [DECISIONS.md](../DECISIONS.md) for exact processing choices.
+
+## Luxeuil
+
+`luxeuil/map.json` and `luxeuil/elevation.json` use the same formats and licenses.
+The larger region is approximately 25.4 × 22.3 km, with a 257 × 257 DEM. Original
+Overpass responses and nine zoom-11 Terrarium tiles live in `luxeuil/cache/`.
+Run the three scenery scripts with `--luxeuil` to reproduce this region. The
+merged `osm.json.gz` is regenerable and ignored, while original layer responses
+are kept. Gameplay never downloads map data from third-party services.

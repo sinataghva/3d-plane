@@ -61,7 +61,9 @@ export function createGeographicCanvas(world, size = 2048, map = false) {
                 ctx.lineWidth = Math.max(map ? 1 : 0.6, (f.width || 4) * sx);
                 ctx.strokeStyle =
                     kind === 'runway'
-                        ? '#bfd098'
+                        ? world.data.airfield?.includes('LFSX')
+                            ? '#647078'
+                            : '#bfd098'
                         : kind === 'waterway'
                           ? '#4b8d9b'
                           : kind === 'taxiway'

@@ -15,6 +15,34 @@ import { getGeography } from './geography.js';
 
 /** @type {Record<string, VisualScenario>} */
 const VISUAL_SCENARIOS = {
+    afterburner: {
+        name: 'afterburner',
+        cameraMode: 'chase',
+        plane: {
+            position: { x: 0, y: 8, z: -112 },
+            yawAngle: -Math.PI / 2,
+            pitchAngle: 0,
+            rollAngle: 0,
+            thrust: 1.1,
+            afterburner: true,
+            gearDown: false,
+            gearExtension: 0,
+            isAirborne: true
+        }
+    },
+    card: {
+        name: 'card',
+        cameraMode: 'orbit',
+        plane: {
+            isAirborne: true,
+            gearDown: false,
+            gearExtension: 0,
+            thrust: 1,
+            pitchAngle: 0.04,
+            rollAngle: -0.15,
+            speed: 2
+        }
+    },
     chase: {
         name: 'chase',
         cameraMode: 'chase',
@@ -139,6 +167,19 @@ export function applyVisualScenario({
             planeState.position.z
         );
         planeState.yawAngle += world.spawn.yaw + Math.PI / 2;
+    }
+    if (world && visualScenario.name === 'card') {
+        const palace = world.data.features.find((f) => f.palace);
+        const p =
+            planeState.aircraft === 'mirage'
+                ? [900, -1250]
+                : palace?.points[0] || [world.spawn.x, world.spawn.z];
+        planeState.position = {
+            x: p[0] - 80,
+            y: world.height(p[0], p[1]) + 110,
+            z: p[1] + 100
+        };
+        planeState.yawAngle = 0.4;
     }
     cameraMode.setMode(visualScenario.cameraMode);
 }

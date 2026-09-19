@@ -1,3 +1,4 @@
+import { getDestination, drawDestinationPin } from './destination.js';
 import { getGeography } from './geography.js';
 import { drawRadar } from './geographicMap.js';
 /**
@@ -286,6 +287,21 @@ export function createMiniMap() {
 
             drawRunway(planeState);
             drawAirportObjects(planeState);
+            const destination = getDestination();
+            if (destination) {
+                const p = project(destination.x, destination.z, planeState);
+                const dx = p.x - centerX,
+                    dy = p.y - centerY;
+                const factor = Math.min(
+                    1,
+                    (centerX - 18) / Math.max(1, Math.hypot(dx, dy))
+                );
+                drawDestinationPin(
+                    radarContext,
+                    centerX + dx * factor,
+                    centerY + dy * factor
+                );
+            }
             drawPlaneMarker(planeState);
         }
     };

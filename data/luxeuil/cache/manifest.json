@@ -1,0 +1,149 @@
+[
+  {
+    "file": "airfield-places.json.gz",
+    "sha256": "562d4af0607afc6113ef109d2972ca8cb322e5742eb5b1eea7f1766c2bad2220",
+    "snapshot": "2026-09-19T11:49:19Z",
+    "elements": 808,
+    "query": "(way[aeroway](47.69,6.2,47.89,6.54);node[place](47.69,6.2,47.89,6.54););"
+  },
+  {
+    "file": "roads.json.gz",
+    "sha256": "65cf157463d7f7f5b5c013a52663257daaaf08b098f41912f0ebfe55b328a9e6",
+    "snapshot": "2026-07-28T02:16:18Z",
+    "elements": 8744,
+    "query": "(way[highway](47.69,6.2,47.89,6.54);way[railway=rail](47.69,6.2,47.89,6.54);way[waterway](47.69,6.2,47.89,6.54););"
+  },
+  {
+    "file": "relations-water.json.gz",
+    "sha256": "e96ea88bfabd30b1bce472d85b92d7bc42740e5f90aa002d1741a3c169d5aa70",
+    "snapshot": "2026-09-19T12:09:36Z",
+    "elements": 36,
+    "query": "rel[natural=water](47.69,6.2,47.89,6.54);"
+  },
+  {
+    "file": "water.json.gz",
+    "sha256": "816d06039fc3253faf60decd1c0edc0c95a8b3e5bd773105c7902756f9e4aa6f",
+    "snapshot": "2026-09-19T11:51:21Z",
+    "elements": 881,
+    "query": "way[natural=water](47.69,6.2,47.89,6.54);"
+  },
+  {
+    "file": "wood.json.gz",
+    "sha256": "93e4e209bacac87dce5b1fcd023923de24bc012740ddcf2767aafb7caba7462f",
+    "snapshot": "2026-09-19T11:51:21Z",
+    "elements": 126,
+    "query": "way[natural=wood](47.69,6.2,47.89,6.54);"
+  },
+  {
+    "file": "parks.json.gz",
+    "sha256": "35bce1a75e1c45c74056f6dc8709f621ce7c513c1058079ee830245aa3c0a363",
+    "snapshot": "2026-09-19T11:51:21Z",
+    "elements": 38,
+    "query": "(way[leisure=park](47.69,6.2,47.89,6.54);way[leisure=garden](47.69,6.2,47.89,6.54););"
+  },
+  {
+    "file": "relations-buildings.json.gz",
+    "sha256": "877bfffc0fa4b93c9b8684d93ee78d3391425ccc9d1006a25e208bcc1d4d779a",
+    "snapshot": "2026-09-19T12:11:40Z",
+    "elements": 15,
+    "query": "relation[building](47.69,6.2,47.89,6.54);"
+  },
+  {
+    "file": "relations-forest.json.gz",
+    "sha256": "1a59bd51a4b3a9e044ee2b2b3dae89fdc900c8ec89f8c8d62434fa9e19e07ec3",
+    "snapshot": "2026-09-19T11:52:20Z",
+    "elements": 60,
+    "query": "relation[landuse=forest](47.69,6.2,47.89,6.54);"
+  },
+  {
+    "file": "relations-wood.json.gz",
+    "sha256": "c1186ab26d473f17929f365069dafb9399afcf0403c50f4983766e47b7c30dff",
+    "snapshot": "2026-09-19T12:12:46Z",
+    "elements": 4,
+    "query": "relation[natural=wood](47.69,6.2,47.89,6.54);"
+  },
+  {
+    "file": "land-forest.json.gz",
+    "sha256": "89240f00f8ffbf15b0a7c3719b320e93f13c1e1794e99c0f35d4c6ebbdc152ed",
+    "snapshot": "2026-09-19T11:53:21Z",
+    "elements": 634,
+    "query": "way[landuse=forest](47.69,6.2,47.89,6.54);"
+  },
+  {
+    "file": "land-farmland.json.gz",
+    "sha256": "56e5175350d3e1ddf76395b89886fd96dd68180fc1ddcc8d922757e67947ad4c",
+    "snapshot": "2026-09-19T12:10:37Z",
+    "elements": 176,
+    "query": "way[landuse=farmland](47.69,6.2,47.89,6.54);"
+  },
+  {
+    "file": "land-meadow.json.gz",
+    "sha256": "25235ef39e503c1537aff20dca81e1682338051e937a9bcb054babc27cffcf30",
+    "snapshot": "2026-09-19T12:10:37Z",
+    "elements": 366,
+    "query": "way[landuse=meadow](47.69,6.2,47.89,6.54);"
+  },
+  {
+    "file": "land-grass.json.gz",
+    "sha256": "9429cc659606ad42065e3571dea6570002a2f5f6d5fc1a26e78e4808e7d4854e",
+    "snapshot": "2026-09-19T11:54:21Z",
+    "elements": 209,
+    "query": "way[landuse=grass](47.69,6.2,47.89,6.54);"
+  },
+  {
+    "file": "land-residential.json.gz",
+    "sha256": "41c8bfb382272370dc7d96bb718356109791a38a406ee92465ccb1873cae76fd",
+    "snapshot": "2026-09-19T12:10:37Z",
+    "elements": 177,
+    "query": "way[landuse=residential](47.69,6.2,47.89,6.54);"
+  },
+  {
+    "file": "land-industrial.json.gz",
+    "sha256": "648af35b5aea93cb3bb67c4aff6dd60b2e5cfd0500f359e342491f2349f5752d",
+    "snapshot": "2026-09-19T11:55:20Z",
+    "elements": 79,
+    "query": "way[landuse=industrial](47.69,6.2,47.89,6.54);"
+  },
+  {
+    "file": "land-commercial.json.gz",
+    "sha256": "726935d613f915a379a60519688baab7daa7f84a12c481ef27292d2b823760c0",
+    "snapshot": "2026-09-19T11:55:20Z",
+    "elements": 5,
+    "query": "way[landuse=commercial](47.69,6.2,47.89,6.54);"
+  },
+  {
+    "file": "buildings-0-0.json.gz",
+    "sha256": "cd33c267e5f3cb15c0c1623e3c4e3c54349e393952ad24a44a409c8dabef0ca9",
+    "snapshot": "2026-09-19T12:12:46Z",
+    "elements": 5886,
+    "query": "way[building](47.69,6.2,47.79,6.37);"
+  },
+  {
+    "file": "buildings-0-1.json.gz",
+    "sha256": "c65326384d7b2bc717e284f52eb8d312aaf7a45edd0be090f8ed4aa3c0663b43",
+    "snapshot": "2026-09-19T12:12:46Z",
+    "elements": 6683,
+    "query": "way[building](47.69,6.37,47.79,6.54);"
+  },
+  {
+    "file": "buildings-1-0-south.json.gz",
+    "sha256": "8259c9445ac3ce69b7ff2dbb9547f5c12dbebea72ebbad62c3b11aca539697e1",
+    "snapshot": "2026-09-19T12:16:51Z",
+    "elements": 3389,
+    "query": "way[building](47.79,6.2,47.84,6.37);"
+  },
+  {
+    "file": "buildings-1-0-north.json.gz",
+    "sha256": "aaf420661c102a941328fb0f4f391838412dfda84e9e9356024e9d5bd0cf9d88",
+    "snapshot": "2026-09-19T12:19:49Z",
+    "elements": 5039,
+    "query": "way[building](47.84,6.2,47.89,6.37);"
+  },
+  {
+    "file": "buildings-1-1.json.gz",
+    "sha256": "3964712df942e36ba6e7a687e4908d96e9be6462a3d2edd85510412026c1c5aa",
+    "snapshot": "2026-09-19T12:14:50Z",
+    "elements": 14517,
+    "query": "way[building](47.79,6.37,47.89,6.54);"
+  }
+]

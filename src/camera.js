@@ -96,14 +96,28 @@ export function updateCamera({
     if (activeMode === 'chase') {
         setCameraFov(camera, 75);
 
-        offset.set(-10, 4, 0).applyQuaternion(airplane.quaternion);
+        // Follow horizontal heading, retaining the last bearing at vertical flight.
+        lookTarget.set(1, 0, 0).applyQuaternion(airplane.quaternion);
+        if (Math.hypot(lookTarget.x, lookTarget.z) > 0.15)
+            camera.userData.chaseHeading = Math.atan2(
+                -lookTarget.z,
+                lookTarget.x
+            );
+        const heading = camera.userData.chaseHeading ?? 0;
+        const distance = airplane.userData.jet ? 23 : 10;
+        offset.set(
+            -Math.cos(heading) * distance,
+            airplane.userData.jet ? 8 : 4,
+            Math.sin(heading) * distance
+        );
         target.copy(airplane.position).add(offset);
         const snap =
             delta === 0 ||
             camera.userData.flightMode !== activeMode ||
             camera.position.distanceToSquared(target) > 2500;
-        camera.position.lerp(target, snap ? 1 : 1 - Math.exp(-8 * delta));
+        camera.position.lerp(target, snap ? 1 : 1 - Math.exp(-3 * delta));
         camera.up.copy(worldUp);
+
         lookTarget
             .set(2, 0, 0)
             .applyQuaternion(airplane.quaternion)
@@ -112,11 +126,21 @@ export function updateCamera({
     } else if (activeMode === 'cockpit') {
         setCameraFov(camera, 68);
 
-        offset.set(2.14, 1.03, 0).applyQuaternion(airplane.quaternion);
+        offset
+            .set(
+                airplane.userData.jet ? 3.5 : 2.14,
+                airplane.userData.jet ? 2.1 : 1.03,
+                0
+            )
+            .applyQuaternion(airplane.quaternion);
         camera.position.copy(airplane.position).add(offset);
         camera.up.copy(worldUp).applyQuaternion(airplane.quaternion);
         lookTarget
-            .set(12, 0.92, 0)
+            .set(
+                airplane.userData.jet ? 20 : 12,
+                airplane.userData.jet ? 2.1 : 0.92,
+                0
+            )
             .applyQuaternion(airplane.quaternion)
             .add(airplane.position);
         camera.lookAt(lookTarget);
@@ -129,8 +153,8 @@ export function updateCamera({
             offset.set(-14, 0, 12).applyQuaternion(airplane.quaternion);
             offset.y = 0;
             if (offset.lengthSq() < 0.01) offset.set(-14, 0, 12);
-            offset.setLength(18);
-            offset.y = 7;
+            offset.setLength(airplane.userData.jet ? 32 : 18);
+            offset.y = airplane.userData.jet ? 12 : 7;
             camera.position.copy(airplane.position).add(offset);
         }
         controls.target.copy(airplane.position);

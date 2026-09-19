@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Saint-Cyr · Versailles Flight</title>
+        <title>Open Skies · Choose your flight</title>
     </head>
     <body>
         <details id="instructions-panel" class="hud-panel">
@@ -17,7 +17,8 @@
                 <li><kbd>←</kbd> / <kbd>→</kbd>: Bank &amp; turn</li>
                 <li><kbd>↓</kbd>: Pitch up</li>
                 <li><kbd>↑</kbd>: Pitch down</li>
-                <li><kbd>Space</kbd>: Fire tracers</li>
+                <li><kbd>Space</kbd>: Fire tracers / jet cannon</li>
+                <li><kbd>P</kbd>: Settings and pause</li>
                 <li>Hold <kbd>M</kbd>: Full map</li>
             </ul>
 
@@ -188,7 +189,6 @@
 
         <div class="flight-toolbar" aria-label="Flight options">
             <button id="camera-button">Camera: Chase</button>
-            <button id="pause-button" aria-pressed="false">Pause</button>
             <button id="restart-button">Restart</button>
             <label for="guide-mode">Guide</label>
             <select id="guide-mode">
@@ -208,7 +208,6 @@
             role="status"
             hidden
         ></div>
-        <div id="pause-overlay" hidden>Paused · press Resume to continue</div>
         <div class="graphics-settings">
             <label for="graphics-quality">Graphics</label>
             <select id="graphics-quality">

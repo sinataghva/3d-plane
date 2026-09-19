@@ -1,5 +1,5 @@
 /** @typedef {{id:string,kind:string,name:string,points:number[][],holes:number[][][],line:boolean,width?:number,height?:number,palace?:boolean,ref?:string,class?:string}} GeoFeature */
-/** @typedef {{origin:number[],bounds:number[],features:GeoFeature[],places:{id:number,name:string,kind:string,point:number[]}[],timestamp:string}} GeoData */
+/** @typedef {{airfield?:string,origin:number[],bounds:number[],features:GeoFeature[],places:{id:number,name:string,kind:string,point:number[]}[],timestamp:string}} GeoData */
 /** @typedef {{size:number,values:number[]}} ElevationData */
 /** @typedef {ReturnType<typeof createGeography>} Geography */
 /** @type {Geography|null} */

@@ -1,3 +1,4 @@
+import { updateJetPhysics } from './jetPhysics.js';
 import { getGeography, groundLevel as terrainGround } from './geography.js';
 import * as THREE from 'three';
 import {
@@ -23,6 +24,17 @@ import {
  * Mutable simulation state for the plane.
  *
  * @typedef {object} PlaneState
+ * @property {{x:number,y:number,z:number,w:number}} [attitude]
+ * @property {boolean} [elevatorManeuver]
+ * @property {number} [airbrakeExtension]
+ * @property {number} [gearExtension]
+ * @property {string} [aircraft]
+ * @property {string} [mission]
+ * @property {boolean} [afterburner]
+ * @property {boolean} [gearDown]
+ * @property {boolean} [airbrake]
+ * @property {number} [enginePower]
+ * @property {number} [gForce]
  * @property {PlanePosition} position
  * @property {number} speed
  * @property {number} thrust
@@ -102,9 +114,18 @@ import {
 /**
  * @returns {PlaneState}
  */
-export function createPlaneState() {
+export function createPlaneState(aircraft = 'cessna') {
     const spawn = getGeography()?.spawn;
     return {
+        aircraft,
+        afterburner: false,
+        gearDown: true,
+        gearExtension: 1,
+        airbrakeExtension: 0,
+        elevatorManeuver: false,
+        airbrake: false,
+        enginePower: 0,
+        gForce: 1,
         position: spawn
             ? { x: spawn.x, y: spawn.y, z: spawn.z }
             : { x: 0, y: GROUND_LEVEL, z: -120 },
@@ -128,7 +149,18 @@ export function createPlaneState() {
  * @param {PlaneState} planeState
  */
 export function resetPlaneState(planeState) {
-    const nextState = createPlaneState();
+    const nextState = createPlaneState(planeState.aircraft);
+    delete planeState.attitude;
+    planeState.elevatorManeuver = false;
+    planeState.gearExtension = 1;
+    planeState.airbrakeExtension = 0;
+    Object.assign(planeState, {
+        afterburner: false,
+        gearDown: true,
+        airbrake: false,
+        enginePower: 0,
+        gForce: 1
+    });
     planeState.position.x = nextState.position.x;
     planeState.position.y = nextState.position.y;
     planeState.position.z = nextState.position.z;
@@ -220,6 +252,10 @@ export function updatePlanePhysics({
     planePhysics,
     delta
 }) {
+    if (planeState.aircraft === 'mirage') {
+        updateJetPhysics(planeState, keyboard, delta);
+        return;
+    }
     if (planeState.isCrashed) {
         return;
     }
@@ -527,13 +563,17 @@ export function syncPlaneMesh({ airplane, propeller, planeState }) {
         planeState.position.y,
         planeState.position.z
     );
-    airplane.quaternion.setFromEuler(
-        new THREE.Euler(
-            planeState.rollAngle,
-            planeState.yawAngle,
-            planeState.pitchAngle,
-            'YZX'
-        )
-    );
+    if (planeState.aircraft === 'mirage' && planeState.attitude) {
+        const q = planeState.attitude;
+        airplane.quaternion.set(q.x, q.y, q.z, q.w);
+    } else
+        airplane.quaternion.setFromEuler(
+            new THREE.Euler(
+                planeState.rollAngle,
+                planeState.yawAngle,
+                planeState.pitchAngle,
+                'YZX'
+            )
+        );
     propeller.rotation.x = planeState.propellerRotation;
 }

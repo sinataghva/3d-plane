@@ -11,14 +11,15 @@ test('hold M opens, release closes, and repeat or blur cannot leave a stuck map'
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.keyboard.down('m');
     await page.keyboard.up('m');
-    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(page.locator('#world-map')).toBeHidden();
     await page.keyboard.down('m');
     await page.evaluate(() => window.dispatchEvent(new Event('blur')));
-    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(page.locator('#world-map')).toBeHidden();
     await page.keyboard.up('m');
+    await page.locator('#settings-button').click();
     await page.getByLabel('Graphics', { exact: true }).focus();
     await page.keyboard.down('m');
-    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(page.locator('#world-map')).toBeHidden();
     await page.keyboard.up('m');
 });
 
@@ -43,5 +44,5 @@ test('mobile map stays open, updates live telemetry, and closes with X', async (
     await page.keyboard.press('m');
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.getByRole('button', { name: 'Close full map' }).click();
-    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(page.locator('#world-map')).toBeHidden();
 });

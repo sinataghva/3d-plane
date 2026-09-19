@@ -1338,3 +1338,594 @@ body:has(.automation-status) .warning-banner {
         white-space: nowrap;
     }
 }
+
+/* Flight selection is a full page, before scenery or a WebGL renderer is loaded. */
+.choosing-flight > * {
+    visibility: hidden;
+}
+.choosing-flight #mission-select,
+.choosing-flight #mission-select * {
+    visibility: visible;
+}
+#mission-select {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    overflow: auto;
+    background: radial-gradient(ellipse at 20% 0%, #244958, #101e29 65%);
+    color: #edf5f4;
+    padding: clamp(24px, 5vw, 70px);
+    box-sizing: border-box;
+    font-family: system-ui, sans-serif;
+}
+.mission-heading,
+.mission-cards,
+.mission-footer {
+    max-width: 1050px;
+    margin: 0 auto;
+}
+.eyebrow {
+    letter-spacing: 0.15em;
+    font-size: 11px;
+    font-weight: 700;
+    color: #abd1cb;
+}
+.mission-heading h1 {
+    font-size: clamp(30px, 4vw, 48px);
+    margin: 14px 0;
+    letter-spacing: -0.035em;
+}
+.mission-heading p,
+.mission-copy p {
+    color: #bdcbd1;
+    line-height: 1.6;
+}
+.mission-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 32px;
+}
+.mission-card {
+    overflow: hidden;
+    text-align: left;
+    padding: 0;
+    background: #162b38;
+    border: 2px solid #38525d;
+    border-radius: 18px;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    transition:
+        border-color 0.15s,
+        transform 0.15s;
+}
+.mission-card[aria-pressed='true'] {
+    border-color: #a2dbc5;
+    box-shadow: 0 0 0 3px #a2dbc518;
+}
+.mission-card:hover {
+    transform: translateY(-3px);
+}
+.mission-card:focus-visible,
+#fly-button:focus-visible {
+    outline: 3px solid #ffdc91;
+    outline-offset: 5px;
+}
+.mission-card img {
+    display: block;
+    width: 100%;
+    height: 235px;
+    object-fit: cover;
+    background: #7094aa;
+}
+.mission-copy {
+    padding: 24px;
+}
+.mission-copy h2 {
+    font-size: 27px;
+    margin: 10px 0;
+}
+.mission-traits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 22px;
+}
+.mission-traits span {
+    border: 1px solid #45606a;
+    border-radius: 30px;
+    font-size: 12px;
+    padding: 7px 10px;
+}
+.mission-footer {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    flex-wrap: wrap;
+    margin-top: 25px;
+}
+.mission-footer small {
+    color: #a7bcc2;
+}
+#fly-button {
+    background: #bce3cf;
+    color: #12362f;
+    border: 0;
+    border-radius: 10px;
+    padding: 15px 28px;
+    font: 700 16px system-ui;
+    cursor: pointer;
+}
+#jet-controls {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    z-index: 25;
+    max-width: 650px;
+    width: max-content;
+}
+#jet-controls button,
+#missions-button {
+    background: #152b38e8;
+    color: #f1f6f5;
+    border: 1px solid #72908e;
+    border-radius: 8px;
+    padding: 10px;
+    font: 12px system-ui;
+    cursor: pointer;
+    touch-action: none;
+}
+#jet-readout {
+    background: #152b38df;
+    border-radius: 6px;
+    color: #e9eec5;
+    padding: 8px;
+    font: 12px system-ui;
+}
+#boost-button[data-active='true'] {
+    background: #91331d;
+    color: #ffe5bc;
+}
+#missions-button {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 22;
+}
+
+@media (max-width: 700px) {
+    .mission-cards {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+    .mission-card img {
+        height: 180px;
+    }
+    .mission-copy {
+        padding: 18px;
+    }
+    .mission-heading h1 {
+        font-size: 32px;
+    }
+    #jet-controls {
+        bottom: 8px;
+        max-width: 60vw;
+        gap: 4px;
+    }
+    #jet-controls button {
+        font-size: 10px;
+        padding: 8px;
+    }
+    #jet-readout {
+        font-size: 10px;
+    }
+    #missions-button {
+        top: 6px;
+        font-size: 10px;
+        padding: 7px;
+    }
+}
+@media (pointer: coarse) and (orientation: landscape) {
+    #jet-controls {
+        bottom: 8px;
+        max-width: 50vw;
+    }
+}
+
+#missions-button {
+    position: static;
+    transform: none;
+    font: inherit;
+    min-height: 36px;
+}
+.jet-flight .automation-status {
+    bottom: 72px;
+    top: auto;
+}
+.jet-flight #cockpit-overlay .gauge-label {
+    font-size: 11px;
+}
+@media (orientation: landscape) and (max-height: 500px) {
+    #missions-button {
+        min-height: 32px;
+        padding: 5px;
+        font-size: 11px;
+    }
+    .jet-flight #jet-controls {
+        max-width: calc(100vw - 350px);
+        bottom: 20px;
+    }
+    .jet-flight #jet-readout {
+        width: 100%;
+        text-align: center;
+        padding: 4px;
+    }
+    .jet-flight .automation-status {
+        bottom: 100px;
+        max-width: calc(100vw - 360px);
+    }
+}
+.mission-footer a {
+    color: #bce3cf;
+}
+#mission-select h1 {
+    color: #edf5f4;
+}
+#mission-selection {
+    color: #c8d8dc;
+}
+@media (min-width: 701px) and (max-height: 800px) {
+    #mission-select {
+        padding: 30px 5vw;
+    }
+    .mission-cards {
+        margin-top: 22px;
+    }
+    .mission-card img {
+        height: 200px;
+    }
+    .mission-copy {
+        padding: 20px;
+    }
+    .mission-copy p {
+        margin: 10px 0;
+    }
+    .mission-traits {
+        margin-top: 16px;
+    }
+    .mission-footer {
+        margin-top: 18px;
+        gap: 14px;
+    }
+}
+@media (min-height: 501px) {
+    .jet-flight:has(#cockpit-overlay:not([hidden])) #jet-controls {
+        bottom: 125px;
+    }
+    .jet-flight:has(#cockpit-overlay:not([hidden])) .automation-status {
+        top: 70px;
+        bottom: auto;
+        left: 20px;
+        transform: none;
+    }
+}
+
+/* Compact settings entry and modal replace the persistent toolbar. */
+#settings-button {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 45;
+    width: 44px;
+    height: 44px;
+    border: 1px solid #829fa7;
+    border-radius: 12px;
+    background: #142d3be8;
+    color: white;
+    font-size: 26px;
+    cursor: pointer;
+}
+#settings-dialog {
+    width: min(460px, calc(100vw - 40px));
+    max-height: calc(100dvh - 40px);
+    overflow: auto;
+    box-sizing: border-box;
+    border: 1px solid #76909c;
+    border-radius: 18px;
+    background: #132c3b;
+    color: #ecf5f7;
+    padding: 24px;
+}
+#settings-dialog::backdrop {
+    background: #06121b99;
+}
+#settings-dialog header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+#settings-dialog h2 {
+    margin: 0;
+}
+#settings-dialog p {
+    color: #adc5cf;
+}
+#settings-dialog .flight-toolbar,
+#settings-dialog .graphics-settings {
+    position: static;
+    transform: none;
+    display: flex;
+    flex-wrap: wrap;
+    width: auto;
+    margin: 16px 0;
+    padding: 0;
+    background: none;
+}
+#settings-dialog #missions-button {
+    position: static;
+    transform: none;
+}
+#close-settings {
+    background: transparent;
+    color: white;
+    border: 0;
+    font-size: 28px;
+    cursor: pointer;
+}
+#flight-data #jet-readout {
+    display: block;
+    position: static;
+    margin-top: 8px;
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: normal;
+}
+@media (hover: hover) and (pointer: fine) {
+    #jet-controls {
+        display: none;
+    }
+}
+.jet-flight .automation-status {
+    bottom: 20px;
+}
+@media (pointer: coarse) {
+    .jet-flight .automation-status {
+        bottom: 80px;
+    }
+}
+
+#settings-dialog {
+    margin: auto;
+}
+#settings-dialog .flight-toolbar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+#settings-dialog .flight-toolbar button,
+#settings-dialog select {
+    min-height: 40px;
+}
+@media (max-width: 900px) and (orientation: landscape) {
+    #settings-button {
+        right: 174px;
+        top: 10px;
+    }
+}
+
+#world-map-canvas {
+    cursor: crosshair;
+}
+#clear-destination {
+    background: #6b202b;
+    color: #fff;
+    border: 1px solid #f88a90;
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+#clear-destination:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+#destination-map-status {
+    font-size: 12px;
+    color: #ffb6ba;
+}
+#destination-guidance {
+    position: fixed;
+    z-index: 21;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    color: #fff;
+    background: #6c1826dc;
+    padding: 6px 9px;
+    border-radius: 8px;
+    border: 1px solid #ff6b73;
+    font: 12px system-ui;
+    white-space: nowrap;
+}
+#destination-guidance[hidden] {
+    display: none;
+}
+#destination-guidance span {
+    display: inline-block;
+    color: #ff767e;
+    margin-right: 8px;
+}
+#destination-guidance span[hidden] {
+    display: none;
+}
+
+.world-map-header > div {
+    flex: 1;
+}
+.world-map-header {
+    gap: 12px;
+}
+
+#world-map-canvas {
+    touch-action: none;
+}
+#map-navigation {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+}
+#map-navigation button {
+    background: #254653;
+    color: white;
+    border: 1px solid #769ca9;
+    border-radius: 7px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+#map-navigation button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+#map-zoom-level {
+    min-width: 44px;
+    text-align: center;
+    font: 12px system-ui;
+}
+.world-map-header {
+    flex-wrap: wrap;
+}
+#close-world-map {
+    order: 3;
+}
+@media (max-width: 600px) {
+    #map-navigation {
+        order: 4;
+        justify-content: center;
+        width: 100%;
+    }
+}
+
+/* Compact mission picker: keep both choices and the launch action in view. */
+@media (max-width: 700px), (max-height: 500px) {
+    #mission-select {
+        height: 100dvh;
+        overflow: hidden;
+        padding: max(12px, env(safe-area-inset-top))
+            max(16px, env(safe-area-inset-right))
+            max(12px, env(safe-area-inset-bottom))
+            max(16px, env(safe-area-inset-left));
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        gap: 12px;
+    }
+    .mission-heading,
+    .mission-cards,
+    .mission-footer {
+        width: 100%;
+        min-height: 0;
+    }
+    .mission-heading h1 {
+        font-size: 25px;
+        margin: 4px 0;
+    }
+    .mission-heading p,
+    .mission-traits,
+    .mission-copy p,
+    .mission-footer > small:first-of-type {
+        display: none;
+    }
+    .mission-cards {
+        margin: 0;
+        gap: 10px;
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 1fr;
+    }
+    .mission-card {
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) auto;
+        min-height: 0;
+    }
+    .mission-card img {
+        height: 100%;
+        min-height: 0;
+        object-fit: cover;
+    }
+    .mission-copy {
+        padding: 10px 14px;
+    }
+    .mission-copy h2 {
+        font-size: 21px;
+        margin: 4px 0 0;
+    }
+    .mission-footer {
+        margin: 0;
+        gap: 6px;
+        justify-content: space-between;
+    }
+    #mission-selection {
+        margin: 0;
+        font-size: 12px;
+    }
+    .mission-footer small {
+        width: 100%;
+        font-size: 10px;
+    }
+    #fly-button {
+        min-height: 44px;
+        padding: 10px 14px;
+    }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+    .mission-cards {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr;
+    }
+    .mission-copy {
+        padding: 6px 12px;
+    }
+    .mission-copy h2 {
+        font-size: 18px;
+    }
+    .mission-heading .eyebrow {
+        display: none;
+    }
+}
+@media (pointer: coarse), (max-width: 900px) and (max-height: 500px) {
+    .jet-flight #jet-controls {
+        display: flex;
+        bottom: max(12px, env(safe-area-inset-bottom));
+    }
+    #jet-controls #gear-button {
+        min-height: 44px;
+        min-width: 108px;
+        font-size: 12px;
+    }
+    #jet-controls #boost-button,
+    #jet-controls #airbrake-button {
+        display: none;
+    }
+    .jet-flight .touch-throttle::after {
+        content: 'BRAKE ← 0–100% → BOOST';
+        grid-column: 1 / -1;
+        font-size: 9px;
+        text-align: center;
+    }
+    .jet-flight .touch-throttle input {
+        background: linear-gradient(
+            to right,
+            #76bada 0% 12%,
+            #ffd166 12% 88%,
+            #ff784e 88%
+        );
+        border-radius: 8px;
+    }
+}

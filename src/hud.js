@@ -181,10 +181,16 @@ export function createHud() {
             const cameraLabel = formatCameraMode(cameraMode.getMode());
             const thrustPercent = Math.round(planeState.thrust * 100);
 
-            setText(speedValueElement, formatSpeedKmh(planeState.speed));
+            setText(
+                speedValueElement,
+                formatSpeedKmh(
+                    planeState.speed *
+                        (planeState.aircraft === 'mirage' ? 2.4 : 1)
+                )
+            );
             setText(altitudeValueElement, formatAltitudeMeters(altitude));
             setText(thrustValueElement, thrustPercent.toString());
-            const width = `${thrustPercent}%`;
+            const width = `${Math.min(100, thrustPercent)}%`;
             if (thrustBarElement.style.width !== width)
                 thrustBarElement.style.width = width;
             setText(headingValueElement, formatHeading(planeState.yawAngle));

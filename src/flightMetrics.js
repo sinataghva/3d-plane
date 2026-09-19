@@ -8,6 +8,8 @@ export const PITCH_PATH_FACTOR = 0.22;
 
 /** @param {import('./physics.js').PlaneState} state */
 export function getVerticalSpeed(state) {
+    if (state.aircraft === 'mirage')
+        return state.isAirborne && !state.isCrashed ? state.verticalSpeed : 0;
     return state.isAirborne && !state.isCrashed
         ? state.verticalSpeed +
               Math.sin(state.pitchAngle) * state.speed * PITCH_PATH_FACTOR
@@ -20,6 +22,7 @@ export function getEffectiveStallSpeed(
     stallSpeed = STALL_SPEED,
     flapReduction = FLAP_STALL_REDUCTION
 ) {
+    if (state.aircraft === 'mirage') return 0.92;
     return stallSpeed - state.flapDeployment * flapReduction;
 }
 

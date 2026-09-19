@@ -1,3 +1,8 @@
+import { createGroundDetail } from './groundDetail.js';
+import { createDestinationBeacon, clearDestination } from './destination.js';
+import { selectFlight } from './missions.js';
+import { createMirage, updateMirage } from './mirage.js';
+import { createJetControls } from './jetControls.js';
 import { createGeography, setGeography } from './geography.js';
 import { createTerrain } from './terrain.js';
 import { createWorldMap } from './worldMap.js';
@@ -162,6 +167,42 @@ async function startApp() {
     }
     const crashOverlayElement = crashOverlay;
 
+    const mission = await selectFlight();
+    document.title = `${mission.title} · Open Skies`;
+    if (mission.aircraft === 'mirage') {
+        const list = document.querySelector('#instructions-panel ul');
+        list?.querySelectorAll('li').forEach((item) => {
+            if (item.textContent?.includes('Fire tracers')) item.hidden = true;
+        });
+        const help = document.createElement('li');
+        help.textContent =
+            'Mirage: hold W at full thrust for 110% afterburner; release to return to 100%. G: landing gear. Hold S at zero thrust: airbrakes. Space: cannon. P: settings. Mobile: full slider + hold Boost.';
+        list?.append(help);
+    }
+    const loading = document.getElementById('scenery-loading');
+    if (loading) loading.textContent = `Loading ${mission.title}…`;
+    const mapCaption = document.querySelector('#world-map p');
+    if (mapCaption)
+        mapCaption.textContent = `${mission.title} · north up · live position`;
+    const dataLink = document.querySelector('#world-map a[download]');
+    if (dataLink)
+        dataLink.setAttribute(
+            'href',
+            `${import.meta.env.BASE_URL}data/${mission.map}`
+        );
+    let closed = false;
+    let disposeFlight = () => {};
+    const menu = document.createElement('button');
+    menu.id = 'missions-button';
+    menu.textContent = 'Change flight';
+    menu.onclick = () => {
+        closed = true;
+        disposeFlight();
+        window.dispatchEvent(new Event('flight-input-clear'));
+        location.assign(import.meta.env.BASE_URL);
+    };
+    document.querySelector('.flight-toolbar')?.append(menu);
+    if (!menu.isConnected) document.body.append(menu);
     const visualScenario = getVisualScenario();
     if (visualScenario) {
         document.documentElement.classList.add('visual-test-mode');
@@ -173,21 +214,27 @@ async function startApp() {
         return response.json();
     };
     const [geoData, elevationData] = await Promise.all([
-        loadData('saint-cyr.json'),
-        loadData('saint-cyr-elevation.json')
+        loadData(mission.map),
+        loadData(mission.elevation)
     ]);
+    if (closed) return;
+    geoData.airfield = mission.airfield;
     const world = createGeography(geoData, elevationData);
     setGeography(world);
     const { scene, camera, renderer, controls } = createScene({ container });
 
-    const { airplane, propeller } = createAirplane();
-    const planeState = createPlaneState();
+    const { airplane, propeller } =
+        mission.aircraft === 'mirage' ? createMirage() : createAirplane();
+    const planeState = createPlaneState(mission.aircraft);
+    planeState.mission = mission.id;
     syncPlaneMesh({ airplane, propeller, planeState });
     scene.add(airplane);
 
     const restoreRandom = visualScenario ? useSeededRandom(12345) : null;
     const airbase = createTerrain(world);
     scene.add(airbase);
+    const groundDetail = createGroundDetail(world);
+    scene.add(groundDetail.group);
 
     const clouds = addClouds(scene);
     if (restoreRandom) {
@@ -196,11 +243,12 @@ async function startApp() {
     const crashEffect = createCrashEffect(scene);
     const machineGun = createMachineGun(scene);
 
-    const keyboard = createKeyboardState();
+    const keyboard = createKeyboardState(mission.aircraft);
     const planePhysics = createPlanePhysics();
     const cameraMode = createCameraModeToggle();
     const hud = createHud();
     const cockpitOverlay = createCockpitOverlay();
+    const destinationBeacon = createDestinationBeacon(scene);
     const miniMap = createMiniMap();
     const worldMap = createWorldMap(planeState);
     const warningBanner = createWarningBanner();
@@ -210,10 +258,47 @@ async function startApp() {
     );
     const timer = new THREE.Timer();
     timer.connect(document);
+    disposeFlight = () => {
+        groundDetail.dispose();
+        destinationBeacon.dispose();
+        machineGun.dispose();
+        controls.dispose();
+        timer.dispose();
+        const geometries = new Set();
+        const materials = new Set();
+        const textures = new Set();
+        scene.traverse((object) => {
+            if (
+                !(
+                    object instanceof THREE.Mesh ||
+                    object instanceof THREE.Sprite
+                )
+            )
+                return;
+            if (object instanceof THREE.Mesh) geometries.add(object.geometry);
+            for (const material of Array.isArray(object.material)
+                ? object.material
+                : [object.material]) {
+                materials.add(material);
+                for (const value of Object.values(material))
+                    if (value instanceof THREE.Texture) textures.add(value);
+            }
+        });
+        if (scene.background instanceof THREE.Texture)
+            textures.add(scene.background);
+        for (const texture of textures) texture.dispose();
+        for (const material of materials) material.dispose();
+        for (const geometry of geometries) geometry.dispose();
+        renderer.dispose();
+        renderer.forceContextLoss();
+    };
     let crashElapsed = 0;
     let wasCrashed = false;
 
     const resetFlight = () => {
+        clearDestination();
+        worldMap.resetView();
+        window.dispatchEvent(new Event('flight-input-clear'));
         resetPlaneState(planeState);
         crashElapsed = 0;
         wasCrashed = false;
@@ -231,12 +316,20 @@ async function startApp() {
         }
     });
 
+    const jetControls = createJetControls(planeState, () => {
+        if (automation?.active) automation.release();
+    });
     if (visualScenario) {
         applyVisualScenario({
             planeState,
             cameraMode,
             visualScenario
         });
+
+        // Static screenshot scenes need fully built and faded-in detail tiles.
+        for (let step = 0; step < 120; step++) {
+            groundDetail.update(planeState.position, scene.userData.quality, 0.1);
+        }
 
         if (visualScenario.cameraPosition) {
             camera.position.set(
@@ -265,6 +358,19 @@ async function startApp() {
             isCockpit: cameraMode.getMode() === 'cockpit'
         });
         updateCamera({ camera, controls, airplane, cameraMode });
+        updateMirage(airplane, planeState, keyboard, 0);
+        if (visualScenario.name === 'card') {
+            camera.position
+                .copy(airplane.position)
+                .add(
+                    new THREE.Vector3(
+                        mission.aircraft === 'mirage' ? 16 : 9,
+                        mission.aircraft === 'mirage' ? 10 : 9,
+                        mission.aircraft === 'mirage' ? 12 : 13
+                    )
+                );
+            camera.lookAt(airplane.position);
+        }
         experience.update();
         hud.update({ planeState, cameraMode });
         cockpitOverlay.update({ planeState, cameraMode });
@@ -280,6 +386,12 @@ async function startApp() {
             visualScenario || experience.paused ? 0 : timer.getDelta(),
             camera.position
         );
+        groundDetail.update(
+            planeState.position,
+            scene.userData.quality,
+            Math.min(timer.getDelta(), 0.1)
+        );
+        destinationBeacon.update(camera, planeState.position);
         scene.userData.followSun(airplane.position);
         renderer.render(scene, camera);
         document.getElementById('scenery-loading')?.remove();
@@ -323,6 +435,7 @@ async function startApp() {
             delta
         });
         machineGun.update({ planeState, keyboard, delta });
+        updateMirage(airplane, planeState, keyboard, performance.now() / 1000);
         warningBanner.update({
             planeState,
             cameraMode,
@@ -377,17 +490,49 @@ async function startApp() {
                     'Agent control • JavaScript API ready (tool registration failed) ';
             });
     }
+    const cancelMachineBoost = () => {
+        if (automation?.active) automation.pause();
+    };
+    window.addEventListener('blur', cancelMachineBoost);
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) cancelMachineBoost();
+    });
+    window.addEventListener('keydown', (event) => {
+        if (
+            automation?.active &&
+            [
+                ' ',
+                'w',
+                's',
+                'a',
+                'd',
+                'arrowup',
+                'arrowdown',
+                'arrowleft',
+                'arrowright'
+            ].includes(event.key.toLowerCase())
+        )
+            automation.release();
+    });
+    document
+        .getElementById('touch-controls')
+        ?.addEventListener('pointerdown', () => {
+            if (automation?.active) automation.release();
+        });
     /** @param {number} timestamp */
     function animate(timestamp) {
+        if (closed) return;
         requestAnimationFrame(animate);
         timer.update(timestamp);
-        if (automation?.active) automation.update(timer.getDelta());
+        if (automation?.active && !document.hidden)
+            automation.update(timer.getDelta());
         if (!automation?.active && !experience.paused) {
             simulationClock.update(timer.getDelta(), (delta) =>
                 simulate(delta, keyboard)
             );
             document.querySelector('.automation-status')?.remove();
         }
+        updateMirage(airplane, planeState, keyboard, timestamp / 1000);
         syncPlaneMesh({ airplane, propeller, planeState });
         const mode = cameraMode.getMode();
         const modeChanged = mode !== lastCameraMode;
@@ -407,6 +552,7 @@ async function startApp() {
         cockpitOverlay.update({ planeState, cameraMode });
         if (modeChanged || timestamp - lastHudUpdate >= 100) {
             experience.update();
+            jetControls.update();
             hud.update({ planeState, cameraMode });
             lastHudUpdate = timestamp;
         }
@@ -420,6 +566,12 @@ async function startApp() {
             visualScenario || experience.paused ? 0 : timer.getDelta(),
             camera.position
         );
+        groundDetail.update(
+            planeState.position,
+            scene.userData.quality,
+            Math.min(timer.getDelta(), 0.1)
+        );
+        destinationBeacon.update(camera, planeState.position);
         scene.userData.followSun(airplane.position);
         renderer.render(scene, camera);
         document.getElementById('scenery-loading')?.remove();
@@ -429,6 +581,9 @@ async function startApp() {
                 fps: Math.round((frames * 1000) / (timestamp - statsAt)),
                 calls: renderer.info.render.calls,
                 triangles: renderer.info.render.triangles,
+                geometries: renderer.info.memory.geometries,
+                textures: renderer.info.memory.textures,
+                ...groundDetail.stats(),
                 ...airbase.userData.summary
             });
             statsAt = timestamp;

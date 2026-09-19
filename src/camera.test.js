@@ -39,3 +39,51 @@ it('keeps chase and orbit distance stable during straight flight', () => {
         ).toBeLessThan(0.00001);
     }
 });
+
+it('jet chase stays upright while banked and lags a heading change', () => {
+    const camera = new THREE.PerspectiveCamera();
+    const airplane = new THREE.Object3D();
+    airplane.userData.jet = true;
+    const mode = {
+        getMode: () => 'chase',
+        isOrbitMode: () => false,
+        setMode() {}
+    };
+    const controls =
+        /** @type {import('three/addons/controls/OrbitControls.js').OrbitControls} */ (
+            /** @type {unknown} */ ({
+                target: new THREE.Vector3(),
+                update() {}
+            })
+        );
+    updateCamera({ camera, airplane, cameraMode: mode, controls });
+    airplane.rotation.set(1.2, 0, 0, 'YZX');
+    updateCamera({
+        camera,
+        airplane,
+        cameraMode: mode,
+        controls,
+        delta: 1 / 60
+    });
+    expect(camera.up.toArray()).toEqual([0, 1, 0]);
+    expect(camera.position.y).toBeCloseTo(8);
+    airplane.rotation.set(1.2, Math.PI / 2, 0, 'YZX');
+    updateCamera({
+        camera,
+        airplane,
+        cameraMode: mode,
+        controls,
+        delta: 1 / 60
+    });
+    expect(camera.position.x).toBeLessThan(-20);
+    expect(camera.position.z).toBeGreaterThan(0);
+    for (let i = 0; i < 180; i++)
+        updateCamera({
+            camera,
+            airplane,
+            cameraMode: mode,
+            controls,
+            delta: 1 / 60
+        });
+    expect(camera.position.z).toBeCloseTo(23, 1);
+});

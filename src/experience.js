@@ -1,3 +1,5 @@
+import { isEditableTarget } from './input.js';
+import { jetWaypoints } from './jetNavigation.js';
 import { getGeography } from './geography.js';
 import { getAltitude } from './flightMetrics.js';
 import { getVerticalSpeed } from './flightMetrics.js';
@@ -16,6 +18,10 @@ export function isOnRunway(state) {
  * @param {import('./physics.js').PlaneState} after
  */
 export function describeTouchdown(before, after) {
+    if (after.crashReason === 'gear')
+        return 'Gear-up touchdown. Extend the landing gear before landing.';
+    if (after.crashReason === 'jet-touchdown')
+        return 'Landing limits exceeded. Approach at 260–340 km/h, wings level, with gear down and less than 5 m/s descent.';
     const sink = Math.max(0, -getVerticalSpeed(before) * 60);
     if (after.crashReason === 'water')
         return 'Water landing. Return to the grass runway for a safe touchdown.';
@@ -54,15 +60,35 @@ export function createExperience({
     const feedback = /** @type {HTMLElement} */ (
         document.getElementById('flight-feedback')
     );
-    const pause = /** @type {HTMLButtonElement} */ (
-        document.getElementById('pause-button')
-    );
+    document.getElementById('pause-button')?.remove();
+    document.getElementById('pause-overlay')?.remove();
+    const menu = document.createElement('button');
+    menu.id = 'settings-button';
+    menu.textContent = '⚙';
+    menu.setAttribute('aria-label', 'Settings (P)');
+    menu.setAttribute('aria-haspopup', 'dialog');
+    const dialog = document.createElement('dialog');
+    dialog.id = 'settings-dialog';
+    dialog.setAttribute('aria-labelledby', 'settings-title');
+    dialog.innerHTML =
+        '<header><h2 id="settings-title">Flight settings</h2><button id="close-settings" aria-label="Close settings">×</button></header><p>Flight paused · P or Esc to resume</p>';
+    for (const selector of ['.flight-toolbar', '.graphics-settings']) {
+        const element = document.querySelector(selector);
+        if (element) dialog.append(element);
+    }
+    const missions = document.getElementById('missions-button');
+    if (missions) dialog.append(missions);
+    document.body.append(menu, dialog);
     const camera = /** @type {HTMLButtonElement} */ (
         document.getElementById('camera-button')
     );
     const throttle = /** @type {HTMLInputElement} */ (
         document.getElementById('touch-throttle')
     );
+    const jet = planeState.aircraft === 'mirage';
+    const world = getGeography();
+    const waypoints = jet && world ? jetWaypoints(world) : [];
+    let waypoint = 0;
     let paused = false;
     let feedbackUntil = 0;
     let maxAltitude = 0;
@@ -70,6 +96,7 @@ export function createExperience({
     let completed = false;
     let landingArmed = false;
     const resetProgress = () => {
+        waypoint = 0;
         maxAltitude = 0;
         startYaw = planeState.yawAngle;
         completed = false;
@@ -81,22 +108,38 @@ export function createExperience({
         guide.value = 'free';
         card.hidden = true;
     });
-    pause.onclick = () => {
-        onTakeControl();
-        paused = !paused;
-        pause.textContent = paused ? 'Resume' : 'Pause';
-        pause.setAttribute('aria-pressed', String(paused));
-        document
-            .getElementById('pause-overlay')
-            ?.toggleAttribute('hidden', !paused);
+    const setPaused = (/** @type {boolean} */ value) => {
+        if (value) onTakeControl();
+        window.dispatchEvent(new Event('flight-input-clear'));
+        paused = value;
+        document.body.classList.toggle('settings-open', value);
+        menu.setAttribute('aria-expanded', String(value));
+        if (value && !dialog.open) dialog.showModal();
+        if (!value && dialog.open) dialog.close();
+        if (!value) menu.blur();
     };
+    menu.onclick = () => setPaused(!paused);
+    dialog
+        .querySelector('#close-settings')
+        ?.addEventListener('click', () => setPaused(false));
+    dialog.addEventListener('cancel', (e) => {
+        e.preventDefault();
+        setPaused(false);
+    });
+    window.addEventListener('keydown', (e) => {
+        if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+        if (
+            e.key.toLowerCase() === 'p' &&
+            (paused || !isEditableTarget(e.target))
+        ) {
+            e.preventDefault();
+            setPaused(!paused);
+        }
+    });
     const restart = () => {
         onTakeControl();
         onRestart();
-        paused = false;
-        pause.textContent = 'Pause';
-        pause.setAttribute('aria-pressed', 'false');
-        document.getElementById('pause-overlay')?.setAttribute('hidden', '');
+        setPaused(false);
         feedback.hidden = true;
         resetProgress();
     };
@@ -110,9 +153,42 @@ export function createExperience({
             modes[(modes.indexOf(cameraMode.getMode()) + 1) % modes.length]
         );
     };
+    throttle.min = jet ? '-15' : '0';
+    throttle.max = jet ? '115' : '100';
+    let throttleHeld = false;
+    /** @param {boolean} boost @param {boolean} brake */
+    const momentary = (boost, brake) => {
+        window.dispatchEvent(new CustomEvent('jet-boost', { detail: boost }));
+        window.dispatchEvent(new CustomEvent('jet-brake', { detail: brake }));
+    };
+    const releaseThrottle = () => {
+        throttleHeld = false;
+        if (jet) {
+            momentary(false, false);
+            planeState.afterburner = false;
+            planeState.airbrake = false;
+            planeState.thrust = Math.max(0, Math.min(1, planeState.thrust));
+        }
+        throttle.value = String(Math.round(planeState.thrust * 100));
+    };
+    throttle.onpointerdown = (e) => {
+        throttleHeld = true;
+        throttle.setPointerCapture(e.pointerId);
+    };
+    throttle.onpointerup = releaseThrottle;
+    throttle.onpointercancel = releaseThrottle;
+    throttle.onlostpointercapture = releaseThrottle;
+    window.addEventListener('blur', releaseThrottle);
+    window.addEventListener('flight-input-clear', releaseThrottle);
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) releaseThrottle();
+    });
     throttle.oninput = () => {
         onTakeControl();
-        planeState.thrust = Number(throttle.value) / 100;
+        const value = Number(throttle.value);
+        planeState.thrust = Math.max(0, Math.min(100, value)) / 100;
+        if (jet)
+            momentary(throttleHeld && value > 100, throttleHeld && value < 0);
     };
     return {
         get paused() {
@@ -121,6 +197,17 @@ export function createExperience({
         reset: resetProgress,
         /** @param {import('./physics.js').PlaneState} before */
         afterStep(before) {
+            if (
+                jet &&
+                guide.value === 'circuit' &&
+                waypoint < waypoints.length &&
+                getAltitude(planeState) > 150 &&
+                Math.hypot(
+                    planeState.position.x - waypoints[waypoint].x,
+                    planeState.position.z - waypoints[waypoint].z
+                ) < 650
+            )
+                waypoint++;
             maxAltitude = Math.max(maxAltitude, getAltitude(planeState));
             if (getAltitude(planeState) >= 2) landingArmed = true;
             if (
@@ -140,8 +227,10 @@ export function createExperience({
                     );
                     completed =
                         guide.value === 'circuit' &&
-                        maxAltitude >= 50 &&
-                        turn >= Math.PI * 1.9 &&
+                        maxAltitude >= (jet ? 150 : 50) &&
+                        (jet
+                            ? waypoint === waypoints.length
+                            : turn >= Math.PI * 1.9) &&
                         headingError < 0.2 &&
                         isOnRunway(planeState);
                     feedback.textContent =
@@ -154,9 +243,13 @@ export function createExperience({
         update() {
             const mode = cameraMode.getMode();
             camera.textContent = `Camera: ${mode[0].toUpperCase() + mode.slice(1)}`;
-            throttle.value = String(Math.round(planeState.thrust * 100));
+            if (!throttleHeld)
+                throttle.value = String(
+                    Math.round(Math.min(1, planeState.thrust) * 100)
+                );
             const output = document.getElementById('touch-thrust-value');
-            if (output) output.textContent = `${throttle.value}%`;
+            if (output)
+                output.textContent = `${Math.round(planeState.thrust * 100)}%`;
             if (performance.now() > feedbackUntil) feedback.hidden = true;
             card.hidden =
                 guide.value === 'free' ||
@@ -174,7 +267,9 @@ export function createExperience({
             } else if (!planeState.isAirborne) {
                 hint = completed
                     ? 'Circuit complete. Keep exploring or select another guide.'
-                    : 'Set full thrust, build speed to 135 km/h, then gently pitch up (↓ or pull the stick).';
+                    : planeState.aircraft === 'mirage'
+                      ? 'Set full thrust; hold W for afterburner. At 260 km/h gently pitch up, then retract gear (G). Mobile: full slider + hold boost.'
+                      : 'Set full thrust, build speed to 135 km/h, then gently pitch up (↓ or pull the stick).';
             } else if (guide.value === 'takeoff') {
                 hint =
                     'You’re flying! Ease pitch as you climb. Bank to turn; release to level your wings. Explore as long as you like.';
@@ -183,6 +278,24 @@ export function createExperience({
                     maxAltitude < 50
                         ? 'Optional circuit: climb to at least 50 m before turning.'
                         : '50 m reached. When ready, bank through a full circuit and return to the runway in your takeoff direction. No time limit.';
+            }
+            if (jet && planeState.isAirborne && guide.value === 'circuit') {
+                const target = waypoints[waypoint];
+                const heading = target
+                    ? (((90 -
+                          (Math.atan2(
+                              -(target.z - planeState.position.z),
+                              target.x - planeState.position.x
+                          ) *
+                              180) /
+                              Math.PI) %
+                          360) +
+                          360) %
+                      360
+                    : 0;
+                hint = target
+                    ? `Optional circuit: climb above 150 m AGL; slow to about 400 km/h for turns. ${waypoint + 1}/4 ${target.name} · heading ${Math.round(heading)}° · ${(Math.hypot(target.x - planeState.position.x, target.z - planeState.position.z) / 1000).toFixed(1)} km. Waypoints shown on map; explore freely.`
+                    : 'Waypoints complete. Return in your takeoff direction. Gear down, airbrake as needed, approach at 260–340 km/h and descend gently. No time limit.';
             }
             if (message.textContent !== hint) message.textContent = hint;
         }

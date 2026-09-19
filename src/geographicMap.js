@@ -1,3 +1,9 @@
+import {
+    destinationProjection,
+    getDestination,
+    drawDestinationPin
+} from './destination.js';
+import { jetWaypoints } from './jetNavigation.js';
 import { createGeographicCanvas } from './cartography.js';
 import { formatHeading } from './hud.js';
 /** @type {WeakMap<import('./geography.js').Geography, HTMLCanvasElement>} */
@@ -47,16 +53,14 @@ export function drawAircraft(ctx, x, y, yaw, size = 1) {
     ctx.stroke();
     ctx.restore();
 }
-/** @param {CanvasRenderingContext2D} ctx @param {number} width @param {number} height @param {import('./physics.js').PlaneState} state @param {import('./geography.js').Geography} world */
-export function drawOverview(ctx, width, height, state, world) {
-    const scale = Math.min(
-        (width - 24) / world.width,
-        (height - 32) / world.depth
+/** @param {CanvasRenderingContext2D} ctx @param {number} width @param {number} height @param {import('./physics.js').PlaneState} state @param {import('./geography.js').Geography} world @param {import('./mapViewport.js').MapView} [view] */
+export function drawOverview(ctx, width, height, state, world, view) {
+    const { scale, w, h, left, top } = destinationProjection(
+        width,
+        height,
+        world,
+        view
     );
-    const w = world.width * scale,
-        h = world.depth * scale,
-        left = (width - w) / 2,
-        top = (height - h) / 2;
     ctx.fillStyle = '#10242d';
     ctx.fillRect(0, 0, width, height);
     ctx.drawImage(mapImage(world), left, top, w, h);
@@ -67,10 +71,17 @@ export function drawOverview(ctx, width, height, state, world) {
     ];
     /** @type {{name:string,point:number[],priority:number}[]} */
     const labels = world.data.places
-        .filter((p) => ['city', 'town', 'village'].includes(p.kind))
+        .filter((p) =>
+            [
+                'city',
+                'town',
+                'village',
+                ...((view?.zoom ?? 1) > 1.5 ? ['hamlet', 'suburb'] : [])
+            ].includes(p.kind)
+        )
         .map((p) => ({ ...p, priority: p.kind === 'city' ? 2 : 3 }));
     labels.unshift({
-        name: 'Saint-Cyr · LFPZ',
+        name: world.data.airfield || 'Saint-Cyr · LFPZ',
         point: [world.spawn.x, world.spawn.z],
         priority: 0
     });
@@ -81,12 +92,27 @@ export function drawOverview(ctx, width, height, state, world) {
             point: palace.points[0],
             priority: 1
         });
+    if (
+        state.aircraft === 'mirage' &&
+        document.getElementById('guide-mode') instanceof HTMLSelectElement &&
+        /** @type {HTMLSelectElement} */ (document.getElementById('guide-mode'))
+            .value === 'circuit'
+    ) {
+        jetWaypoints(world).forEach((p, i) =>
+            labels.push({
+                name: `${i + 1} · ${p.name}`,
+                point: [p.x, p.z],
+                priority: 1
+            })
+        );
+    }
     labels.sort((a, b) => a.priority - b.priority);
     /** @type {number[][]} */ const boxes = [];
     ctx.font = `${height < 400 ? 11 : 13}px system-ui`;
     for (const label of labels) {
         const [x, y] = project(label.point),
             textWidth = ctx.measureText(label.name).width;
+        if (x < 0 || x > width || y < 0 || y > height) continue;
         const tx = Math.max(4, Math.min(width - textWidth - 8, x + 7));
         for (const offset of [-10, 18, 34]) {
             const ty = y + offset,
@@ -122,9 +148,25 @@ export function drawOverview(ctx, width, height, state, world) {
     ctx.fillStyle = '#edf5f1';
     ctx.font = '12px system-ui';
     ctx.textAlign = 'left';
-    ctx.fillText('N ↑', left + 8, top + 18);
-    ctx.fillRect(left + 10, top + h - 15, 1000 * scale, 2);
-    ctx.fillText('1 km', left + 10, top + h - 22);
+    ctx.fillText('N ↑', 16, 24);
+    const desired = 100 / scale;
+    const power = 10 ** Math.floor(Math.log10(desired));
+    const meters =
+        ([1, 2, 5, 10].find((n) => n * power >= desired) ?? 10) * power;
+    ctx.fillStyle = '#10242ddd';
+    ctx.fillRect(10, height - 44, meters * scale + 16, 36);
+    ctx.fillStyle = '#edf5f1';
+    ctx.fillRect(18, height - 15, meters * scale, 2);
+    ctx.fillText(
+        meters >= 1000 ? `${meters / 1000} km` : `${meters} m`,
+        18,
+        height - 24
+    );
+    const destination = getDestination();
+    if (destination) {
+        const p = project([destination.x, destination.z]);
+        drawDestinationPin(ctx, p[0], p[1]);
+    }
     const outside = x !== state.position.x || z !== state.position.z;
     const east = (state.position.x - world.spawn.x) / 1000,
         north = (world.spawn.z - state.position.z) / 1000;
@@ -132,7 +174,7 @@ export function drawOverview(ctx, width, height, state, world) {
 }
 /** @param {CanvasRenderingContext2D} ctx @param {number} size @param {import('./physics.js').PlaneState} state @param {import('./geography.js').Geography} world */
 export function drawRadar(ctx, size, state, world) {
-    const scale = size / 1800;
+    const scale = size / (state.aircraft === 'mirage' ? 8000 : 1800);
     ctx.fillStyle = '#10242d';
     ctx.fillRect(0, 0, size, size);
     ctx.save();
@@ -146,5 +188,20 @@ export function drawRadar(ctx, size, state, world) {
         world.depth * scale
     );
     ctx.restore();
+    const destination = getDestination();
+    if (destination) {
+        const dx = (destination.x - state.position.x) * scale,
+            dz = (destination.z - state.position.z) * scale;
+        const angle = state.yawAngle - Math.PI / 2;
+        let x = dx * Math.cos(angle) - dz * Math.sin(angle),
+            y = dx * Math.sin(angle) + dz * Math.cos(angle);
+        const factor = Math.min(
+            1,
+            (size / 2 - 18) / Math.max(1, Math.hypot(x, y))
+        );
+        x *= factor;
+        y *= factor;
+        drawDestinationPin(ctx, size / 2 + x, size / 2 + y);
+    }
     drawAircraft(ctx, size / 2, size / 2, Math.PI / 2, 0.48);
 }

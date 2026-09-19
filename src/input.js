@@ -1,6 +1,8 @@
 /**
- * @typedef {'w'|'s'|'a'|'d'|'arrowLeft'|'arrowRight'|'arrowUp'|'arrowDown'|'space'} ButtonKey
+ * @typedef {'w'|'s'|'a'|'d'|'arrowLeft'|'arrowRight'|'arrowUp'|'arrowDown'|'space'|'boost'|'brake'} ButtonKey
  * @typedef {object} KeyboardState
+ * @property {boolean} [brake]
+ * @property {boolean} [boost]
  * @property {boolean} w
  * @property {boolean} s
  * @property {boolean} a
@@ -16,6 +18,8 @@
  */
 /** @type {Record<string, ButtonKey>} */
 const KEY_BINDINGS = {
+    brake: 'brake',
+    boost: 'boost',
     w: 'w',
     s: 's',
     a: 'a',
@@ -39,9 +43,11 @@ export function applyStickCurve(value, authority) {
 }
 
 /** Independent input sources prevent one released finger/key cancelling another. */
-export function createInputController() {
+export function createInputController(aircraft = 'cessna') {
     /** @type {KeyboardState} */
     const state = {
+        brake: false,
+        boost: false,
         w: false,
         s: false,
         a: false,
@@ -97,8 +103,14 @@ export function createInputController() {
         /** @param {number} id @param {number} x @param {number} y */
         moveStick(id, x, y) {
             if (id !== stickPointer) return false;
-            state.stickRoll = applyStickCurve(x, STICK_ROLL_AUTHORITY);
-            state.stickPitch = applyStickCurve(y, STICK_PITCH_AUTHORITY);
+            state.stickRoll = applyStickCurve(
+                x,
+                aircraft === 'mirage' ? 1 : STICK_ROLL_AUTHORITY
+            );
+            state.stickPitch = applyStickCurve(
+                y,
+                aircraft === 'mirage' ? 1 : STICK_PITCH_AUTHORITY
+            );
             return true;
         },
         /** @param {number} id */
@@ -128,8 +140,8 @@ export function isEditableTarget(target) {
 }
 
 /** @returns {KeyboardState} */
-export function createKeyboardState() {
-    const input = createInputController();
+export function createKeyboardState(aircraft = 'cessna') {
+    const input = createInputController(aircraft);
     const buttons = [
         ...document.querySelectorAll('#touch-controls [data-key]')
     ].filter((node) => node instanceof HTMLElement);
@@ -153,12 +165,20 @@ export function createKeyboardState() {
         refreshButtons();
         resetStickVisual();
     };
+    window.addEventListener('jet-brake', (event) => {
+        input.key('brake', Boolean(Reflect.get(event, 'detail')));
+    });
+    window.addEventListener('jet-boost', (event) => {
+        input.key('boost', Boolean(Reflect.get(event, 'detail')));
+    });
+    window.addEventListener('flight-input-clear', clear);
     window.addEventListener('blur', clear);
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) clear();
     });
     window.addEventListener('keydown', (event) => {
         if (
+            document.body.classList.contains('settings-open') ||
             isEditableTarget(event.target) ||
             event.metaKey ||
             event.ctrlKey ||

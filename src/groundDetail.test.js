@@ -1,0 +1,72 @@
+import { expect, test } from 'vitest';
+import {
+    createRenderedHeight,
+    detailOpacity,
+    GROUND_DETAIL_PRESETS
+} from './groundDetail.js';
+test('detail fade includes a fully detailed inner area and a smooth outer transition', () => {
+    expect(detailOpacity(0, 0)).toBe(0);
+    expect(detailOpacity(300, 1000)).toBe(1);
+    expect(detailOpacity(800, 1000)).toBeCloseTo(0.5);
+    expect(detailOpacity(1000, 1000)).toBe(0);
+    expect(detailOpacity(3000, 1000)).toBe(0);
+    expect(GROUND_DETAIL_PRESETS.high.radius).toBeGreaterThan(
+        GROUND_DETAIL_PRESETS.balanced.radius
+    );
+    expect(GROUND_DETAIL_PRESETS.low.tiles).toBe(0);
+});
+test('overlay heights match the terrain triangle interpolation on sloped ground', () => {
+    const world = /** @type {import('./geography.js').Geography} */ (
+        /** @type {unknown} */ ({
+            width: 256,
+            depth: 256,
+            minX: -128,
+            minZ: -128,
+            height: (/** @type {number} */ x, /** @type {number} */ z) =>
+                x * 0.2 + z * 0.4
+        })
+    );
+    const h = createRenderedHeight(world);
+    for (const [x, z] of [
+        [0, 0],
+        [15.3, 27.9],
+        [-48.8, 44.1]
+    ])
+        expect(h(x, z)).toBeCloseTo(x * 0.2 + z * 0.4, 5);
+});
+
+test('wide surfaces are subdivided onto the base triangles without height gaps', async () => {
+    const { clipToTerrain } = await import('./groundDetail.js');
+    const world = /** @type {import('./geography.js').Geography} */ (
+        /** @type {unknown} */ ({
+            width: 256,
+            depth: 256,
+            minX: 0,
+            minZ: 0,
+            height: (/** @type {number} */ x, /** @type {number} */ z) =>
+                Math.sin(x * 0.8) * Math.cos(z * 0.6) * 4
+        })
+    );
+    const height = createRenderedHeight(world);
+    const triangles = clipToTerrain(
+        [
+            [2.2, 1.7],
+            [6.8, 2.9],
+            [7.2, 5.5],
+            [2.6, 4.3]
+        ],
+        world
+    );
+    expect(triangles.length).toBeGreaterThan(6);
+    for (let i = 0; i < triangles.length; i += 3) {
+        const a = triangles[i],
+            b = triangles[i + 1],
+            c = triangles[i + 2];
+        const interpolated =
+            (height(a[0], a[1]) + height(b[0], b[1]) + height(c[0], c[1])) / 3;
+        expect(interpolated).toBeCloseTo(
+            height((a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3),
+            5
+        );
+    }
+});

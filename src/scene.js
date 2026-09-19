@@ -148,6 +148,7 @@ export function createScene({ container }) {
     if (new URLSearchParams(location.search).has('visual')) quality = 'high';
     const applyQuality = () => {
         const settings = getRenderQuality(quality, window.devicePixelRatio);
+        scene.userData.quality = quality;
         renderer.setPixelRatio(settings.pixelRatio);
         if (renderer.shadowMap.enabled !== settings.shadows) {
             renderer.shadowMap.enabled = settings.shadows;

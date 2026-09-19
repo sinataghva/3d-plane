@@ -4,7 +4,8 @@ Coordinates are meters east/south from the local origin. No network requests.
 """
 import json,math,sys,pathlib,gzip
 raw=json.load(gzip.open(sys.argv[1], 'rt') if sys.argv[1].endswith('.gz') else open(sys.argv[1])); assert 'remark' not in raw,raw.get('remark')
-origin=[48.81,2.085]; south,west,north,east=48.775,2.015,48.845,2.155
+from scenery_regions import ORIGIN, BOUNDS, MAP_FILE
+origin=ORIGIN; south,west,north,east=BOUNDS
 mx=111320*math.cos(math.radians(origin[0])); my=111320
 def project(g):return [round((g['lon']-origin[1])*mx,1),round((origin[0]-g['lat'])*my,1)]
 def area(r):return abs(sum(a[0]*b[1]-b[0]*a[1] for a,b in zip(r,r[1:]+r[:1])))/2
@@ -94,7 +95,7 @@ for e in raw['elements']:
         if kind=='runway':f['ref']=t.get('ref','11/29')
         if kind=='road':f['class']=t.get('highway');f['width']={'motorway':16,'trunk':12,'primary':10,'secondary':8,'tertiary':7,'path':2,'footway':2,'track':3}.get(t.get('highway'),6)
         features.append(f)
-result=dict(origin=origin,bounds=[south,west,north,east],features=features,places=places,source='© OpenStreetMap contributors',license='ODbL-1.0',sourceUrl='https://www.openstreetmap.org/copyright',timestamp=raw.get('osm3s',{}).get('timestamp_osm_base'),retrieved='2026-09-18')
-out=pathlib.Path('data/saint-cyr.json');out.write_text(json.dumps(result,ensure_ascii=False,separators=(',',':')))
+result=dict(origin=origin,bounds=[south,west,north,east],features=features,places=places,source='© OpenStreetMap contributors',license='ODbL-1.0',sourceUrl='https://www.openstreetmap.org/copyright',timestamp=raw.get('osm3s',{}).get('timestamp_osm_base'),retrieved=__import__('datetime').date.today().isoformat())
+out=MAP_FILE;out.write_text(json.dumps(result,ensure_ascii=False,separators=(',',':')))
 from collections import Counter
 print(Counter(f['kind'] for f in features));print('Places:',[(p['name'],p['point']) for p in places]);print('Runways:',[f for f in features if f['kind']=='runway']);print('Palace:',[f['name'] for f in features if f.get('palace')]);print(out.stat().st_size,'bytes')
