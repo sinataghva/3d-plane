@@ -69,3 +69,54 @@ test('mobile viewport, hit targets, compact HUD and home screen assets', async (
     await page.screenshot({ path: info.outputPath('mobile.png') });
     await context.close();
 });
+
+test('joystick cancels native tap defaults and releases after repeated touch input', async ({
+    browser
+}, info) => {
+    const context = await browser.newContext({
+        viewport: { width: 852, height: 393 },
+        isMobile: true,
+        hasTouch: true
+    });
+    const page = await context.newPage();
+    await page.goto('/3d-plane/?mission=luxeuil&automation=1');
+    await page.waitForFunction(() => Boolean(window.planeAutomation));
+    const stick = page.locator('[data-stick]');
+    const cancelled = await stick.evaluate((el) =>
+        ['touchstart', 'touchmove', 'touchend', 'dblclick'].map(
+            (type) =>
+                !el.dispatchEvent(
+                    type.startsWith('touch')
+                        ? new TouchEvent(type, {
+                              bubbles: true,
+                              cancelable: true
+                          })
+                        : new MouseEvent(type, {
+                              bubbles: true,
+                              cancelable: true
+                          })
+                )
+        )
+    );
+    expect(cancelled).toEqual([true, true, true, true]);
+    const box = await stick.boundingBox();
+    const touch = await context.newCDPSession(page);
+    for (let i = 0; i < 4; i++) {
+        await touch.send('Input.dispatchTouchEvent', {
+            type: 'touchStart',
+            touchPoints: [
+                { x: box.x + box.width * 0.7, y: box.y + box.height * 0.35 }
+            ]
+        });
+        await expect(stick).toHaveAttribute('data-active', 'true');
+        await touch.send('Input.dispatchTouchEvent', {
+            type: 'touchEnd',
+            touchPoints: []
+        });
+        await expect(stick).toHaveAttribute('data-active', 'false');
+    }
+    expect(await page.evaluate(() => visualViewport.scale)).toBe(1);
+    await expect(page.locator('body')).not.toHaveClass(/has-runtime-error/);
+    await page.screenshot({ path: info.outputPath('joystick-taps.png') });
+    await context.close();
+});

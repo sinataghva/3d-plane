@@ -219,6 +219,19 @@ export function createKeyboardState(aircraft = 'cessna') {
         button.addEventListener('lostpointercapture', release);
     }
     if (stick instanceof HTMLElement) {
+        // iOS can recognize double-tap page zoom despite pointer-event
+        // preventDefault and touch-action. Cancel native touch defaults on
+        // this pointer-driven control, including the final tap release.
+        for (const type of [
+            'touchstart',
+            'touchmove',
+            'touchend',
+            'dblclick'
+        ]) {
+            stick.addEventListener(type, (event) => event.preventDefault(), {
+                passive: false
+            });
+        }
         const move = (/** @type {PointerEvent} */ event) => {
             const rect = stick.getBoundingClientRect();
             const radius = rect.width / 2;
