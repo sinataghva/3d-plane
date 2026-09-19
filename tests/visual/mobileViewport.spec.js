@@ -116,6 +116,13 @@ test('joystick cancels native tap defaults and releases after repeated touch inp
         await expect(stick).toHaveAttribute('data-active', 'false');
     }
     expect(await page.evaluate(() => visualViewport.scale)).toBe(1);
+    await touch.send('Emulation.setPageScaleFactor', { pageScaleFactor: 2 });
+    await expect(page.locator('body')).toHaveClass(/browser-zoomed/);
+    expect(
+        await stick.evaluate((el) => getComputedStyle(el).touchAction)
+    ).toMatch(/manipulation|pinch-zoom/);
+    await touch.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1 });
+    await expect(page.locator('body')).not.toHaveClass(/browser-zoomed/);
     await expect(page.locator('body')).not.toHaveClass(/has-runtime-error/);
     await page.screenshot({ path: info.outputPath('joystick-taps.png') });
     await context.close();

@@ -228,9 +228,16 @@ export function createKeyboardState(aircraft = 'cessna') {
             'touchend',
             'dblclick'
         ]) {
-            stick.addEventListener(type, (event) => event.preventDefault(), {
-                passive: false
-            });
+            stick.addEventListener(
+                type,
+                (event) => {
+                    if ((window.visualViewport?.scale ?? 1) <= 1.01)
+                        event.preventDefault();
+                },
+                {
+                    passive: false
+                }
+            );
         }
         const move = (/** @type {PointerEvent} */ event) => {
             const rect = stick.getBoundingClientRect();
@@ -255,6 +262,7 @@ export function createKeyboardState(aircraft = 'cessna') {
                 knob.style.translate = `${Math.round(x)}px ${Math.round(y)}px`;
         };
         stick.addEventListener('pointerdown', (event) => {
+            event.preventDefault();
             if (!input.beginStick(event.pointerId)) return;
             stick.setPointerCapture(event.pointerId);
             move(event);

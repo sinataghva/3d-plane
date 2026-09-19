@@ -1,5 +1,10 @@
 // Scope browser gesture suppression to touch-sized game layouts.
 export function setupMobileViewport() {
+    const zoomed = () => (window.visualViewport?.scale ?? 1) > 1.01;
+    const updateZoomRecovery = () =>
+        document.body.classList.toggle('browser-zoomed', zoomed());
+    window.visualViewport?.addEventListener('resize', updateZoomRecovery);
+    updateZoomRecovery();
     const mobile = () =>
         matchMedia(
             '(pointer: coarse), (max-width: 900px) and (max-height: 500px)'
@@ -13,7 +18,7 @@ export function setupMobileViewport() {
         document.addEventListener(
             type,
             (event) => {
-                if (mobile()) event.preventDefault();
+                if (mobile() && !zoomed()) event.preventDefault();
             },
             { passive: false }
         );
@@ -22,7 +27,8 @@ export function setupMobileViewport() {
     document.addEventListener(
         'touchmove',
         (event) => {
-            if (mobile() && event.touches.length > 1) event.preventDefault();
+            if (mobile() && !zoomed() && event.touches.length > 1)
+                event.preventDefault();
         },
         { passive: false }
     );
