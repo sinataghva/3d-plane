@@ -116,14 +116,61 @@ test('joystick cancels native tap defaults and releases after repeated touch inp
         await expect(stick).toHaveAttribute('data-active', 'false');
     }
     expect(await page.evaluate(() => visualViewport.scale)).toBe(1);
-    await touch.send('Emulation.setPageScaleFactor', { pageScaleFactor: 2 });
-    await expect(page.locator('body')).toHaveClass(/browser-zoomed/);
-    expect(
-        await stick.evaluate((el) => getComputedStyle(el).touchAction)
-    ).toMatch(/manipulation|pinch-zoom/);
-    await touch.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1 });
-    await expect(page.locator('body')).not.toHaveClass(/browser-zoomed/);
     await expect(page.locator('body')).not.toHaveClass(/has-runtime-error/);
     await page.screenshot({ path: info.outputPath('joystick-taps.png') });
+    await context.close();
+});
+
+test('mobile page-wide double taps are cancelled outside the joystick', async ({
+    browser
+}) => {
+    const context = await browser.newContext({
+        viewport: { width: 852, height: 393 },
+        isMobile: true,
+        hasTouch: true
+    });
+    const page = await context.newPage();
+    await page.goto('/3d-plane/?mission=luxeuil&automation=1');
+    await page.waitForFunction(() => Boolean(window.planeAutomation));
+    const result = await page.evaluate(() => {
+        const targets = [
+            document.body,
+            document.querySelector('.touch-flight-stick'),
+            document.querySelector('#flight-data'),
+            document.querySelector('#canvas-container')
+        ];
+        return targets.map((el) => {
+            const t = new Touch({
+                identifier: 1,
+                target: el,
+                clientX: 400,
+                clientY: 150
+            });
+            const tap = () => {
+                el.dispatchEvent(
+                    new TouchEvent('touchstart', {
+                        bubbles: true,
+                        touches: [t],
+                        changedTouches: [t]
+                    })
+                );
+                return !el.dispatchEvent(
+                    new TouchEvent('touchend', {
+                        bubbles: true,
+                        cancelable: true,
+                        touches: [],
+                        changedTouches: [t]
+                    })
+                );
+            };
+            tap();
+            return tap();
+        });
+    });
+    expect(result).toEqual([true, true, true, true]);
+    await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
+        'content',
+        /maximum-scale=1/
+    );
     await context.close();
 });

@@ -231,8 +231,7 @@ export function createKeyboardState(aircraft = 'cessna') {
             stick.addEventListener(
                 type,
                 (event) => {
-                    if ((window.visualViewport?.scale ?? 1) <= 1.01)
-                        event.preventDefault();
+                    event.preventDefault();
                 },
                 {
                     passive: false
