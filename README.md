@@ -598,7 +598,7 @@ See the [audio credits and listening checklist](public/audio/README.md) for ever
 ### Nearby railways and water
 
 Both regions now share the road-detail tile budget with railway and water surfaces.
-Balanced shows ballast, rails, and sharp static water geometry; High adds repeating
+Balanced shows ballast, rails, and sharp water geometry; High adds repeating
 rail sleepers and finer gravel. Low keeps the lightweight regional map texture.
 Nearby detail fades with distance and altitude; no more than 80 tiles are cached,
 with up to two built per frame and a time check before starting the second tile.
@@ -611,6 +611,18 @@ Bridges use approximate endpoint elevations; detailed bridge structures are not
 modeled. Narrow shoreline heights remain limited by the regional elevation grid.
 
 Surface waterways participate in water-landing detection; covered channels do not.
-Water is deliberately static: animated ripples and reflections remain a future
-iteration. All data comes from the existing local caches; no new downloads were
-needed. See [scenery data notes](data/README.md) for reproduction and attribution.
+Water shading follows the graphics preset:
+
+- **Low:** the static regional map, prioritizing rendering speed.
+- **Balanced:** gentle animated ripples and soft sunlight highlights.
+- **High:** two ripple layers, subtle moving color variation and richer highlights.
+
+Lakes and canals are calmer than rivers; narrow or intermittent streams use weaker
+effects. Fine ripples fade with viewing distance to reduce shimmering. Motion is
+wind-driven decoration, not a simulation of downstream currents. Highlights come
+from the scene's sun; water does not mirror aircraft or buildings. The effect adds
+no reflection render pass or extra surface draw calls and uses one shared 128×128
+procedural texture. Animation freezes while paused or in the background and resets
+with the flight. Surface geometry, shorelines and collision heights stay unchanged.
+
+All data comes from the existing local caches; no new downloads were needed. See [scenery data notes](data/README.md) for reproduction and attribution.

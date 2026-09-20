@@ -1,6 +1,7 @@
 import * as THREE from 'three';
+import { waterCharacter } from './waterEffects.js';
 import { isSurfaceFeature, bridgeProfile } from './surfaceFeatures.js';
-/** @typedef {{points:number[][],kind:'ballast'|'rail'|'water'|'bank',origin?:number[],direction?:number[],offset?:number,bridge?:number[]}} SurfacePatch */
+/** @typedef {{points:number[][],kind:'ballast'|'rail'|'water'|'bank',origin?:number[],direction?:number[],offset?:number,bridge?:number[],waterCharacter?:number}} SurfacePatch */
 /** Clip a convex polygon to a rectangle, retaining triangle/quad winding.
  * @param {number[][]} polygon @param {number} minX @param {number} minZ @param {number} maxX @param {number} maxZ */
 export function clipRectangle(polygon, minX, minZ, maxX, maxZ) {
@@ -180,7 +181,11 @@ export function indexScenerySurfaces(world, tileSize, emit) {
             );
             const points = [...outer, ...holes.flat()];
             for (const tri of triangles)
-                add({ points: tri.map((i) => points[i]), kind: 'water' });
+                add({
+                    points: tri.map((i) => points[i]),
+                    kind: 'water',
+                    waterCharacter: waterCharacter(f)
+                });
             continue;
         }
         if (
@@ -206,6 +211,7 @@ export function indexScenerySurfaces(world, tileSize, emit) {
                 add({
                     points: [a[i - 1], a[i], b[i], b[i - 1]],
                     kind,
+                    waterCharacter: kind === 'water' ? waterCharacter(f) : 0,
                     origin: p[i - 1],
                     direction: [dx / len, dz / len],
                     offset:

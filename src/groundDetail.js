@@ -8,6 +8,7 @@ import {
     surfaceElevation
 } from './surfaceFeatures.js';
 import * as THREE from 'three';
+import { createWaterEffects } from './waterEffects.js';
 
 export const GROUND_DETAIL_PRESETS = {
     low: { radius: 0, tiles: 0, fine: false },
@@ -321,6 +322,7 @@ export function createGroundDetail(world) {
         }
         (tile.patches ??= []).push(patch);
     });
+    const waterEffects = createWaterEffects();
     const ballast = createBallastTexture();
     const grain = noiseTexture(512, false),
         grass = noiseTexture(512, true),
@@ -346,12 +348,12 @@ export function createGroundDetail(world) {
     function build(tile) {
         const root = new THREE.Group();
         const materials = [];
-        /** @type {Map<SurfaceKind,{p:number[],uv:number[]}>} */ const buckets =
+        /** @type {Map<SurfaceKind,{p:number[],uv:number[],water:number[]}>} */ const buckets =
             new Map();
         for (const strip of tile.strips) {
             let bucket = buckets.get(strip.kind);
             if (!bucket) {
-                bucket = { p: [], uv: [] };
+                bucket = { p: [], uv: [], water: [] };
                 buckets.set(strip.kind, bucket);
             }
             const dx = strip.bx - strip.ax,
@@ -394,7 +396,7 @@ export function createGroundDetail(world) {
         for (const patch of tile.patches || []) {
             let bucket = buckets.get(patch.kind);
             if (!bucket) {
-                bucket = { p: [], uv: [] };
+                bucket = { p: [], uv: [], water: [] };
                 buckets.set(patch.kind, bucket);
             }
             const triangles = clipToTerrain(patch.points, world);
@@ -414,6 +416,8 @@ export function createGroundDetail(world) {
                         height(x, z)
                     );
                     bucket.p.push(x, y + (patch.offset ?? 0.035), z);
+                    if (patch.kind === 'water')
+                        bucket.water.push(patch.waterCharacter ?? 0.55);
                     if (
                         patch.kind === 'ballast' &&
                         patch.origin &&
@@ -440,6 +444,11 @@ export function createGroundDetail(world) {
                 'uv',
                 new THREE.Float32BufferAttribute(b.uv, 2)
             );
+            if (kind === 'water')
+                geometry.setAttribute(
+                    'waterCharacter',
+                    new THREE.Float32BufferAttribute(b.water, 1)
+                );
             geometry.computeVertexNormals();
             geometry.computeBoundingSphere();
             const paint = kind === 'paint' || kind.startsWith('number'),
@@ -473,6 +482,7 @@ export function createGroundDetail(world) {
                 polygonOffsetFactor: paint || wear ? -3 : -2,
                 polygonOffsetUnits: -2
             });
+            if (kind === 'water') waterEffects.attach(material);
             material.userData.kind = kind;
             material.userData.maximum = wear ? 0.23 : 1;
             if (kind.startsWith('number'))
@@ -497,9 +507,11 @@ export function createGroundDetail(world) {
     }
     return {
         group,
-        /** @param {{x:number,y:number,z:number}} position @param {string} quality @param {number} delta */
-        update(position, quality, delta) {
+        waterEffects,
+        /** @param {{x:number,y:number,z:number}} position @param {string} quality @param {number} delta @param {number} [animationDelta] */
+        update(position, quality, delta, animationDelta = 0) {
             if (disposed) return;
+            waterEffects.update(animationDelta, quality);
             clock += delta;
             scan -= delta;
             const settings =
@@ -623,6 +635,7 @@ export function createGroundDetail(world) {
         },
         stats() {
             return {
+                waterAnimationTime: waterEffects.uniforms.waterTime.value,
                 groundDetailTiles: cache.size,
                 groundDetailVisible: [...cache.values()].filter(
                     (t) => t.group.visible
@@ -639,6 +652,7 @@ export function createGroundDetail(world) {
             for (const tile of cache.values()) disposeTile(tile);
             cache.clear();
             textures.forEach((t) => t.dispose());
+            waterEffects.dispose();
             index.clear();
         }
     };

@@ -305,6 +305,7 @@ async function startApp() {
     const resetFlight = () => {
         clearDestination();
         worldMap.resetView();
+        groundDetail.waterEffects.reset();
         window.dispatchEvent(new Event('flight-input-clear'));
         resetPlaneState(planeState);
         crashElapsed = 0;
@@ -422,7 +423,10 @@ async function startApp() {
         groundDetail.update(
             planeState.position,
             scene.userData.quality,
-            Math.min(timer.getDelta(), 0.1)
+            Math.min(timer.getDelta(), 0.1),
+            visualScenario || experience.paused || document.hidden
+                ? 0
+                : Math.min(timer.getDelta(), 0.1)
         );
         destinationBeacon.update(camera, planeState.position);
         scene.userData.followSun(airplane.position);
@@ -612,7 +616,10 @@ async function startApp() {
         groundDetail.update(
             planeState.position,
             scene.userData.quality,
-            Math.min(timer.getDelta(), 0.1)
+            Math.min(timer.getDelta(), 0.1),
+            visualScenario || experience.paused || document.hidden
+                ? 0
+                : Math.min(timer.getDelta(), 0.1)
         );
         destinationBeacon.update(camera, planeState.position);
         scene.userData.followSun(airplane.position);
