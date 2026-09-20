@@ -641,3 +641,26 @@ procedural texture. Animation freezes while paused or in the background and rese
 with the flight. Surface geometry, shorelines and collision heights stay unchanged.
 
 All data comes from the existing local caches; no new downloads were needed. See [scenery data notes](data/README.md) for reproduction and attribution.
+
+### Airfield scenery
+
+Saint-Cyr retains its grass runways and modest aeroclub character, with pale
+hangars, sliding-door panels and upper windows. Luxeuil uses larger utilitarian
+hangars, rounded shelter roofs and its mapped control tower. Buildings follow
+cached OpenStreetMap footprints and existing height estimates; facade colors,
+doors and roof profiles are stylized, not surveyed architectural reproductions.
+No new building locations, parked aircraft or service vehicles are invented.
+
+Nearby mapped aprons now have crisp terrain-aligned surfaces. Explicit grass,
+asphalt and concrete tags take precedence over mission defaults, including
+Saint-Cyr's mix of grass and paved taxiways. Unspecified surfaces use paved
+Luxeuil taxiways and aprons, and grass Saint-Cyr taxiways. Yellow centerlines
+follow mapped paved taxiway lines; they are illustrative markings, not surveyed
+paint layouts. Grass runway boards remain at Saint-Cyr. Luxeuil's mapped
+landing-light row has simple unlit-in-daylight fixture geometry with a bright
+material; it does not add dynamic lights or a complete night-lighting system.
+
+Building detail shares the existing spatial batches on every graphics preset.
+Apron and taxiway detail uses the same Balanced/High distance ranges and bounded
+tile cache as roads; Low keeps the regional ground texture. All data is local,
+and the additional aviation tags were restored from the preserved source caches.

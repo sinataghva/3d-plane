@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createGeographicCanvas } from './cartography.js';
+import { pavedAirfieldSurface } from './surfaceFeatures.js';
 import { inFeature } from './geography.js';
+import { airfieldBuilding, appendAirfieldBuilding } from './airfieldScenery.js';
 import { instanceStaticScenery } from './instancing.js';
 
 /** @param {import('./geography.js').Geography} world */
@@ -50,6 +52,9 @@ export function createTerrain(world) {
     }
     /** @type {Map<string,{positions:number[],colors:number[]}>} */
     const chunks = new Map();
+    const boundaries = world.data.features.filter((f) => f.kind === 'airfield');
+    const military = Boolean(world.data.airfield?.includes('LFSX'));
+    let detailedBuildings = 0;
     for (const f of world.data.features.filter((f) => f.kind === 'building')) {
         const ring = f.points.slice(0, -1);
         if (ring.length < 3) continue;
@@ -60,6 +65,11 @@ export function createTerrain(world) {
         if (!chunk) {
             chunk = { positions: [], colors: [] };
             chunks.set(key, chunk);
+        }
+        if (airfieldBuilding(f, boundaries)) {
+            appendAirfieldBuilding(f, world, chunk, military);
+            detailedBuildings++;
+            continue;
         }
         const contour = ring.map((p) => new THREE.Vector2(p[0], p[1]));
         const holes = f.holes.map((h) =>
@@ -231,6 +241,7 @@ export function createTerrain(world) {
         boardMaterial = new THREE.MeshBasicMaterial({ color: 0xfff7df });
     const boards = [];
     for (const runway of world.runways) {
+        if (pavedAirfieldSurface(runway, military)) continue;
         const a = runway.points[0],
             b = runway.points[runway.points.length - 1],
             dx = b[0] - a[0],
@@ -248,7 +259,40 @@ export function createTerrain(world) {
             }
     }
     instanceStaticScenery(group, boards, 500);
+    // Only fixtures on explicitly mapped landing-light rows; no dynamic point lights.
+    const lightGeometry = new THREE.BoxGeometry(0.6, 0.45, 0.6);
+    const lightMaterial = new THREE.MeshBasicMaterial({ color: 0xffe7b0 });
+    const lights = [];
+    for (const f of world.data.features.filter(
+        (f) => f.kind === 'airfieldLight'
+    )) {
+        for (let i = 1; i < f.points.length; i++) {
+            const a = f.points[i - 1],
+                b = f.points[i],
+                length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+            const count = Math.max(1, Math.ceil(length / 6));
+            for (let j = 0; j <= count; j++) {
+                const x = a[0] + ((b[0] - a[0]) * j) / count,
+                    z = a[1] + ((b[1] - a[1]) * j) / count;
+                const light = new THREE.Mesh(lightGeometry, lightMaterial);
+                light.position.set(x, world.height(x, z) + 0.35, z);
+                group.add(light);
+                lights.push(light);
+            }
+        }
+    }
+    if (lights.length) instanceStaticScenery(group, lights, 500);
+    else {
+        lightGeometry.dispose();
+        lightMaterial.dispose();
+    }
+    if (!boards.length) {
+        boardGeometry.dispose();
+        boardMaterial.dispose();
+    }
     group.userData.summary = {
+        detailedAirfieldBuildings: detailedBuildings,
+        mappedAirfieldLights: lights.length,
         buildings: world.data.features.filter((f) => f.kind === 'building')
             .length,
         trees: trees.length,

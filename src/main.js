@@ -405,7 +405,13 @@ async function startApp() {
         if (visualScenario.name.endsWith('-detail')) {
             camera.position
                 .copy(airplane.position)
-                .add(new THREE.Vector3(30, 35, 35));
+                .add(
+                    ['airfield-detail', 'shelter-detail'].includes(
+                        visualScenario.name
+                    )
+                        ? new THREE.Vector3(65, 45, 65)
+                        : new THREE.Vector3(30, 35, 35)
+                );
             camera.lookAt(
                 airplane.position.x,
                 airplane.position.y - 8,
@@ -452,6 +458,13 @@ async function startApp() {
         scene.userData.followSun(airplane.position);
         renderer.render(scene, camera);
         document.getElementById('scenery-loading')?.remove();
+        if (import.meta.env.DEV)
+            document.documentElement.dataset.sceneryStats = JSON.stringify({
+                calls: renderer.info.render.calls,
+                triangles: renderer.info.render.triangles,
+                ...groundDetail.stats(),
+                ...airbase.userData.summary
+            });
         document.documentElement.dataset.visualReady = 'true';
         return;
     }

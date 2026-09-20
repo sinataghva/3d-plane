@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import { waterCharacter } from './waterEffects.js';
-import { isSurfaceFeature, bridgeProfile } from './surfaceFeatures.js';
-/** @typedef {{points:number[][],kind:'ballast'|'rail'|'water'|'bank',origin?:number[],direction?:number[],offset?:number,bridge?:number[],waterCharacter?:number}} SurfacePatch */
+import {
+    isSurfaceFeature,
+    bridgeProfile,
+    pavedAirfieldSurface
+} from './surfaceFeatures.js';
+/** @typedef {{points:number[][],kind:'ballast'|'rail'|'water'|'bank'|'asphalt'|'grass',origin?:number[],direction?:number[],offset?:number,bridge?:number[],waterCharacter?:number}} SurfacePatch */
 /** Clip a convex polygon to a rectangle, retaining triangle/quad winding.
  * @param {number[][]} polygon @param {number} minX @param {number} minZ @param {number} maxX @param {number} maxZ */
 export function clipRectangle(polygon, minX, minZ, maxX, maxZ) {
@@ -172,7 +176,7 @@ export function indexScenerySurfaces(world, tileSize, emit) {
         ...features.filter((f) => f.kind !== 'water')
     ]) {
         if (!isSurfaceFeature(f)) continue;
-        if (f.kind === 'water' && !f.line) {
+        if (['water', 'taxiway'].includes(f.kind) && !f.line) {
             const outer = f.points.slice(0, -1),
                 holes = f.holes.map((h) => h.slice(0, -1));
             const triangles = THREE.ShapeUtils.triangulateShape(
@@ -183,8 +187,20 @@ export function indexScenerySurfaces(world, tileSize, emit) {
             for (const tri of triangles)
                 add({
                     points: tri.map((i) => points[i]),
-                    kind: 'water',
-                    waterCharacter: waterCharacter(f)
+                    kind:
+                        f.kind === 'water'
+                            ? 'water'
+                            : pavedAirfieldSurface(
+                                    f,
+                                    Boolean(
+                                        world.data.airfield?.includes('LFSX')
+                                    )
+                                )
+                              ? 'asphalt'
+                              : 'grass',
+                    offset: f.kind === 'water' ? 0.035 : 0.04,
+                    waterCharacter:
+                        f.kind === 'water' ? waterCharacter(f) : undefined
                 });
             continue;
         }

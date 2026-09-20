@@ -54,7 +54,7 @@ for (const mission of ['saint-cyr', 'luxeuil'])
             JSON.parse(document.documentElement.dataset.sceneryStats)
         );
         expect(end.groundDetailTiles).toBeLessThanOrEqual(80);
-        expect(end.groundDetailGeometries).toBeLessThanOrEqual(80 * 11);
+        expect(end.groundDetailGeometries).toBeLessThanOrEqual(80 * 12);
     });
 for (const mission of ['saint-cyr', 'luxeuil'])
     test(`mobile ${mission} detail stays readable on the runway and in flight`, async ({

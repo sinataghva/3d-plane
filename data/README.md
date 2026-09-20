@@ -41,3 +41,21 @@ this distinction. These are visual approximations, not measured channel widths.
 `python3 scripts/upgrade-surface-cache.py` restores these fields and line coordinates
 from both regions' original cached responses without network access or changing
 unrelated features/source dates. The normal OSM importer also retains this metadata.
+
+## Airfield detail
+
+`python3 scripts/upgrade-airfield-cache.py` restores allowlisted aviation tags
+(`aeroway`, `surface`, `lit`, building type and roof shape) from both existing
+caches, without downloads or changing source timestamps. It also restores missing
+explicitly mapped hangar, shelter and tower footprints, plus landing-light rows.
+The Luxeuil cache supplies 27 previously omitted shelter footprints, one tower
+and one landing-light row. These aviation features lacked a general `building`
+tag and were skipped by the earlier importer. They now participate in ordinary
+building collision checks. The normal importer retains these categories/tags too.
+
+Only tagged aviation buildings inside the mapped airfield boundary receive the
+special facade treatment. Roof shapes and door placement are illustrative when
+not provided by OSM; door facades face the nearest mapped taxiway/apron. Estimated
+heights retain the existing collision envelope. Unknown apron surfaces are treated
+as paved; unknown taxiways use the mission's paved/grass default. Light spacing
+within a mapped row is illustrative. None of this depicts current base operations.

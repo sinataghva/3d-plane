@@ -4,6 +4,7 @@ Coordinates are meters east/south from the local origin. No network requests.
 """
 import json,math,sys,pathlib,gzip
 from scenery_metadata import surface_metadata
+from airfield_metadata import airfield_metadata
 raw=json.load(gzip.open(sys.argv[1], 'rt') if sys.argv[1].endswith('.gz') else open(sys.argv[1])); assert 'remark' not in raw,raw.get('remark')
 from scenery_regions import ORIGIN, BOUNDS, MAP_FILE
 origin=ORIGIN; south,west,north,east=BOUNDS
@@ -44,6 +45,8 @@ def join(parts):
         if len(ring)>3 and ring[0]==ring[-1]:rings.append(ring)
     return rings
 def category(t):
+    if t.get('aeroway') in ('hangar','shelter','tower'):return 'building'
+    if t.get('aeroway')=='landing_light':return 'airfieldLight'
     if t.get('building') and t.get('building')!='no':return 'building'
     if t.get('aeroway')=='runway':return 'runway'
     if t.get('aeroway') in ('taxiway','apron'):return 'taxiway'
@@ -72,7 +75,7 @@ for e in raw['elements']:
         p=[project(g) for g in e.get('geometry',[]) if g]
         if len(p)<2:continue
         line=p[0]!=p[-1]
-        if line and kind not in ('road','rail','waterway','runway','taxiway'):continue
+        if line and kind not in ('road','rail','waterway','runway','taxiway','airfieldLight'):continue
         rings=[p]
     else:
         outer=[];inner=[]
@@ -92,6 +95,7 @@ for e in raw['elements']:
         name=t.get('name','')
         f=dict(id=f"{e['type'][0]}{e['id']}-{ri}",kind=kind,name=name,points=r,holes=[simplify(h,1) for h in holes if inside(h[0],r)],line=line)
         f.update(surface_metadata(t,kind))
+        f.update(airfield_metadata(t))
         if kind=='building':f.update(height=height,roof=t.get('roof:shape',''),palace=('château de versailles' in name.lower() or t.get('wikidata')=='Q2946'))
         if line and 'width' not in f:f['width']=width
         if kind=='runway':f['ref']=t.get('ref','11/29')

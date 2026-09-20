@@ -1,3 +1,4 @@
+import { pavedAirfieldSurface } from './surfaceFeatures.js';
 import {
     indexScenerySurfaces,
     createBallastTexture
@@ -17,7 +18,7 @@ export const GROUND_DETAIL_PRESETS = {
 };
 const TILE = 500;
 const CACHE_LIMIT = 80;
-/** @typedef {'road'|'asphalt'|'grass'|'paint'|'wear'|'number0'|'number1'|'ballast'|'rail'|'water'|'bank'} SurfaceKind */
+/** @typedef {'road'|'asphalt'|'grass'|'taxiPaint'|'paint'|'wear'|'number0'|'number1'|'ballast'|'rail'|'water'|'bank'} SurfaceKind */
 /** @typedef {{ax:number,az:number,bx:number,bz:number,width:number,kind:SurfaceKind,bridge?:number[]}} Strip */
 /** @typedef {{x:number,z:number,y:number,strips:Strip[],patches?:import('./scenerySurfaces.js').SurfacePatch[],priority:number}} Tile */
 /** Interpolate the same triangles as the existing 256×256 terrain mesh. */
@@ -220,15 +221,11 @@ export function createGroundDetail(world) {
         )
             continue;
         const kind =
-            f.kind === 'runway'
-                ? jet
-                    ? 'asphalt'
-                    : 'grass'
-                : f.kind === 'taxiway'
-                  ? jet
-                      ? 'asphalt'
-                      : 'grass'
-                  : 'road';
+            f.kind === 'road'
+                ? 'road'
+                : pavedAirfieldSurface(f, jet)
+                  ? 'asphalt'
+                  : 'grass';
         const width = f.width || (f.kind === 'road' ? 5 : 20);
         for (let i = 1; i < f.points.length; i++)
             add(
@@ -240,6 +237,15 @@ export function createGroundDetail(world) {
                 kind,
                 bridgeProfile(f, height)
             );
+        if (f.kind === 'taxiway' && kind === 'asphalt') {
+            for (let i = 1; i < f.points.length; i++)
+                add(
+                    .../** @type {[number,number]} */ (f.points[i - 1]),
+                    .../** @type {[number,number]} */ (f.points[i]),
+                    0.25,
+                    'taxiPaint'
+                );
+        }
         if (f.kind !== 'runway') continue;
         const a = f.points[0],
             b = f.points[f.points.length - 1],
@@ -256,7 +262,7 @@ export function createGroundDetail(world) {
                 w,
                 kind
             );
-        if (jet) {
+        if (kind === 'asphalt') {
             for (let t = 160; t < length - 160; t += 60)
                 line(t, Math.min(t + 30, length - 160), 0, 0.9, 'paint');
             line(15, length - 15, -width * 0.46, 0.45, 'paint');
@@ -320,6 +326,8 @@ export function createGroundDetail(world) {
             };
             index.set(key, tile);
         }
+        if (patch.kind === 'asphalt' || patch.kind === 'grass')
+            tile.priority = 0;
         (tile.patches ??= []).push(patch);
     });
     const waterEffects = createWaterEffects();
@@ -368,9 +376,13 @@ export function createGroundDetail(world) {
                 [strip.bx - nx, strip.bz - nz],
                 [strip.ax - nx, strip.az - nz]
             ];
-            const overlay = ['paint', 'wear', 'number0', 'number1'].includes(
-                strip.kind
-            );
+            const overlay = [
+                'taxiPaint',
+                'paint',
+                'wear',
+                'number0',
+                'number1'
+            ].includes(strip.kind);
             // Split every surface at the base terrain's triangle boundaries.
             // Corner-only height sampling lets long/wide strips cut through hills.
             const triangles = clipToTerrain(corners, world);
@@ -451,27 +463,32 @@ export function createGroundDetail(world) {
                 );
             geometry.computeVertexNormals();
             geometry.computeBoundingSphere();
-            const paint = kind === 'paint' || kind.startsWith('number'),
+            const paint =
+                    kind === 'taxiPaint' ||
+                    kind === 'paint' ||
+                    kind.startsWith('number'),
                 wear = kind === 'wear';
             const material = new THREE.MeshStandardMaterial({
                 color:
-                    kind === 'water'
-                        ? 0x4b8d9b
-                        : kind === 'bank'
-                          ? 0x797a58
-                          : kind === 'rail'
-                            ? 0xaab0b4
-                            : kind === 'ballast'
-                              ? 0xb8b2a7
-                              : paint
-                                ? 0xf0edce
-                                : wear
-                                  ? 0x33363a
-                                  : kind === 'grass'
-                                    ? 0x94ab70
-                                    : kind === 'road'
-                                      ? 0x929798
-                                      : 0x939ca3,
+                    kind === 'taxiPaint'
+                        ? 0xe9c650
+                        : kind === 'water'
+                          ? 0x4b8d9b
+                          : kind === 'bank'
+                            ? 0x797a58
+                            : kind === 'rail'
+                              ? 0xaab0b4
+                              : kind === 'ballast'
+                                ? 0xb8b2a7
+                                : paint
+                                  ? 0xf0edce
+                                  : wear
+                                    ? 0x33363a
+                                    : kind === 'grass'
+                                      ? 0x94ab70
+                                      : kind === 'road'
+                                        ? 0x929798
+                                        : 0x939ca3,
                 roughness: kind === 'rail' ? 0.45 : 1,
                 metalness: kind === 'rail' ? 0.35 : 0,
                 transparent: true,
@@ -597,6 +614,7 @@ export function createGroundDetail(world) {
                             'water',
                             'bank',
                             'rail',
+                            'taxiPaint',
                             'paint',
                             'wear',
                             'number0',

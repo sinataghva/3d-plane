@@ -1,3 +1,11 @@
+/** Preserve explicit surface tags; use mission defaults only when unmapped.
+ * @param {import('./geography.js').GeoFeature} f @param {boolean} military */
+export function pavedAirfieldSurface(f, military) {
+    if (f.surface)
+        return /asphalt|concrete|paved|paving_stones/.test(f.surface);
+    return military || f.aeroway === 'apron';
+}
+
 /** @param {import('./geography.js').GeoFeature} feature */
 export function isSurfaceFeature(feature) {
     return !(

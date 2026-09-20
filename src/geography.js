@@ -3,7 +3,7 @@ import {
     isFlowingWater,
     distanceToLine
 } from './surfaceFeatures.js';
-/** @typedef {{id:string,kind:string,name:string,points:number[][],holes:number[][][],line:boolean,width?:number,height?:number,palace?:boolean,ref?:string,class?:string,bridge?:string,tunnel?:string,covered?:string,layer?:string,intermittent?:string,railwayType?:string,waterwayType?:string,waterType?:string,gauge?:number,widthEstimated?:boolean}} GeoFeature */
+/** @typedef {{id:string,kind:string,name:string,points:number[][],holes:number[][][],line:boolean,width?:number,height?:number,aeroway?:string,surface?:string,lit?:string,buildingType?:string,roofShape?:string,palace?:boolean,ref?:string,class?:string,bridge?:string,tunnel?:string,covered?:string,layer?:string,intermittent?:string,railwayType?:string,waterwayType?:string,waterType?:string,gauge?:number,widthEstimated?:boolean}} GeoFeature */
 /** @typedef {{airfield?:string,origin:number[],bounds:number[],features:GeoFeature[],places:{id:number,name:string,kind:string,point:number[]}[],timestamp:string}} GeoData */
 /** @typedef {{size:number,values:number[]}} ElevationData */
 /** @typedef {ReturnType<typeof createGeography>} Geography */

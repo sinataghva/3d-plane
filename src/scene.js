@@ -122,6 +122,9 @@ export function createScene({ container }) {
     directionalLight.castShadow = true;
     directionalLight.shadow.mapSize.width = 2048;
     directionalLight.shadow.mapSize.height = 2048;
+    // Keep low-angle sunlight from producing self-shadow stripes on flat roofs.
+    directionalLight.shadow.normalBias = 0.18;
+    directionalLight.shadow.bias = -0.00005;
     directionalLight.shadow.camera.near = 1;
     directionalLight.shadow.camera.far = 280;
     directionalLight.shadow.camera.left = -140;

@@ -1,3 +1,4 @@
+import { airfieldBuilding } from './airfieldScenery.js';
 import { getGeography } from './geography.js';
 /**
  * @typedef {import('./physics.js').PlaneState} PlaneState
@@ -175,9 +176,14 @@ export function getVisualScenario() {
     const scenarioName = params.get('visual');
 
     if (
-        ['rail-detail', 'water-detail', 'river-detail'].includes(
-            scenarioName || ''
-        )
+        [
+            'airfield-detail',
+            'shelter-detail',
+            'tower-detail',
+            'rail-detail',
+            'water-detail',
+            'river-detail'
+        ].includes(scenarioName || '')
     )
         return {
             name: scenarioName || '',
@@ -236,7 +242,43 @@ export function applyVisualScenario({
         };
         planeState.yawAngle = 0.4;
     }
-    if (world && visualScenario.name.endsWith('-detail')) {
+    if (
+        world &&
+        ['airfield-detail', 'shelter-detail', 'tower-detail'].includes(
+            visualScenario.name
+        )
+    ) {
+        const boundaries = world.data.features.filter(
+            (f) => f.kind === 'airfield'
+        );
+        const kind =
+            visualScenario.name === 'shelter-detail'
+                ? 'shelter'
+                : visualScenario.name === 'tower-detail'
+                  ? 'tower'
+                  : 'hangar';
+        const feature = world.data.features
+            .filter(
+                (f) => f.aeroway === kind && airfieldBuilding(f, boundaries)
+            )
+            .sort(
+                (a, b) =>
+                    Math.hypot(
+                        a.points[0][0] - world.spawn.x,
+                        a.points[0][1] - world.spawn.z
+                    ) -
+                    Math.hypot(
+                        b.points[0][0] - world.spawn.x,
+                        b.points[0][1] - world.spawn.z
+                    )
+            )[0];
+        if (feature) {
+            const ring = feature.points.slice(0, -1),
+                x = ring.reduce((s, p) => s + p[0], 0) / ring.length,
+                z = ring.reduce((s, p) => s + p[1], 0) / ring.length;
+            planeState.position = { x, y: world.height(x, z) + 8, z };
+        }
+    } else if (world && visualScenario.name.endsWith('-detail')) {
         const kind =
             visualScenario.name === 'rail-detail'
                 ? 'rail'
