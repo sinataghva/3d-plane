@@ -95,17 +95,39 @@ export function createExperience({
     dialog.id = 'settings-dialog';
     dialog.setAttribute('aria-labelledby', 'settings-title');
     dialog.innerHTML =
-        '<header><h2 id="settings-title">Flight settings</h2><button id="close-settings" aria-label="Close settings">×</button></header><p>Flight paused · P or Esc to resume</p>';
-    for (const selector of ['.flight-toolbar', '.graphics-settings']) {
-        const element = document.querySelector(selector);
-        if (element) dialog.append(element);
+        '<header><div><h2 id="settings-title">Flight settings</h2><p>Flight paused<span class="settings-key-hint"> · P or Esc to resume</span></p></div><button id="close-settings" aria-label="Close settings">×</button></header><div class="settings-grid"></div><div class="settings-actions"></div>';
+    const grid = dialog.querySelector('.settings-grid');
+    const camera = document.createElement('select');
+    camera.id = 'camera-select';
+    camera.innerHTML =
+        '<option value="chase">Chase</option><option value="cockpit">Cockpit</option><option value="orbit">Orbit</option>';
+    document.getElementById('camera-button')?.remove();
+    for (const [title, element] of [
+        ['Camera', camera],
+        ['Guide', document.getElementById('guide-mode')],
+        ['Graphics', document.getElementById('graphics-quality')],
+        ['Time of day', document.getElementById('time-of-day')]
+    ]) {
+        if (!(element instanceof HTMLElement)) continue;
+        const field = document.createElement('div');
+        field.className = 'settings-field';
+        const label = document.createElement('label');
+        label.htmlFor = element.id;
+        label.textContent = String(title);
+        field.append(label, element);
+        grid?.append(field);
     }
-    const missions = document.getElementById('missions-button');
-    if (missions) dialog.append(missions);
+    for (const id of ['restart-button', 'missions-button']) {
+        const button = document.getElementById(id);
+        if (button) dialog.querySelector('.settings-actions')?.append(button);
+    }
+    for (const selector of [
+        '.flight-toolbar',
+        '.graphics-settings',
+        '.time-settings'
+    ])
+        document.querySelector(selector)?.remove();
     document.body.append(menu, dialog);
-    const camera = /** @type {HTMLButtonElement} */ (
-        document.getElementById('camera-button')
-    );
     const throttle = /** @type {HTMLInputElement} */ (
         document.getElementById('touch-throttle')
     );
@@ -170,12 +192,7 @@ export function createExperience({
         .getElementById('restart-button')
         ?.addEventListener('click', restart);
     document.getElementById('crash-retry')?.addEventListener('click', restart);
-    camera.onclick = () => {
-        const modes = ['chase', 'cockpit', 'orbit'];
-        cameraMode.setMode(
-            modes[(modes.indexOf(cameraMode.getMode()) + 1) % modes.length]
-        );
-    };
+    camera.onchange = () => cameraMode.setMode(camera.value);
     throttle.min = jet ? '-15' : '0';
     throttle.max = jet ? '115' : '100';
     let throttleHeld = false;
@@ -265,7 +282,7 @@ export function createExperience({
         },
         update() {
             const mode = cameraMode.getMode();
-            camera.textContent = `Camera: ${mode[0].toUpperCase() + mode.slice(1)}`;
+            camera.value = mode;
             if (!throttleHeld)
                 throttle.value = String(
                     Math.round(Math.min(1, planeState.thrust) * 100)

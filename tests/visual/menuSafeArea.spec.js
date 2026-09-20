@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test('iPhone menus respect safe insets across rotation and standalone-sized viewports', async ({
     browser
 }, info) => {
-    test.setTimeout(90000);
+    test.setTimeout(150000);
     const context = await browser.newContext({
         viewport: { width: 393, height: 852 },
         isMobile: true,
@@ -57,7 +57,7 @@ test('iPhone menus respect safe insets across rotation and standalone-sized view
     }
     await page.locator('#fly-button').tap();
     await expect(page.locator('#settings-button')).toBeVisible();
-    for (const size of cases.slice(0, 2)) {
+    for (const size of cases) {
         await page.setViewportSize({ width: size.width, height: size.height });
         // Chromium cannot emulate iOS safe-area env values; inject their CSS inputs.
         await page.evaluate((size) => {
@@ -74,6 +74,14 @@ test('iPhone menus respect safe insets across rotation and standalone-sized view
         );
         await page.locator('#settings-button').tap();
         const dialog = await page.locator('#settings-dialog').boundingBox();
+        expect(
+            await page
+                .locator('#settings-dialog')
+                .evaluate((e) => e.scrollHeight <= e.clientHeight)
+        ).toBe(true);
+        await page.locator('#camera-select').selectOption('orbit');
+        await expect(page.locator('#camera-select')).toHaveValue('orbit');
+
         expect(dialog.x).toBeGreaterThanOrEqual(size.left + 12);
         expect(dialog.y).toBeGreaterThanOrEqual(size.top + 12);
         expect(dialog.x + dialog.width).toBeLessThanOrEqual(
@@ -83,7 +91,7 @@ test('iPhone menus respect safe insets across rotation and standalone-sized view
             size.height - size.bottom - 12
         );
         await page.screenshot({
-            path: info.outputPath(`settings-${size.width}.png`)
+            path: info.outputPath(`settings-${size.width}-${size.height}.png`)
         });
         await page.locator('#close-settings').tap();
         await expect(page.locator('#settings-dialog')).not.toBeVisible();

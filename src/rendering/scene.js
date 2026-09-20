@@ -1,3 +1,4 @@
+import { TIME_OF_DAY, timeOfDay } from './timeOfDay.js';
 import * as THREE from 'three';
 import { getRenderQuality } from './renderQuality.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -13,7 +14,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 /**
  * @returns {THREE.CanvasTexture | THREE.Color}
  */
-function createSkyBackground() {
+function createSkyBackground(colors = TIME_OF_DAY.day.sky) {
     const canvas = document.createElement('canvas');
     canvas.width = 16;
     canvas.height = 256;
@@ -24,10 +25,10 @@ function createSkyBackground() {
     }
 
     const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, '#78b7ee');
-    gradient.addColorStop(0.48, '#c7e4ff');
-    gradient.addColorStop(0.72, '#edf6ff');
-    gradient.addColorStop(1, '#f7f1dc');
+    gradient.addColorStop(0, colors[0]);
+    gradient.addColorStop(0.48, colors[1]);
+    gradient.addColorStop(0.72, colors[2]);
+    gradient.addColorStop(1, colors[3]);
 
     context.fillStyle = gradient;
     context.fillRect(0, 0, canvas.width, canvas.height);
@@ -88,7 +89,8 @@ export function createScene({ container }) {
     const scene = new THREE.Scene();
     scene.background = createSkyBackground();
     scene.fog = new THREE.Fog(0xd9edf7, 2400, 12000);
-    scene.add(createSunSprite());
+    const sunSprite = createSunSprite();
+    scene.add(sunSprite);
 
     const camera = new THREE.PerspectiveCamera(
         75,
@@ -137,6 +139,63 @@ export function createScene({ container }) {
         directionalLight.position.copy(position).add(sunOffset);
         directionalLight.target.position.copy(position);
     };
+
+    scene.userData.setTimeOfDay = (/** @type {unknown} */ value) => {
+        const mode = timeOfDay(value),
+            preset = TIME_OF_DAY[mode];
+        if (scene.background instanceof THREE.Texture)
+            scene.background.dispose();
+        scene.background = createSkyBackground(preset.sky);
+        scene.fog?.color.setHex(preset.fog);
+        hemisphereLight.color.setHex(preset.skyLight);
+        hemisphereLight.groundColor.setHex(preset.groundLight);
+        hemisphereLight.intensity = preset.ambient;
+        directionalLight.color.setHex(preset.sun);
+        directionalLight.intensity = preset.intensity;
+        sunOffset.set(preset.offset[0], preset.offset[1], preset.offset[2]);
+        sunSprite.visible = mode !== 'night';
+        sunSprite.position.set(
+            mode === 'day' ? 1800 : 2300,
+            mode === 'day' ? 940 : 270,
+            mode === 'day' ? -2300 : -2000
+        );
+        sunSprite.material.color.setHex(mode === 'day' ? 0xffffff : preset.sun);
+        renderer.toneMappingExposure = preset.exposure;
+        scene.userData.timeOfDay = mode;
+        scene.traverse((object) => {
+            if (object.name === 'Decorative runway night lights')
+                object.visible = mode !== 'day';
+            if (
+                object instanceof THREE.Mesh &&
+                object.material instanceof THREE.ShaderMaterial &&
+                object.material.uniforms.cloudTint
+            )
+                object.material.uniforms.cloudTint.value.setHex(preset.clouds);
+        });
+        renderer.shadowMap.needsUpdate = true;
+    };
+    const timeSelect = document.getElementById('time-of-day');
+    let selectedTime = 'day';
+    try {
+        selectedTime = timeOfDay(localStorage.getItem('plane-time-of-day'));
+    } catch {
+        /* Optional persistence. */
+    }
+    const params = new URLSearchParams(location.search);
+    if (params.has('visual')) selectedTime = timeOfDay(params.get('time'));
+    scene.userData.setTimeOfDay(selectedTime);
+    if (timeSelect instanceof HTMLSelectElement) {
+        timeSelect.value = selectedTime;
+        timeSelect.addEventListener('change', () => {
+            const mode = timeOfDay(timeSelect.value);
+            scene.userData.setTimeOfDay(mode);
+            try {
+                localStorage.setItem('plane-time-of-day', mode);
+            } catch {
+                /* Optional persistence. */
+            }
+        });
+    }
 
     const qualitySelect = document.getElementById('graphics-quality');
     let quality = 'high';

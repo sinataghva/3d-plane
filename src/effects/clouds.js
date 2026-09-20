@@ -116,6 +116,7 @@ export function addClouds(scene, texture = createCloudTexture()) {
         depthWrite: false,
         depthTest: true,
         uniforms: {
+            cloudTint: { value: new THREE.Color(0xffffff) },
             cloudMap: { value: texture },
             windOffset: { value: new THREE.Vector2() },
             observer: { value: new THREE.Vector2() },
@@ -143,6 +144,7 @@ export function addClouds(scene, texture = createCloudTexture()) {
             }`,
         fragmentShader: `
             uniform sampler2D cloudMap;
+            uniform vec3 cloudTint;
             varying vec2 cloudUv;
             varying float opacity;
             varying float distanceToCloud;
@@ -152,7 +154,7 @@ export function addClouds(scene, texture = createCloudTexture()) {
                 alpha *= 1.0-smoothstep(7500.0,12500.0,distanceToCloud);
                 if(alpha < .003) discard;
                 vec3 shade = mix(vec3(.65,.73,.80),vec3(1.0,.98,.94),smoothstep(.12,.82,cloudUv.y));
-                gl_FragColor = vec4(shade,alpha);
+                gl_FragColor = vec4(shade * cloudTint,alpha);
                 #include <tonemapping_fragment>
                 #include <colorspace_fragment>
             }`

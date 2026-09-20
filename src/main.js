@@ -1,3 +1,4 @@
+import { createRunwayLights } from './rendering/timeOfDay.js';
 import { createFpsCounter } from './ui/fps.js';
 import { createServiceVehicles } from './scenery/serviceVehicles.js';
 import { createParkedAircraft } from './scenery/parkedAircraft.js';
@@ -265,6 +266,8 @@ async function startApp() {
     scene.add(groundDetail.group);
 
     const clouds = addClouds(scene);
+    scene.add(createRunwayLights(world));
+    scene.userData.setTimeOfDay(scene.userData.timeOfDay);
     if (restoreRandom) {
         restoreRandom();
     }
@@ -305,11 +308,13 @@ async function startApp() {
             if (
                 !(
                     object instanceof THREE.Mesh ||
-                    object instanceof THREE.Sprite
+                    object instanceof THREE.Sprite ||
+                    object instanceof THREE.Points
                 )
             )
                 return;
-            if (object instanceof THREE.Mesh) geometries.add(object.geometry);
+            if (object instanceof THREE.Mesh || object instanceof THREE.Points)
+                geometries.add(object.geometry);
             for (const material of Array.isArray(object.material)
                 ? object.material
                 : [object.material]) {

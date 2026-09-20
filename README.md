@@ -509,8 +509,9 @@ landing help, and optional circuit challenges: Saint-Cyr asks for a climb to
 waypoints above 150 m AGL. There is no timer or forced
 landing. Collapsible controls leave more room for the view.
 
-The settings menu pauses flight and provides camera, graphics, guide, restart
-and change-flight controls on desktop and mobile. The touch throttle slider sets thrust directly, including immediate
+The settings menu pauses flight and provides camera, guide, graphics and time-of-day
+dropdowns, sound controls, and restart/change-flight buttons. Its compact grid fits
+desktop and mobile screens, including phone landscape safe margins. The touch throttle slider sets thrust directly, including immediate
 100%. Using pause, restart, or the slider takes control from an automation flight.
 Crashes now wait for **Return to runway**; feedback explains excessive descent or
 attitude. Successful touchdowns report runway/off-field location and descent rate.
@@ -714,3 +715,15 @@ are needed.
 The bottom-left FPS counter shows rendered frames per second, averaged over half
 a second. It resets after switching tabs and does not cap high-refresh displays.
 A stable 60 FPS is the target on a 60 Hz screen; simulation ticks remain separate.
+
+
+### Time of day
+
+In Settings, choose **Day**, **Sunset** or **Night**. Day is the default;
+your choice is saved on this device and applies to both scenarios. Changing
+the setting updates the lighting immediately without restarting the flight.
+
+Sunset and Night include decorative runway edge and threshold lights.
+These are navigation aids for the game, not surveyed lighting installations
+or a claim that Saint-Cyr supports real night operations. All graphics presets
+use the same time choices; the existing quality setting controls shadow detail.

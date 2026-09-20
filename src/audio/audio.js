@@ -224,8 +224,12 @@ export function createFlightAudio() {
             const panel = document.createElement('fieldset');
             panel.className = 'audio-settings';
             panel.innerHTML =
-                '<legend>Sound</legend><label><input id="audio-muted" type="checkbox"> Mute audio</label><label for="audio-volume">Volume</label><input id="audio-volume" type="range" min="0" max="100" step="1">';
-            document.getElementById('settings-dialog')?.append(panel);
+                '<legend>Sound</legend><label><input id="audio-muted" type="checkbox"> Mute</label><label for="audio-volume">Volume</label><input id="audio-volume" type="range" min="0" max="100" step="1">';
+            const dialog = document.getElementById('settings-dialog');
+            dialog?.insertBefore(
+                panel,
+                dialog.querySelector('.settings-actions')
+            );
             const mute = /** @type {HTMLInputElement} */ (
                 panel.querySelector('#audio-muted')
             );
