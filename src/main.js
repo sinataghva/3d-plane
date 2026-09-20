@@ -1,3 +1,4 @@
+import { createServiceVehicles } from './serviceVehicles.js';
 import { createParkedAircraft } from './parkedAircraft.js';
 import { createMachEffect, createMachTransition } from './machTransition.js';
 import { getVerticalSpeed } from './flightMetrics.js';
@@ -244,6 +245,9 @@ async function startApp() {
     const parkedAircraft = createParkedAircraft(world);
     scene.add(parkedAircraft.group);
     airbase.userData.summary.parkedAircraft = parkedAircraft.spots.length;
+    const serviceVehicles = createServiceVehicles(world, parkedAircraft.spots);
+    scene.add(serviceVehicles.group);
+    airbase.userData.summary.serviceVehicles = serviceVehicles.spots.length;
     const groundDetail = createGroundDetail(world);
     scene.add(groundDetail.group);
 
@@ -351,10 +355,19 @@ async function startApp() {
         });
 
         if (
-            visualScenario.name === 'parking-detail' &&
-            parkedAircraft.spots.length
+            ['parking-detail', 'service-detail'].includes(
+                visualScenario.name
+            ) &&
+            (visualScenario.name === 'service-detail'
+                ? serviceVehicles
+                : parkedAircraft
+            ).spots.length
         ) {
-            const p = parkedAircraft.spots[0];
+            const p = (
+                visualScenario.name === 'service-detail'
+                    ? serviceVehicles
+                    : parkedAircraft
+            ).spots[0];
             planeState.position = {
                 x: p.x,
                 y: world.height(p.x, p.z) + 8,
@@ -426,7 +439,9 @@ async function startApp() {
                         visualScenario.name
                     )
                         ? new THREE.Vector3(65, 45, 65)
-                        : new THREE.Vector3(30, 35, 35)
+                        : visualScenario.name === 'service-detail'
+                          ? new THREE.Vector3(10, 8, 12)
+                          : new THREE.Vector3(30, 35, 35)
                 );
             camera.lookAt(
                 airplane.position.x,
@@ -473,6 +488,7 @@ async function startApp() {
         destinationBeacon.update(camera, planeState.position);
         scene.userData.followSun(airplane.position);
         parkedAircraft.update(camera.position, scene.userData.quality);
+        serviceVehicles.update(camera.position, scene.userData.quality);
         renderer.render(scene, camera);
         document.getElementById('scenery-loading')?.remove();
         if (import.meta.env.DEV)
@@ -685,6 +701,7 @@ async function startApp() {
         destinationBeacon.update(camera, planeState.position);
         scene.userData.followSun(airplane.position);
         parkedAircraft.update(camera.position, scene.userData.quality);
+        serviceVehicles.update(camera.position, scene.userData.quality);
         renderer.render(scene, camera);
         document.getElementById('scenery-loading')?.remove();
         frames++;

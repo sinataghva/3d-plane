@@ -122,3 +122,19 @@ test('apron holes remain free of aircraft', () => {
     expect(spots.length).toBeGreaterThan(0);
     for (const p of spots) expect(p.z - p.radius).toBeGreaterThan(60);
 });
+test('service parking respects occupied aircraft envelopes and fleet limits', () => {
+    const occupied = planAircraftParking(world, true);
+    const spots = planAircraftParking(world, true, {
+        radius: 4,
+        occupied,
+        perApron: 2,
+        limit: 2,
+        slope: 0.3
+    });
+    expect(spots).toHaveLength(2);
+    for (const p of spots)
+        for (const aircraft of occupied)
+            expect(
+                Math.hypot(p.x - aircraft.x, p.z - aircraft.z)
+            ).toBeGreaterThanOrEqual(p.radius + aircraft.radius + 4);
+});

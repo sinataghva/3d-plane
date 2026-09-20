@@ -649,7 +649,7 @@ hangars, sliding-door panels and upper windows. Luxeuil uses larger utilitarian
 hangars, rounded shelter roofs and its mapped control tower. Buildings follow
 cached OpenStreetMap footprints and existing height estimates; facade colors,
 doors and roof profiles are stylized, not surveyed architectural reproductions.
-No new building locations are invented. Parked aircraft are separate fictional scenery, as described below; service vehicles are not included.
+No new building locations are invented. Parked aircraft and service vehicles are separate fictional scenery, as described below.
 
 Nearby mapped aprons now have crisp terrain-aligned surfaces. Explicit grass,
 asphalt and concrete tags take precedence over mission defaults, including
@@ -680,3 +680,18 @@ outside holes, clear of buildings, roads, runway/taxiway corridors and the depar
 spawn. Steep ground and crowded areas are skipped. One shared baked mesh per
 mission is instanced in spatial batches, with visibility ranges of 700 m on Low,
 1,400 m on Balanced and 2,500 m on High. No external models or textures are loaded.
+
+
+### Service vehicles
+
+Five parked service vehicles at Saint-Cyr and twelve at Luxeuil add activity to
+mapped aprons. The fleet includes vans, towing tugs and fuel trucks, with civilian
+white/blue paint at Saint-Cyr and muted military colors at Luxeuil. These original
+procedural models are fictional scenery, not a record of either airfield’s fleet.
+They are stationary, with no engines, audio or collision bodies.
+
+Placement shares the apron, building, route and slope checks used for parked
+aircraft, and also reserves clearance around every parked aircraft. Vehicles use
+at most three instanced draw calls per mission and visibility ranges of 500 m on
+Low, 1,000 m on Balanced and 1,800 m on High. No external assets or network data
+are needed.

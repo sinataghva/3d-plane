@@ -8,9 +8,11 @@ import { createRenderedHeight } from './groundDetail.js';
 /** @typedef {{x:number,z:number,yaw:number,apron:string,radius:number}} ParkingSpot */
 /** Deterministic fictional parking, constrained by the cached apron geometry.
  * @param {import('./geography.js').Geography} world @param {boolean} jet
+ * @param {{radius?:number,limit?:number,perApron?:number,occupied?:ParkingSpot[],slope?:number}} [options]
  * @returns {ParkingSpot[]} */
-export function planAircraftParking(world, jet) {
-    const radius = jet ? 8.5 : 7;
+export function planAircraftParking(world, jet, options = {}) {
+    const radius = options.radius ?? (jet ? 8.5 : 7);
+    const perApron = options.perApron ?? 4;
     const boundaries = world.data.features.filter((f) => f.kind === 'airfield');
     const aprons = world.data.features.filter(
         (f) =>
@@ -77,12 +79,12 @@ export function planAircraftParking(world, jet) {
         let count = 0;
         for (
             let v = minV + radius + 1;
-            v <= maxV - radius - 1 && count < 4;
+            v <= maxV - radius - 1 && count < perApron;
             v += radius * 2 + 5
         ) {
             for (
                 let u = minU + radius + 1;
-                u <= maxU - radius - 1 && count < 4;
+                u <= maxU - radius - 1 && count < perApron;
                 u += radius * 2 + 5
             ) {
                 const x = edge.a[0] + u * ux - v * uz,
@@ -97,8 +99,9 @@ export function planAircraftParking(world, jet) {
                 if (Math.hypot(x - world.spawn.x, z - world.spawn.z) < 100)
                     continue;
                 if (
-                    result.some(
-                        (p) => Math.hypot(x - p.x, z - p.z) < radius * 2 + 4
+                    [...result, ...(options.occupied || [])].some(
+                        (p) =>
+                            Math.hypot(x - p.x, z - p.z) < radius + p.radius + 4
                     )
                 )
                     continue;
@@ -130,7 +133,10 @@ export function planAircraftParking(world, jet) {
                         z + Math.sin((i * Math.PI) / 4) * radius
                     )
                 );
-                if (Math.max(...heights) - Math.min(...heights) > 0.65)
+                if (
+                    Math.max(...heights) - Math.min(...heights) >
+                    (options.slope ?? 0.65)
+                )
                     continue;
                 result.push({
                     x,
@@ -140,7 +146,8 @@ export function planAircraftParking(world, jet) {
                     radius
                 });
                 count++;
-                if (result.length >= (jet ? 16 : 20)) return result;
+                if (result.length >= (options.limit ?? (jet ? 16 : 20)))
+                    return result;
             }
         }
     }

@@ -181,6 +181,7 @@ export function getVisualScenario() {
             'shelter-detail',
             'tower-detail',
             'parking-detail',
+            'service-detail',
             'rail-detail',
             'water-detail',
             'river-detail'
