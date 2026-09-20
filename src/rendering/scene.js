@@ -163,6 +163,13 @@ export function createScene({ container }) {
         renderer.toneMappingExposure = preset.exposure;
         scene.userData.timeOfDay = mode;
         scene.traverse((object) => {
+            if (
+                object instanceof THREE.Mesh &&
+                !Array.isArray(object.material) &&
+                object.material.userData.townNightIntensity
+            )
+                object.material.userData.townNightIntensity.value =
+                    mode === 'day' ? 0 : mode === 'sunset' ? 0.65 : 1.4;
             if (object.name === 'Decorative runway night lights')
                 object.visible = mode !== 'day';
             if (

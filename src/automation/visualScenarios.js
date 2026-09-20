@@ -1,5 +1,6 @@
+import { buildingLightSeed } from '../scenery/buildingLights.js';
 import { airfieldBuilding } from '../scenery/airfieldScenery.js';
-import { getGeography } from '../scenery/geography.js';
+import { getGeography, inFeature } from '../scenery/geography.js';
 /**
  * @typedef {import('../flight/physics.js').PlaneState} PlaneState
  * @typedef {import('../rendering/camera.js').CameraMode} CameraMode
@@ -177,6 +178,7 @@ export function getVisualScenario() {
 
     if (
         [
+            'town-detail',
             'airfield-detail',
             'shelter-detail',
             'tower-detail',
@@ -279,6 +281,26 @@ export function applyVisualScenario({
             const ring = feature.points.slice(0, -1),
                 x = ring.reduce((s, p) => s + p[0], 0) / ring.length,
                 z = ring.reduce((s, p) => s + p[1], 0) / ring.length;
+            planeState.position = { x, y: world.height(x, z) + 8, z };
+        }
+    } else if (world && visualScenario.name === 'town-detail') {
+        const boundaries = world.data.features.filter(
+            (f) => f.kind === 'airfield'
+        );
+        const feature = world.data.features.find(
+            (f) =>
+                f.kind === 'building' &&
+                !f.palace &&
+                buildingLightSeed(f.id, f.buildingType) &&
+                (f.height || 8) >= 6 &&
+                !boundaries.some((b) =>
+                    inFeature(f.points[0][0], f.points[0][1], b)
+                )
+        );
+        if (feature) {
+            const ring = feature.points.slice(0, -1);
+            const x = ring.reduce((s, p) => s + p[0], 0) / ring.length;
+            const z = ring.reduce((s, p) => s + p[1], 0) / ring.length;
             planeState.position = { x, y: world.height(x, z) + 8, z };
         }
     } else if (world && visualScenario.name.endsWith('-detail')) {

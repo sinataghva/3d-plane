@@ -1,3 +1,7 @@
+import {
+    addBuildingWindowShader,
+    buildingLightSeed
+} from './buildingLights.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createGeographicCanvas } from '../map/cartography.js';
@@ -50,7 +54,7 @@ export function createTerrain(world) {
         apron.computeVertexNormals();
         group.add(new THREE.Mesh(apron, outer.material));
     }
-    /** @type {Map<string,{positions:number[],colors:number[]}>} */
+    /** @type {Map<string,{positions:number[],colors:number[],windows:number[]}>} */
     const chunks = new Map();
     const boundaries = world.data.features.filter((f) => f.kind === 'airfield');
     const military = Boolean(world.data.airfield?.includes('LFSX'));
@@ -63,14 +67,20 @@ export function createTerrain(world) {
         const key = `${Math.floor(x / 500)},${Math.floor(z / 500)}`;
         let chunk = chunks.get(key);
         if (!chunk) {
-            chunk = { positions: [], colors: [] };
+            chunk = { positions: [], colors: [], windows: [] };
             chunks.set(key, chunk);
         }
         if (airfieldBuilding(f, boundaries)) {
             appendAirfieldBuilding(f, world, chunk, military);
+            while (chunk.windows.length < chunk.positions.length)
+                chunk.windows.push(0);
             detailedBuildings++;
             continue;
         }
+        const lightSeed =
+            f.palace || boundaries.some((b) => inFeature(x, z, b))
+                ? 0
+                : buildingLightSeed(f.id, f.buildingType);
         const contour = ring.map((p) => new THREE.Vector2(p[0], p[1]));
         const holes = f.holes.map((h) =>
             h.slice(0, -1).map((p) => new THREE.Vector2(p[0], p[1]))
@@ -87,9 +97,10 @@ export function createTerrain(world) {
                   ? 0x8f6652
                   : 0x777d79
         );
-        /** @param {number[]} a @param {number[]} b @param {number[]} c @param {THREE.Color} color */
-        const tri = (a, b, c, color) => {
+        /** @param {number[]} a @param {number[]} b @param {number[]} c @param {THREE.Color} color @param {number[]} [windows] */
+        const tri = (a, b, c, color, windows = [0, 0, 0, 0, 0, 0, 0, 0, 0]) => {
             chunk.positions.push(...a, ...b, ...c);
+            chunk.windows.push(...windows);
             for (let k = 0; k < 3; k++)
                 chunk.colors.push(color.r, color.g, color.b);
         };
@@ -107,17 +118,44 @@ export function createTerrain(world) {
                         world.height(a[0], a[1]),
                         world.height(b[0], b[1])
                     ) - 1;
+                const lengthForWindows = Math.hypot(b[0] - a[0], b[1] - a[1]);
+                const seed =
+                    lengthForWindows >= 4 && top - base >= 3 ? lightSeed : 0;
+                const uvBottom = bottom - base,
+                    uvTop = Math.max(1, Math.floor((top - base) / 3.2)) * 3.2;
                 tri(
                     [a[0], bottom, a[1]],
                     [b[0], bottom, b[1]],
                     [b[0], top, b[1]],
-                    wall
+                    wall,
+                    [
+                        0,
+                        uvBottom,
+                        seed,
+                        lengthForWindows,
+                        uvBottom,
+                        seed,
+                        lengthForWindows,
+                        uvTop,
+                        seed
+                    ]
                 );
                 tri(
                     [a[0], bottom, a[1]],
                     [b[0], top, b[1]],
                     [a[0], top, a[1]],
-                    wall
+                    wall,
+                    [
+                        0,
+                        uvBottom,
+                        seed,
+                        lengthForWindows,
+                        uvTop,
+                        seed,
+                        0,
+                        uvTop,
+                        seed
+                    ]
                 );
                 if (f.palace) {
                     const dx = b[0] - a[0],
@@ -157,6 +195,7 @@ export function createTerrain(world) {
         vertexColors: true,
         side: THREE.DoubleSide
     });
+    addBuildingWindowShader(material);
     for (const c of chunks.values()) {
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute(
@@ -166,6 +205,10 @@ export function createTerrain(world) {
         geometry.setAttribute(
             'color',
             new THREE.Float32BufferAttribute(c.colors, 3)
+        );
+        geometry.setAttribute(
+            'buildingWindow',
+            new THREE.Float32BufferAttribute(c.windows, 3)
         );
         geometry.computeVertexNormals();
         geometry.computeBoundingSphere();

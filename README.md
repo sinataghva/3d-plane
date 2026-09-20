@@ -729,6 +729,11 @@ or a claim that Saint-Cyr supports real night operations. All graphics presets
 use the same time choices; the existing quality setting controls shadow detail.
 
 
+At sunset and night, a stable selection of civilian buildings has warm glowing
+windows. Some rooms and buildings remain dark. These decorative windows reuse
+the building geometry, add no light sources or draw calls, and fade when too
+small to resolve. Airfield buildings and utility sheds/garages are excluded.
+
 ### Photo mode
 
 Use the camera icon beside Settings to pause the flight and hide the flight HUD.
