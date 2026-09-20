@@ -1,3 +1,5 @@
+import { getVerticalSpeed } from './flightMetrics.js';
+import { createFlightAudio } from './audio.js';
 import { setupMobileViewport } from './mobileViewport.js';
 import { createGroundDetail } from './groundDetail.js';
 import { createDestinationBeacon, clearDestination } from './destination.js';
@@ -170,6 +172,7 @@ async function startApp() {
     }
     const crashOverlayElement = crashOverlay;
 
+    const flightAudio = createFlightAudio();
     const mission = await selectFlight();
     document.title = `${mission.title} · Open Skies`;
     if (mission.aircraft === 'mirage') {
@@ -262,6 +265,7 @@ async function startApp() {
     const timer = new THREE.Timer();
     timer.connect(document);
     disposeFlight = () => {
+        flightAudio.dispose();
         groundDetail.dispose();
         destinationBeacon.dispose();
         machineGun.dispose();
@@ -318,6 +322,8 @@ async function startApp() {
             if (automation?.active) automation.release();
         }
     });
+
+    flightAudio.mount();
 
     const jetControls = createJetControls(planeState, () => {
         if (automation?.active) automation.release();
@@ -424,7 +430,11 @@ async function startApp() {
             ? { ...planeState, position: { ...planeState.position } }
             : null;
         updatePlanePhysics({ planeState, keyboard, planePhysics, delta });
-        if (before) experience.afterStep(before);
+        if (before) {
+            experience.afterStep(before);
+            if (!planeState.isAirborne && !planeState.isCrashed)
+                flightAudio.touchdown(getVerticalSpeed(before) * 60);
+        }
 
         if (planeState.isCrashed) {
             if (!wasCrashed) {
@@ -551,6 +561,12 @@ async function startApp() {
         updateMirage(airplane, planeState, keyboard, timestamp / 1000);
         syncPlaneMesh({ airplane, propeller, planeState });
         const mode = cameraMode.getMode();
+        flightAudio.update(
+            planeState,
+            keyboard,
+            experience.paused || !document.hasFocus(),
+            mode === 'cockpit'
+        );
         const modeChanged = mode !== lastCameraMode;
         lastCameraMode = mode;
         updateAirplaneCockpitVisibility({

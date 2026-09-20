@@ -586,3 +586,9 @@ the full map on tap. Game surfaces suppress text selection, long-press callouts
 and browser zoom gestures while the map retains its own pinch zoom. Safe-area
 padding keeps touch controls away from the notch and home indicator. Desktop
 Flight Data is unchanged; radar headings are removed on both layouts.
+
+### Audio
+
+Both aircraft have locally bundled CC0 engine sounds and firing effects, with generated wind, afterburner, gear motion, and touchdown audio. Engine pitch and volume follow power; cockpit view muffles exterior sound. Settings → Sound provides saved mute and volume controls. Audio starts after a user gesture and stops while paused or in the background.
+
+See the [audio credits and listening checklist](public/audio/README.md) for every sound, its source, and how to trigger it individually.
