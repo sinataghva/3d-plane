@@ -115,3 +115,39 @@ test('iPhone menus respect safe insets across rotation and standalone-sized view
     }
     await context.close();
 });
+
+test('map reuses HUD margins when modal insets resolve to zero', async ({
+    browser
+}, info) => {
+    test.setTimeout(90000);
+    const context = await browser.newContext({
+        viewport: { width: 874, height: 402 },
+        isMobile: true,
+        hasTouch: true
+    });
+    const page = await context.newPage();
+    await page.goto('/3d-plane/?mission=luxeuil');
+    await expect(page.locator('#mini-map')).toBeVisible();
+    // Reproduce the reported difference: flight HUD is safely inset but the
+    // map receives zero insets. No device-size fallback is used by the game.
+    await page.addStyleTag({
+        content:
+            '#flight-data {left:59px} #mini-map {right:59px} #world-map {--safe-left:0px;--safe-right:0px}'
+    });
+    await page.locator('#mini-map').tap();
+    for (const selector of [
+        '.world-map-header',
+        '#world-map-canvas',
+        '#world-map footer'
+    ]) {
+        const box = await page.locator(selector).boundingBox();
+        expect(box.x).toBeGreaterThanOrEqual(71);
+        expect(box.x + box.width).toBeLessThanOrEqual(803);
+    }
+    await page.locator('#map-zoom-in').tap();
+    await expect(page.locator('#map-zoom-level')).toContainText('120%');
+    await page.screenshot({ path: info.outputPath('map-matches-hud.png') });
+    await page.locator('#close-world-map').tap();
+    await expect(page.locator('#world-map')).not.toBeVisible();
+    await context.close();
+});

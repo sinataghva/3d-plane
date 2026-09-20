@@ -251,12 +251,55 @@ export function createWorldMap(planeState) {
         dialog.close();
         previousFocus?.focus({ preventScroll: true });
     }
+    // Resolve pixel insets from the normal page before entering the modal top
+    // layer. Use the same HUD offsets that already keep the flight controls safe.
+    function syncSafeArea() {
+        if (
+            !matchMedia(
+                '(pointer: coarse), (max-width: 900px) and (max-height: 500px)'
+            ).matches
+        )
+            return;
+        const probe = document.createElement('div');
+        probe.style.cssText =
+            'position:fixed;visibility:hidden;pointer-events:none;padding:var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left)';
+        document.body.append(probe);
+        const padding = getComputedStyle(probe);
+        const hud = document.getElementById('flight-data');
+        const radar = document.getElementById('mini-map');
+        const left = hud ? parseFloat(getComputedStyle(hud).left) || 0 : 0;
+        const right = radar
+            ? parseFloat(getComputedStyle(radar).right) || 0
+            : 0;
+        const insets = {
+            top: parseFloat(padding.paddingTop) || 0,
+            right: Math.max(parseFloat(padding.paddingRight) || 0, right),
+            bottom: parseFloat(padding.paddingBottom) || 0,
+            left: Math.max(parseFloat(padding.paddingLeft) || 0, left)
+        };
+        probe.remove();
+        for (const [side, value] of Object.entries(insets))
+            dialog.style.setProperty(`--safe-${side}`, `${value}px`);
+    }
+    window.addEventListener('resize', () => {
+        if (dialog.open) {
+            syncSafeArea();
+            draw();
+        }
+    });
+    window.visualViewport?.addEventListener('resize', () => {
+        if (dialog.open) {
+            syncSafeArea();
+            draw();
+        }
+    });
     function open() {
         if (dialog.open) return;
         previousFocus =
             document.activeElement instanceof HTMLElement
                 ? document.activeElement
                 : null;
+        syncSafeArea();
         dialog.showModal();
         draw();
     }
