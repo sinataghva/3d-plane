@@ -2271,3 +2271,79 @@ body:has(.automation-status) .warning-banner {
         gap: 6px;
     }
 }
+
+#photo-button {
+    position: fixed;
+    top: 16px;
+    right: 68px;
+    z-index: 45;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #829fa7;
+    border-radius: 12px;
+    background: #142d3be8;
+    color: white;
+    cursor: pointer;
+}
+#photo-controls {
+    display: none;
+}
+body.photo-mode > :not(#canvas-container):not(#photo-controls) {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+body.photo-mode #canvas-container > :not(canvas) {
+    visibility: hidden !important;
+}
+body.photo-mode #photo-controls {
+    position: fixed;
+    top: calc(12px + var(--safe-top, 0px));
+    left: calc(12px + var(--safe-left, 0px));
+    right: calc(12px + var(--safe-right, 0px));
+    z-index: 100;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 16px;
+    padding: 10px;
+    border-radius: 12px;
+    background: #142d3bd9;
+    color: white;
+    font-size: 14px;
+}
+#photo-controls .photo-help {
+    color: #adc5cf;
+    font-size: 12px;
+}
+#photo-controls div {
+    display: flex;
+    gap: 8px;
+}
+#photo-controls button {
+    min-height: 44px;
+    border: 1px solid #829fa7;
+    border-radius: 8px;
+    background: #234351;
+    color: white;
+    padding: 8px 12px;
+    font: inherit;
+}
+body.photo-controls-hidden #photo-controls {
+    visibility: hidden;
+    pointer-events: none;
+}
+.visual-test-mode #photo-button {
+    display: none;
+}
+@media (pointer: coarse), (max-width: 900px) and (max-height: 500px) {
+    #photo-button {
+        top: calc(8px + var(--safe-top));
+        right: calc(174px + var(--safe-right));
+    }
+}
+body.photo-mode #canvas-container canvas {
+    outline: none;
+}

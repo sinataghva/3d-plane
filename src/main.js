@@ -1,3 +1,4 @@
+import { createPhotoMode } from './ui/photoMode.js';
 import { createRunwayLights } from './rendering/timeOfDay.js';
 import { createFpsCounter } from './ui/fps.js';
 import { createServiceVehicles } from './scenery/serviceVehicles.js';
@@ -294,6 +295,7 @@ async function startApp() {
     const timer = new THREE.Timer();
     timer.connect(document);
     disposeFlight = () => {
+        photoMode.dispose();
         flightAudio.dispose();
         machEffect?.dispose();
         groundDetail.dispose();
@@ -360,6 +362,13 @@ async function startApp() {
         }
     });
 
+    const photoMode = createPhotoMode({
+        camera,
+        controls,
+        airplane,
+        canvas: renderer.domElement,
+        onPause: (active) => experience.setPhotoPaused(active)
+    });
     flightAudio.mount();
 
     const jetControls = createJetControls(planeState, () => {
@@ -506,6 +515,8 @@ async function startApp() {
                 : Math.min(timer.getDelta(), 0.1)
         );
         destinationBeacon.update(camera, planeState.position);
+        const beacon = scene.getObjectByName('destination-beacon');
+        if (photoMode.active && beacon) beacon.visible = false;
         scene.userData.followSun(airplane.position);
         parkedAircraft.update(camera.position, scene.userData.quality);
         serviceVehicles.update(camera.position, scene.userData.quality);
@@ -668,9 +679,10 @@ async function startApp() {
             );
             document.querySelector('.automation-status')?.remove();
         }
-        updateMirage(airplane, planeState, keyboard, timestamp / 1000);
+        if (!photoMode.active)
+            updateMirage(airplane, planeState, keyboard, timestamp / 1000);
         syncPlaneMesh({ airplane, propeller, planeState });
-        const mode = cameraMode.getMode();
+        const mode = photoMode.active ? 'orbit' : cameraMode.getMode();
         machEffect?.render(mode === 'cockpit', planeState.isCrashed);
         flightAudio.update(
             planeState,
@@ -690,13 +702,15 @@ async function startApp() {
             propeller,
             isCockpit: mode === 'cockpit'
         });
-        updateCamera({
-            camera,
-            controls,
-            airplane,
-            cameraMode,
-            delta: timer.getDelta()
-        });
+        if (photoMode.active) photoMode.update();
+        else
+            updateCamera({
+                camera,
+                controls,
+                airplane,
+                cameraMode,
+                delta: timer.getDelta()
+            });
         cockpitOverlay.update({ planeState, cameraMode });
         if (modeChanged || timestamp - lastHudUpdate >= 100) {
             experience.update();
@@ -723,6 +737,8 @@ async function startApp() {
                 : Math.min(timer.getDelta(), 0.1)
         );
         destinationBeacon.update(camera, planeState.position);
+        const beacon = scene.getObjectByName('destination-beacon');
+        if (photoMode.active && beacon) beacon.visible = false;
         scene.userData.followSun(airplane.position);
         parkedAircraft.update(camera.position, scene.userData.quality);
         serviceVehicles.update(camera.position, scene.userData.quality);

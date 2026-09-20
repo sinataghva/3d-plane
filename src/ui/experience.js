@@ -136,6 +136,7 @@ export function createExperience({
     const waypoints = jet && world ? jetWaypoints(world) : [];
     let waypoint = 0;
     let paused = false;
+    let photoPaused = false;
     let maxAltitude = 0;
     let startYaw = planeState.yawAngle;
     let completed = false;
@@ -232,7 +233,11 @@ export function createExperience({
     };
     return {
         get paused() {
-            return paused;
+            return paused || photoPaused;
+        },
+        setPhotoPaused(/** @type {boolean} */ value) {
+            if (value) onTakeControl();
+            photoPaused = value;
         },
         reset: resetProgress,
         /** @param {import('../flight/physics.js').PlaneState} before */

@@ -727,3 +727,13 @@ Sunset and Night include decorative runway edge and threshold lights.
 These are navigation aids for the game, not surveyed lighting installations
 or a claim that Saint-Cyr supports real night operations. All graphics presets
 use the same time choices; the existing quality setting controls shadow detail.
+
+
+### Photo mode
+
+Use the camera icon beside Settings to pause the flight and hide the flight HUD.
+Drag to orbit the aircraft, scroll or pinch to zoom, and right-drag or use two
+fingers to pan. **Reset view** frames the aircraft again. **Hide controls** clears
+the photo toolbar; tap/click the scene to restore it. **Return to flying** or
+**Esc** resumes the flight with your previous camera view. Use your device's
+normal screenshot controls; there is no capture, download or save feature.

@@ -213,7 +213,8 @@ export function createKeyboardState(aircraft = 'cessna') {
                     event.metaKey ||
                     event.altKey ||
                     document.querySelector('dialog[open]') ||
-                    document.body.classList.contains('choosing-flight')
+                    document.body.classList.contains('choosing-flight') ||
+                    document.body.classList.contains('photo-mode')
                 )
                     return;
                 const target = event.target;
