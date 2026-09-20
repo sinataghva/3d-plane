@@ -710,3 +710,7 @@ aircraft, and also reserves clearance around every parked aircraft. Vehicles use
 at most three instanced draw calls per mission and visibility ranges of 500 m on
 Low, 1,000 m on Balanced and 1,800 m on High. No external assets or network data
 are needed.
+
+The bottom-left FPS counter shows rendered frames per second, averaged over half
+a second. It resets after switching tabs and does not cap high-refresh displays.
+A stable 60 FPS is the target on a 60 Hz screen; simulation ticks remain separate.

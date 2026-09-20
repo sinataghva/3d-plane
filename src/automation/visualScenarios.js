@@ -183,6 +183,7 @@ export function getVisualScenario() {
             'parking-detail',
             'service-detail',
             'rail-detail',
+            'road-detail',
             'water-detail',
             'river-detail'
         ].includes(scenarioName || '')
@@ -282,15 +283,22 @@ export function applyVisualScenario({
         }
     } else if (world && visualScenario.name.endsWith('-detail')) {
         const kind =
-            visualScenario.name === 'rail-detail'
-                ? 'rail'
-                : visualScenario.name === 'river-detail'
-                  ? 'waterway'
-                  : 'water';
+            visualScenario.name === 'road-detail'
+                ? 'road'
+                : visualScenario.name === 'rail-detail'
+                  ? 'rail'
+                  : visualScenario.name === 'river-detail'
+                    ? 'waterway'
+                    : 'water';
         const feature = world.data.features
             .filter(
                 (f) =>
                     f.kind === kind &&
+                    (kind !== 'road' ||
+                        (f.line &&
+                            !['footway', 'path', 'steps', 'cycleway'].includes(
+                                f.class || ''
+                            ))) &&
                     !f.tunnel &&
                     !f.covered &&
                     f.points.length > 3
@@ -299,16 +307,24 @@ export function applyVisualScenario({
                 const score = (
                     /** @type {import('../scenery/geography.js').GeoFeature} */ f
                 ) =>
-                    kind === 'water'
-                        ? f.name === 'Grand Canal' ||
-                          f.name === 'Lac des Sept Chevaux'
+                    kind === 'road'
+                        ? Math.hypot(
+                              f.points[0][0] - f.points[f.points.length - 1][0],
+                              f.points[0][1] - f.points[f.points.length - 1][1]
+                          ) < 0.01
                             ? 0
                             : 1e8
-                        : kind === 'waterway'
-                          ? f.name === 'La Lanterne' || f.name === 'Ru de Gally'
+                        : kind === 'water'
+                          ? f.name === 'Grand Canal' ||
+                            f.name === 'Lac des Sept Chevaux'
                               ? 0
                               : 1e8
-                          : 0;
+                          : kind === 'waterway'
+                            ? f.name === 'La Lanterne' ||
+                              f.name === 'Ru de Gally'
+                                ? 0
+                                : 1e8
+                            : 0;
                 return (
                     score(a) -
                     score(b) +

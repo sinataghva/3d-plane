@@ -70,3 +70,56 @@ test('wide surfaces are subdivided onto the base triangles without height gaps',
         );
     }
 });
+
+test('road bends and closed loops share identical edge vertices without gaps', async () => {
+    const { roadRibbon } = await import('./groundDetail.js');
+    for (const points of [
+        [
+            [0, 0],
+            [30, 0],
+            [30, 30]
+        ],
+        [
+            [0, 0],
+            [0, 0],
+            [30, 0],
+            [30, 30],
+            [0, 30],
+            [0, 0]
+        ]
+    ]) {
+        const segments = roadRibbon(points, 6);
+        for (let i = 1; i < segments.length; i++) {
+            expect(segments[i - 1].corners[1]).toEqual(segments[i].corners[0]);
+            expect(segments[i - 1].corners[2]).toEqual(segments[i].corners[3]);
+        }
+        if (points.length > 3) {
+            expect(segments[segments.length - 1].corners[1]).toEqual(
+                segments[0].corners[0]
+            );
+            expect(segments[segments.length - 1].corners[2]).toEqual(
+                segments[0].corners[3]
+            );
+        }
+    }
+    expect(
+        roadRibbon(
+            [
+                [0, 0],
+                [0, 0]
+            ],
+            6
+        )
+    ).toEqual([]);
+    const sharp = roadRibbon(
+        [
+            [0, 0],
+            [30, 0],
+            [1, 1]
+        ],
+        6
+    );
+    expect(
+        Math.hypot(sharp[0].corners[1][0] - 30, sharp[0].corners[1][1])
+    ).toBeLessThanOrEqual(6.001);
+});

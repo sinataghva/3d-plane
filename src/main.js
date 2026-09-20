@@ -1,3 +1,4 @@
+import { createFpsCounter } from './ui/fps.js';
 import { createServiceVehicles } from './scenery/serviceVehicles.js';
 import { createParkedAircraft } from './scenery/parkedAircraft.js';
 import {
@@ -453,7 +454,9 @@ async function startApp() {
                         ? new THREE.Vector3(65, 45, 65)
                         : visualScenario.name === 'service-detail'
                           ? new THREE.Vector3(10, 8, 12)
-                          : new THREE.Vector3(30, 35, 35)
+                          : visualScenario.name === 'road-detail'
+                            ? new THREE.Vector3(70, 95, 70)
+                            : new THREE.Vector3(30, 35, 35)
                 );
             camera.lookAt(
                 airplane.position.x,
@@ -569,6 +572,10 @@ async function startApp() {
     }
 
     // Tool commands and fixed physics steps request a frame; only RAF draws it.
+    const fpsCounter = createFpsCounter();
+    window.addEventListener('pagehide', () => fpsCounter.dispose(), {
+        once: true
+    });
     let lastHudUpdate = -Infinity;
     let lastRadarUpdate = -Infinity;
     let lastCameraMode = '';
@@ -716,6 +723,7 @@ async function startApp() {
         serviceVehicles.update(camera.position, scene.userData.quality);
         renderer.render(scene, camera);
         document.getElementById('scenery-loading')?.remove();
+        fpsCounter.update(timestamp);
         frames++;
         if (import.meta.env.DEV && timestamp - statsAt > 1000) {
             document.documentElement.dataset.sceneryStats = JSON.stringify({

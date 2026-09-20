@@ -1,7 +1,8 @@
 import { pavedAirfieldSurface } from './surfaceFeatures.js';
 import {
     indexScenerySurfaces,
-    createBallastTexture
+    createBallastTexture,
+    offsetLine
 } from './scenerySurfaces.js';
 import {
     isSurfaceFeature,
@@ -19,7 +20,7 @@ export const GROUND_DETAIL_PRESETS = {
 const TILE = 500;
 const CACHE_LIMIT = 80;
 /** @typedef {'road'|'asphalt'|'grass'|'taxiPaint'|'paint'|'wear'|'number0'|'number1'|'ballast'|'rail'|'water'|'bank'} SurfaceKind */
-/** @typedef {{ax:number,az:number,bx:number,bz:number,width:number,kind:SurfaceKind,bridge?:number[]}} Strip */
+/** @typedef {{ax:number,az:number,bx:number,bz:number,width:number,kind:SurfaceKind,bridge?:number[],corners?:number[][]}} Strip */
 /** @typedef {{x:number,z:number,y:number,strips:Strip[],patches?:import('./scenerySurfaces.js').SurfacePatch[],priority:number}} Tile */
 /** Interpolate the same triangles as the existing 256×256 terrain mesh. */
 /** @param {import('./geography.js').Geography} world */
@@ -121,6 +122,36 @@ export function clipToTerrain(corners, world) {
         }
     return result;
 }
+/** Joined road edges, including the seam of closed loops; repeated nodes are ignored.
+ * @param {number[][]} source @param {number} width */
+export function roadRibbon(source, width) {
+    const points = source.filter(
+        (p, i) =>
+            !i ||
+            Math.hypot(p[0] - source[i - 1][0], p[1] - source[i - 1][1]) > 0.01
+    );
+    if (points.length < 2) return [];
+    const closed =
+        points.length > 3 &&
+        Math.hypot(
+            points[0][0] - points[points.length - 1][0],
+            points[0][1] - points[points.length - 1][1]
+        ) < 0.01;
+    const extended = closed
+        ? [points[points.length - 2], ...points, points[1]]
+        : points;
+    let left = offsetLine(extended, width / 2),
+        right = offsetLine(extended, -width / 2);
+    if (closed) {
+        left = left.slice(1, -1);
+        right = right.slice(1, -1);
+    }
+    return points.slice(1).map((p, i) => ({
+        a: points[i],
+        b: p,
+        corners: [left[i], left[i + 1], right[i + 1], right[i]]
+    }));
+}
 /** @param {number} size @param {boolean} grass */
 function noiseTexture(size, grass) {
     const data = new Uint8Array(size * size * 4);
@@ -169,8 +200,8 @@ export function createGroundDetail(world) {
     group.name = 'nearby-ground-detail';
     const height = createRenderedHeight(world);
     /** @type {Map<string,Tile>} */ const index = new Map();
-    /** @param {number} ax @param {number} az @param {number} bx @param {number} bz @param {number} width @param {SurfaceKind} kind @param {number[]} [bridge] */
-    function add(ax, az, bx, bz, width, kind, bridge) {
+    /** @param {number} ax @param {number} az @param {number} bx @param {number} bz @param {number} width @param {SurfaceKind} kind @param {number[]} [bridge] @param {number[][]} [corners] */
+    function add(ax, az, bx, bz, width, kind, bridge, corners) {
         const n = kind.startsWith('number')
             ? 1
             : Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 20));
@@ -201,7 +232,31 @@ export function createGroundDetail(world) {
                 bz: z2,
                 width,
                 kind,
-                bridge
+                bridge,
+                corners: corners
+                    ? [
+                          corners[0].map((v, j) =>
+                              THREE.MathUtils.lerp(v, corners[1][j], i / n)
+                          ),
+                          corners[0].map((v, j) =>
+                              THREE.MathUtils.lerp(
+                                  v,
+                                  corners[1][j],
+                                  (i + 1) / n
+                              )
+                          ),
+                          corners[3].map((v, j) =>
+                              THREE.MathUtils.lerp(
+                                  v,
+                                  corners[2][j],
+                                  (i + 1) / n
+                              )
+                          ),
+                          corners[3].map((v, j) =>
+                              THREE.MathUtils.lerp(v, corners[2][j], i / n)
+                          )
+                      ]
+                    : undefined
             });
         }
     }
@@ -227,23 +282,29 @@ export function createGroundDetail(world) {
                   ? 'asphalt'
                   : 'grass';
         const width = f.width || (f.kind === 'road' ? 5 : 20);
-        for (let i = 1; i < f.points.length; i++)
+        const bridge = bridgeProfile(f, height);
+        for (const segment of roadRibbon(f.points, width))
             add(
-                f.points[i - 1][0],
-                f.points[i - 1][1],
-                f.points[i][0],
-                f.points[i][1],
+                segment.a[0],
+                segment.a[1],
+                segment.b[0],
+                segment.b[1],
                 width,
                 kind,
-                bridgeProfile(f, height)
+                bridge,
+                segment.corners
             );
         if (f.kind === 'taxiway' && kind === 'asphalt') {
-            for (let i = 1; i < f.points.length; i++)
+            for (const segment of roadRibbon(f.points, 0.25))
                 add(
-                    .../** @type {[number,number]} */ (f.points[i - 1]),
-                    .../** @type {[number,number]} */ (f.points[i]),
+                    segment.a[0],
+                    segment.a[1],
+                    segment.b[0],
+                    segment.b[1],
                     0.25,
-                    'taxiPaint'
+                    'taxiPaint',
+                    undefined,
+                    segment.corners
                 );
         }
         if (f.kind !== 'runway') continue;
@@ -370,7 +431,7 @@ export function createGroundDetail(world) {
             if (len < 0.01) continue;
             const nx = ((-dz / len) * strip.width) / 2,
                 nz = ((dx / len) * strip.width) / 2;
-            const corners = [
+            const corners = strip.corners || [
                 [strip.ax + nx, strip.az + nz],
                 [strip.bx + nx, strip.bz + nz],
                 [strip.bx - nx, strip.bz - nz],
