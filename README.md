@@ -68,10 +68,10 @@ coordinates as flight and collision detection. This is stylized scenery, not a
 navigation chart or a representation of current base operations.
 
 ```bash
-python3 scripts/download-scenery.py --luxeuil
-python3 scripts/import-osm.py data/luxeuil/cache/osm.json.gz --luxeuil
-python3 scripts/import-elevation.py --luxeuil
-node scripts/validate-jet-flight.mjs
+python3 scripts/scenery/download-scenery.py --luxeuil
+python3 scripts/scenery/import-osm.py data/luxeuil/cache/osm.json.gz --luxeuil
+python3 scripts/scenery/import-elevation.py --luxeuil
+node scripts/flight/validate-jet-flight.mjs
 ```
 
 Source layers and nine original elevation tiles stay in `data/luxeuil/cache/`.
@@ -116,22 +116,22 @@ Altitude is above local ground.
 Buildings and water can cause crashes; grass and fields remain usable for
 forgiving off-field landings. Free flight continues beyond the detailed area.
 
-Saint-Cyr source downloads are cached in `data/cache/`. Normal play and builds use
-only local `data/saint-cyr.json` and `data/saint-cyr-elevation.json`; no API token
+Saint-Cyr source downloads are cached in `data/saint-cyr/cache/`. Normal play and builds use
+only local `data/saint-cyr/map.json` and `data/saint-cyr/elevation.json`; no API token
 or runtime Overpass/elevation connection is needed. Existing cached layers are
 reused. To reproduce the scenery from the cache:
 
 ```bash
-python3 scripts/download-scenery.py
-python3 scripts/import-osm.py data/cache/osm.json.gz
-python3 scripts/import-elevation.py
+python3 scripts/scenery/download-scenery.py
+python3 scripts/scenery/import-osm.py data/saint-cyr/cache/osm.json.gz
+python3 scripts/scenery/import-elevation.py
 ```
 
 The elevation import requires Python Pillow. The downloader fetches only missing
 source layers; preserve the cache to avoid repeated requests to public services.
-`node scripts/plan-flight.mjs` generates a reproducible banked sightseeing flight
+`node scripts/flight/plan-flight.mjs` generates a reproducible banked sightseeing flight
 using the actual flight physics, ending back on the runway. It saves controls to
-`data/scenic-tour.json` for local automation testing.
+`tests/fixtures/flights/scenic-tour.json` for local automation testing.
 
 Buildings are simplified and heights are estimated where OSM has no height;
 the palace is a stylized footprint-based model. Real elevation is resampled onto
@@ -146,7 +146,7 @@ Thank you to the contributors and projects that make this scenery possible:
 - **© [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)** —
   airfield geometry, building footprints, roads, land cover, waterways, and place
   names. The map data is available under the **Open Database License (ODbL 1.0)**.
-  Our simplified, projected derived databases for [Saint-Cyr](data/saint-cyr.json)
+  Our simplified, projected derived databases for [Saint-Cyr](data/saint-cyr/map.json)
   and [Luxeuil](data/luxeuil/map.json) are distributed with the project and
   linked from each in-game full map.
 - **[Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API)** — the
@@ -161,7 +161,7 @@ Thank you to the contributors and projects that make this scenery possible:
   [terrain-attribution.md](data/terrain-attribution.md), from the
   [upstream attribution document](https://github.com/tilezen/joerd/blob/master/docs/attribution.md).
 
-Original downloads are preserved in [Saint-Cyr cache](data/cache/) and
+Original downloads are preserved in [Saint-Cyr cache](data/saint-cyr/cache/) and
 [Luxeuil cache](data/luxeuil/cache/), with source timestamps and checksums in
 their respective `manifest.json` files.
 Source dates can differ between layers; this is a cached scenery snapshot,
@@ -218,7 +218,8 @@ http://127.0.0.1:4173/3d-plane/
 - **Arrow Left / Arrow Right**: Bank and turn left/right
 - **Arrow Down**: Pitch nose up
 - **Arrow Up**: Pitch nose down
-- **Space**: Fire tracer rounds
+- **Space**: Fire tracer rounds. Clicking game buttons does not keep keyboard focus;
+  Space remains gunfire during flight. Use Enter to activate a keyboard-focused minimap.
 - **G**: Toggle Mirage landing gear in flight
 - **P**: Open/close settings and pause/resume
 - **C**: Cycle camera mode between chase, cockpit, and orbit
@@ -296,24 +297,53 @@ npm run test:visual:update
 
 ## Project Structure
 
+```text
+src/
+  aircraft/     Procedural light aircraft and Mirage models
+  flight/       Physics, controls, metrics and simulation clock
+  scenery/      Geography, terrain, surfaces and airfield objects
+  rendering/    Scene, cameras, quality and instancing
+  effects/      Clouds, water, Mach transition and tracers
+  audio/        Flight audio and sonic boom
+  ui/           Mission selection, settings, HUD and styles
+  map/          Cartography, minimap, full map and destinations
+  automation/   Machine flight control and screenshot scenarios
+  main.js       Application setup and game loop
+scripts/
+  scenery/      Offline map/elevation download and import tools
+  flight/       Flight validation, planning and performance tools
+  capture/      In-game preview capture
+data/          Each region has map.json, elevation.json and cache/
+tests/
+  fixtures/     Deterministic flight data
+  visual/       Browser tests and screenshot baselines
+public/        Audio, icons, scenario previews and app manifest
+note/          Ignored working notes and screenshots
+```
+
+Unit tests stay beside the modules they exercise. Run scripts from the repository
+root. `dist/`, `test-results/` and dependency folders are generated and ignored;
+original source caches and regression screenshot baselines are intentionally kept.
+
+
 - `src/main.js`: App setup, render loop, and scene wiring
-- `src/airplane.js`: Procedural airplane model and animated control surfaces
-- `src/physics.js`: Light-aircraft physics and shared plane state
-- `src/mirage.js`, `src/jetPhysics.js`, `src/jetAttitude.js`: Jet model and handling
-- `src/missions.js`: Scenario picker and mission definitions
-- `src/experience.js`, `src/jetControls.js`: Settings, guides and throttle/gear controls
-- `src/worldMap.js`, `src/mapViewport.js`, `src/destination.js`: Full map and destination
-- `src/groundDetail.js`: Nearby road/runway surfaces and tile cache
-- `src/camera.js`: Chase, cockpit, and orbit camera handling
-- `src/hud.js`: Flight data HUD
-- `src/cockpitOverlay.js`: Cockpit instrument overlay
-- `src/minimap.js`: Radar/minimap rendering
-- `src/machineGun.js`: Tracer firing behavior
-- `src/terrain.js`: Geographic scenery and batched buildings/trees
-- `src/geography.js`: Shared projection, terrain heights, runway and collision queries
+- `src/aircraft/airplane.js`: Procedural airplane model and animated control surfaces
+- `src/flight/physics.js`: Light-aircraft physics and shared plane state
+- `src/aircraft/mirage.js`, `src/flight/jetPhysics.js`, `src/flight/jetAttitude.js`: Jet model and handling
+- `src/ui/missions.js`: Scenario picker and mission definitions
+- `src/ui/experience.js`, `src/flight/jetControls.js`: Settings, guides and throttle/gear controls
+- `src/map/worldMap.js`, `src/map/mapViewport.js`, `src/map/destination.js`: Full map and destination
+- `src/scenery/groundDetail.js`: Nearby road/runway surfaces and tile cache
+- `src/rendering/camera.js`: Chase, cockpit, and orbit camera handling
+- `src/ui/hud.js`: Flight data HUD
+- `src/ui/cockpitOverlay.js`: Cockpit instrument overlay
+- `src/map/minimap.js`: Radar/minimap rendering
+- `src/effects/machineGun.js`: Tracer firing behavior
+- `src/scenery/terrain.js`: Geographic scenery and batched buildings/trees
+- `src/scenery/geography.js`: Shared projection, terrain heights, runway and collision queries
 - `data/`: Local scenery, elevation and download cache
-- `src/clouds.js`: Procedural clouds
-- `src/warnings.js`: Flight warning logic
+- `src/effects/clouds.js`: Procedural clouds
+- `src/ui/warnings.js`: Flight warning logic
 - `tests/visual/`: Playwright visual regression tests and baselines
 
 ## Customization
@@ -324,21 +354,21 @@ footprints and land cover, real elevation, and generated building/tree meshes.
 To change the plane model, edit:
 
 ```text
-src/airplane.js  # Light aircraft
-src/mirage.js    # Mirage 2000
+src/aircraft/airplane.js  # Light aircraft
+src/aircraft/mirage.js    # Mirage 2000
 ```
 
 To change flight behavior, edit:
 
 ```text
-src/physics.js     # Light aircraft
-src/jetPhysics.js  # Mirage 2000
+src/flight/physics.js     # Light aircraft
+src/flight/jetPhysics.js  # Mirage 2000
 ```
 
 To add larger world objects such as buildings or future targets, start with:
 
 ```text
-src/terrain.js
+src/scenery/terrain.js
 ```
 
 ## Asset Conventions
@@ -347,25 +377,10 @@ The app generates aircraft, building, tree, and cloud meshes in Three.js.
 Geographic source data and processed scenery live in `data/`; the build packages
 the processed map, elevation, and attribution files for local loading.
 
-Use these locations for future static assets:
-
-- `public/models/` for `.glb` and `.gltf` model files
-- `public/textures/` for image textures
-- `src/assets/` for asset-loading utilities
-
-Files in `public/` are served from the site root. For example:
-
-```text
-public/models/airplane.glb
-```
-
-should be loaded relative to Vite’s configured base so GitHub Pages works:
-
-```js
-loadGltfModel(`${import.meta.env.BASE_URL}models/airplane.glb`);
-```
-
-Use `loadGltfModel()` from `src/assets/modelLoader.js` for future GLTF/GLB loading.
+Runtime assets live in `public/audio/`, `public/icons/` and `public/previews/`.
+Aircraft and scenery models are procedural; there are no external model or texture
+folders until those assets are needed. Reference public assets using
+`import.meta.env.BASE_URL` so deployment under `/3d-plane/` works.
 
 ## Deployment
 
@@ -523,8 +538,8 @@ freezes their movement; visual regression fixtures use a fixed cloud state.
 
 ## Experience development and automation
 
-`src/missions.js` defines experiences; `src/mirage.js` creates the jet, and
-`src/jetPhysics.js` implements its handling. Use `?mission=luxeuil&automation=1`
+`src/ui/missions.js` defines experiences; `src/aircraft/mirage.js` creates the jet, and
+`src/flight/jetPhysics.js` implements its handling. Use `?mission=luxeuil&automation=1`
 for opt-in machine control. `setControls` accepts `boost`, `gearDown`, and
 `airbrake` booleans in addition to the existing inputs. Hold boost with
 `{throttle: 1, boost: true}` and release with `{boost: false}`. Pausing, human
@@ -532,7 +547,7 @@ takeover, reset, focus loss, or the end of a bounded animated flight clears boos
 Telemetry includes `plane.aircraft`, `plane.mission`, engine power and gear state.
 
 To regenerate the selection artwork, run the dev server on port 5174 and then
-`node scripts/capture-previews.mjs`. It captures the actual local scene with the
+`node scripts/capture/capture-previews.mjs`. It captures the actual local scene with the
 HUD hidden at 2× pixel density. Pass `luxeuil` or `saint-cyr` to capture only
 one card; `PREVIEW_ORIGIN` overrides the default `http://127.0.0.1:5174`.
 Artwork is stored in `public/previews/` and uses the same map credits.
@@ -576,7 +591,7 @@ range to avoid rebuilding when crossing a boundary. The original physics and
 collision terrain remain authoritative. Distant fields and forests still use
 the regional texture; this is a focused road/runway upgrade, not satellite scenery.
 
-For local comparative measurements, run `node scripts/benchmark-ground.mjs current`
+For local comparative measurements, run `node scripts/flight/benchmark-ground.mjs current`
 with the dev server running. Results and ground screenshots go into
 `test-results/ground-benchmark/`. Headless software-rendered timings are not
 representative of native GPU performance.

@@ -55,10 +55,12 @@ for (const mission of ['saint-cyr', 'luxeuil'])
                 resources.find((n) => /\/three\.js(?:\?|$)/.test(n))
             );
             const { getGeography } = await import(
-                resources.find((n) => /\/src\/geography\.js(?:\?|$)/.test(n))
+                resources.find((n) =>
+                    /\/src\/scenery\/geography\.js(?:\?|$)/.test(n)
+                )
             );
             const { createGroundDetail } =
-                await import('/3d-plane/src/groundDetail.js');
+                await import('/3d-plane/src/scenery/groundDetail.js');
             const world = getGeography();
             const f = world.data.features.find(
                 (f) =>

@@ -122,8 +122,8 @@ test('sonic boom creates a bounded audible voice and respects pause, mute and re
             }
             return connect.apply(this, args);
         };
-        const { createFlightAudio } = await import('/3d-plane/src/audio.js');
-        const { createPlaneState } = await import('/3d-plane/src/physics.js');
+        const { createFlightAudio } = await import('/3d-plane/src/audio/audio.js');
+        const { createPlaneState } = await import('/3d-plane/src/flight/physics.js');
         window.sound = createFlightAudio();
         window.sound.mount();
         window.state = {

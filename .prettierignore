@@ -4,5 +4,11 @@ package-lock.json
 
 # Cached and compact generated geographic data
 data/**/*.json
+tests/fixtures/**/*.json
 # Preserve the original upstream attribution document
 data/terrain-attribution.md
+
+note/
+test-results/
+playwright-report/
+coverage/

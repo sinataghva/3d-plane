@@ -1,21 +1,30 @@
-import { createServiceVehicles } from './serviceVehicles.js';
-import { createParkedAircraft } from './parkedAircraft.js';
-import { createMachEffect, createMachTransition } from './machTransition.js';
-import { getVerticalSpeed } from './flightMetrics.js';
-import { createFlightAudio } from './audio.js';
-import { setupMobileViewport } from './mobileViewport.js';
-import { createGroundDetail } from './groundDetail.js';
-import { createDestinationBeacon, clearDestination } from './destination.js';
-import { selectFlight } from './missions.js';
-import { createMirage, updateMirage } from './mirage.js';
-import { createJetControls } from './jetControls.js';
-import { createGeography, setGeography } from './geography.js';
-import { createTerrain } from './terrain.js';
-import { createWorldMap } from './worldMap.js';
-import { createExperience, describeTouchdown } from './experience.js';
-import './styles.css';
-import { createSimulationClock } from './simulationClock.js';
-import { createFlightAutomation, registerFlightTools } from './automation.js';
+import { createServiceVehicles } from './scenery/serviceVehicles.js';
+import { createParkedAircraft } from './scenery/parkedAircraft.js';
+import {
+    createMachEffect,
+    createMachTransition
+} from './effects/machTransition.js';
+import { getVerticalSpeed } from './flight/flightMetrics.js';
+import { createFlightAudio } from './audio/audio.js';
+import { setupMobileViewport } from './ui/mobileViewport.js';
+import { createGroundDetail } from './scenery/groundDetail.js';
+import {
+    createDestinationBeacon,
+    clearDestination
+} from './map/destination.js';
+import { selectFlight } from './ui/missions.js';
+import { createMirage, updateMirage } from './aircraft/mirage.js';
+import { createJetControls } from './flight/jetControls.js';
+import { createGeography, setGeography } from './scenery/geography.js';
+import { createTerrain } from './scenery/terrain.js';
+import { createWorldMap } from './map/worldMap.js';
+import { createExperience, describeTouchdown } from './ui/experience.js';
+import './ui/styles.css';
+import { createSimulationClock } from './flight/simulationClock.js';
+import {
+    createFlightAutomation,
+    registerFlightTools
+} from './automation/automation.js';
 
 import * as THREE from 'three';
 
@@ -23,29 +32,32 @@ import {
     createAirplane,
     updateAirplaneCockpitVisibility,
     updateAirplaneControlSurfaces
-} from './airplane.js';
-import { addClouds } from './clouds.js';
-import { createCameraModeToggle, updateCamera } from './camera.js';
-import { createCockpitOverlay } from './cockpitOverlay.js';
-import { createHud } from './hud.js';
-import { createKeyboardState } from './input.js';
-import { createMachineGun } from './machineGun.js';
-import { createMiniMap } from './minimap.js';
+} from './aircraft/airplane.js';
+import { addClouds } from './effects/clouds.js';
+import { createCameraModeToggle, updateCamera } from './rendering/camera.js';
+import { createCockpitOverlay } from './ui/cockpitOverlay.js';
+import { createHud } from './ui/hud.js';
+import { createKeyboardState } from './flight/input.js';
+import { createMachineGun } from './effects/machineGun.js';
+import { createMiniMap } from './map/minimap.js';
 import {
     createPlanePhysics,
     createPlaneState,
     resetPlaneState,
     syncPlaneMesh,
     updatePlanePhysics
-} from './physics.js';
-import { isWebGLAvailable, showRuntimeFallback } from './runtimeFallback.js';
-import { createScene } from './scene.js';
+} from './flight/physics.js';
+import {
+    isWebGLAvailable,
+    showRuntimeFallback
+} from './rendering/runtimeFallback.js';
+import { createScene } from './rendering/scene.js';
 import {
     applyVisualScenario,
     getVisualScenario,
     useSeededRandom
-} from './visualScenarios.js';
-import { createWarningBanner } from './warnings.js';
+} from './automation/visualScenarios.js';
+import { createWarningBanner } from './ui/warnings.js';
 
 setupMobileViewport();
 
@@ -504,7 +516,7 @@ async function startApp() {
 
     /**
      * @param {number} delta
-     * @param {import('./input.js').KeyboardState} keyboard
+     * @param {import('./flight/input.js').KeyboardState} keyboard
      */
     function simulate(delta, keyboard) {
         const before = planeState.isAirborne

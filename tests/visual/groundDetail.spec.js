@@ -103,12 +103,12 @@ test('detail cache stays capped across travel, fades at altitude, and disposes',
     await page.waitForFunction(() => Boolean(window.planeAutomation));
     const result = await page.evaluate(async () => {
         const { createGroundDetail } =
-            await import('/3d-plane/src/groundDetail.js');
+            await import('/3d-plane/src/scenery/groundDetail.js');
         // Vite may append an HMR timestamp; read the running game's singleton.
         const geographyUrl = performance
             .getEntriesByType('resource')
             .map((r) => r.name)
-            .find((n) => /\/src\/geography\.js(?:\?|$)/.test(n));
+            .find((n) => /\/src\/scenery\/geography\.js(?:\?|$)/.test(n));
         const { getGeography } = await import(geographyUrl);
         const world = getGeography();
         const detail = createGroundDetail(world);

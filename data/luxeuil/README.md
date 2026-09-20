@@ -22,9 +22,9 @@ runways by the runtime. The same data drives scenery, map and collision queries.
 From the repository root, reproduce entirely from this cache:
 
 ```sh
-python3 scripts/download-scenery.py --luxeuil
-python3 scripts/import-osm.py data/luxeuil/cache/osm.json.gz --luxeuil
-python3 scripts/import-elevation.py --luxeuil
+python3 scripts/scenery/download-scenery.py --luxeuil
+python3 scripts/scenery/import-osm.py data/luxeuil/cache/osm.json.gz --luxeuil
+python3 scripts/scenery/import-elevation.py --luxeuil
 ```
 
 Pillow is needed for elevation import. The merged `cache/osm.json.gz` is an ignored,

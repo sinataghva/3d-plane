@@ -4,20 +4,22 @@ All geography is downloaded once and kept here. The game does not call external
 map or elevation APIs. Vite packages both regions’ processed map/elevation JSON files and elevation
 credits in the production build.
 
-- `saint-cyr.json`: simplified, projected OpenStreetMap-derived database.
+- `saint-cyr/map.json`: simplified, projected OpenStreetMap-derived database.
   © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).
-- `saint-cyr-elevation.json`: 129 × 129 regional elevation samples in meters ASL.
+- `saint-cyr/elevation.json`: 129 × 129 regional elevation samples in meters ASL.
 - `terrain-attribution.md`: original Terrain Tiles attribution and source licenses.
-- `cache/`: original successful OSM layer responses (lossless `.json.gz`) and six Terrarium PNG tiles.
+- `saint-cyr/cache/`: original successful OSM layer responses (lossless `.json.gz`) and six Terrarium PNG tiles.
   Preserve these files: the downloader skips existing layers.
-- `scenic-tour.json`: generated control sequence for a deterministic sightseeing
-  circuit; local validation fixture, not loaded during normal play.
+
+The generated sightseeing control sequence is stored separately in
+`tests/fixtures/flights/scenic-tour.json`; it is a local validation fixture, not
+scenery loaded during normal play.
 
 The processed OSM database is linked from the full-screen map. Geometry is
 simplified and reprojected; building heights may be estimated. Elevation is
 resampled and runway corridors are flattened in the runtime representation.
 Source snapshot timestamps are stored separately from the download date.
-See the import scripts in `scripts/` and [project README](../README.md) for
+See the import scripts in `scripts/scenery/` and [project README](../README.md) for
 processing details.
 
 ## Luxeuil
@@ -38,13 +40,13 @@ precision for nearby rendering. Missing waterway widths use conservative estimat
 river 12 m, stream 2 m, canal 4 m, ditch 0.7 m, drain 0.5 m; `widthEstimated` records
 this distinction. These are visual approximations, not measured channel widths.
 
-`python3 scripts/upgrade-surface-cache.py` restores these fields and line coordinates
+`python3 scripts/scenery/upgrade-surface-cache.py` restores these fields and line coordinates
 from both regions' original cached responses without network access or changing
 unrelated features/source dates. The normal OSM importer also retains this metadata.
 
 ## Airfield detail
 
-`python3 scripts/upgrade-airfield-cache.py` restores allowlisted aviation tags
+`python3 scripts/scenery/upgrade-airfield-cache.py` restores allowlisted aviation tags
 (`aeroway`, `surface`, `lit`, building type and roof shape) from both existing
 caches, without downloads or changing source timestamps. It also restores missing
 explicitly mapped hangar, shelter and tower footprints, plus landing-light rows.

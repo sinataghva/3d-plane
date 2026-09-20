@@ -25,7 +25,7 @@ test('selection uses local rendered cards and switches between clean flight sess
     await ready(page);
     await expect(page.locator('#jet-controls')).toBeHidden();
     await expect(page.locator('#flight-data #jet-readout')).toBeVisible();
-    expect(maps.some((u) => u.includes('saint-cyr.json'))).toBe(false);
+    expect(maps.some((u) => u.includes('saint-cyr/map.json'))).toBe(false);
     await page.locator('#settings-button').click();
     await page.getByRole('button', { name: 'Change flight' }).click();
     await expect(page.locator('#mission-select')).toBeVisible();

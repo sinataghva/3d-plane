@@ -13,8 +13,8 @@ export default defineConfig({
                 for (const file of [
                     'luxeuil/map.json',
                     'luxeuil/elevation.json',
-                    'saint-cyr.json',
-                    'saint-cyr-elevation.json',
+                    'saint-cyr/map.json',
+                    'saint-cyr/elevation.json',
                     'terrain-attribution.md'
                 ]) {
                     this.emitFile({

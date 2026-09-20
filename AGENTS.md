@@ -19,12 +19,12 @@ Saint-Cyr/Versailles with a light aircraft and Luxeuil with a Mirage 2000.
 Read `README.md` for current controls, setup, map sources, and automation APIs.
 
 - `src/main.js`: application setup and simulation/render loop.
-- `src/missions.js`: scenario selection and mission definitions.
-- `src/physics.js`, `src/airplane.js`: light aircraft and shared state.
-- `src/jetPhysics.js`, `src/jetAttitude.js`, `src/mirage.js`: jet handling/model.
-- `src/geography.js`, `src/terrain.js`, `src/groundDetail.js`: scenery and surfaces.
-- `src/input.js`, `src/experience.js`, `src/jetControls.js`: flight controls/UI.
-- `src/worldMap.js`, `src/mapViewport.js`, `src/destination.js`: map/navigation.
+- `src/ui/missions.js`: scenario selection and mission definitions.
+- `src/flight/physics.js`, `src/aircraft/airplane.js`: light aircraft and shared state.
+- `src/flight/jetPhysics.js`, `src/flight/jetAttitude.js`, `src/aircraft/mirage.js`: jet handling/model.
+- `src/scenery/geography.js`, `src/scenery/terrain.js`, `src/scenery/groundDetail.js`: scenery and surfaces.
+- `src/flight/input.js`, `src/ui/experience.js`, `src/flight/jetControls.js`: flight controls/UI.
+- `src/map/worldMap.js`, `src/map/mapViewport.js`, `src/map/destination.js`: map/navigation.
 - `data/`: processed scenery and preserved source caches.
 
 Reuse cached geographic data; do not repeatedly download existing source layers.

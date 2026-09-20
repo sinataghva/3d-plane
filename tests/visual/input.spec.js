@@ -11,7 +11,7 @@ test('blur and hidden-page events clear held keyboard and touch controls', async
     page
 }) => {
     const result = await page.evaluate(async () => {
-        const { createKeyboardState } = await import('/3d-plane/src/input.js');
+        const { createKeyboardState } = await import('/3d-plane/src/flight/input.js');
         const state = createKeyboardState();
         const button = document.querySelector('[data-key="space"]');
         // Synthetic pointer IDs have no native capture; stub capture only in this fixture.
@@ -52,7 +52,7 @@ test('pointer cancellation and lost capture release buttons', async ({
     page
 }) => {
     const result = await page.evaluate(async () => {
-        const { createKeyboardState } = await import('/3d-plane/src/input.js');
+        const { createKeyboardState } = await import('/3d-plane/src/flight/input.js');
         const state = createKeyboardState();
         const button = document.querySelector('[data-key="w"]');
         button.setPointerCapture = () => {};
@@ -75,8 +75,8 @@ test('camera ignores key repeat and controls focused on form widgets', async ({
 }) => {
     const result = await page.evaluate(async () => {
         const { createCameraModeToggle } =
-            await import('/3d-plane/src/camera.js');
-        const { createKeyboardState } = await import('/3d-plane/src/input.js');
+            await import('/3d-plane/src/rendering/camera.js');
+        const { createKeyboardState } = await import('/3d-plane/src/flight/input.js');
         const mode = createCameraModeToggle();
         const state = createKeyboardState();
         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c' }));

@@ -25,7 +25,7 @@ for (const mobile of [false, true]) {
         await page.waitForFunction(() => Boolean(window.planeAutomation));
         await page.evaluate(async () => {
             const { showLandingFeedback } =
-                await import('/3d-plane/src/experience.js');
+                await import('/3d-plane/src/ui/experience.js');
             const schedule = window.setTimeout;
             window.setTimeout = (callback, delay, ...args) =>
                 schedule(callback, delay === 3000 ? 20000 : delay, ...args);
@@ -59,7 +59,7 @@ for (const mobile of [false, true]) {
         await page.screenshot({ path: info.outputPath('landing.png') });
         await page.evaluate(async () => {
             const { showLandingFeedback } =
-                await import('/3d-plane/src/experience.js');
+                await import('/3d-plane/src/ui/experience.js');
             showLandingFeedback(
                 document.getElementById('flight-feedback'),
                 'Runway landing · Smooth touchdown · 1.2 m/s descent.'

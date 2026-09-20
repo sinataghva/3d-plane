@@ -108,8 +108,8 @@ test('effect voices follow flight events and dispose cleanly', async ({
             window.sources.push(source);
             return source;
         };
-        const { createFlightAudio } = await import('/3d-plane/src/audio.js');
-        const { createPlaneState } = await import('/3d-plane/src/physics.js');
+        const { createFlightAudio } = await import('/3d-plane/src/audio/audio.js');
+        const { createPlaneState } = await import('/3d-plane/src/flight/physics.js');
         window.sound = createFlightAudio();
         window.state = createPlaneState();
         window.state.aircraft = 'mirage';
@@ -182,8 +182,8 @@ test('foreground effects remain audible at full engine power without clipping', 
             }
             return connect.apply(this, args);
         };
-        const { createFlightAudio } = await import('/3d-plane/src/audio.js');
-        const { createPlaneState } = await import('/3d-plane/src/physics.js');
+        const { createFlightAudio } = await import('/3d-plane/src/audio/audio.js');
+        const { createPlaneState } = await import('/3d-plane/src/flight/physics.js');
         window.sound = createFlightAudio();
         window.state = createPlaneState();
         window.state.thrust = 1;
