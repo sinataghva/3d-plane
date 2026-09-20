@@ -180,6 +180,7 @@ export function getVisualScenario() {
             'airfield-detail',
             'shelter-detail',
             'tower-detail',
+            'parking-detail',
             'rail-detail',
             'water-detail',
             'river-detail'

@@ -1,3 +1,4 @@
+import { createParkedAircraft } from './parkedAircraft.js';
 import { createMachEffect, createMachTransition } from './machTransition.js';
 import { getVerticalSpeed } from './flightMetrics.js';
 import { createFlightAudio } from './audio.js';
@@ -240,6 +241,9 @@ async function startApp() {
     const restoreRandom = visualScenario ? useSeededRandom(12345) : null;
     const airbase = createTerrain(world);
     scene.add(airbase);
+    const parkedAircraft = createParkedAircraft(world);
+    scene.add(parkedAircraft.group);
+    airbase.userData.summary.parkedAircraft = parkedAircraft.spots.length;
     const groundDetail = createGroundDetail(world);
     scene.add(groundDetail.group);
 
@@ -345,6 +349,18 @@ async function startApp() {
             cameraMode,
             visualScenario
         });
+
+        if (
+            visualScenario.name === 'parking-detail' &&
+            parkedAircraft.spots.length
+        ) {
+            const p = parkedAircraft.spots[0];
+            planeState.position = {
+                x: p.x,
+                y: world.height(p.x, p.z) + 8,
+                z: p.z
+            };
+        }
 
         // Static screenshot scenes need fully built and faded-in detail tiles.
         for (let step = 0; step < 120; step++) {
@@ -456,6 +472,7 @@ async function startApp() {
         );
         destinationBeacon.update(camera, planeState.position);
         scene.userData.followSun(airplane.position);
+        parkedAircraft.update(camera.position, scene.userData.quality);
         renderer.render(scene, camera);
         document.getElementById('scenery-loading')?.remove();
         if (import.meta.env.DEV)
@@ -667,6 +684,7 @@ async function startApp() {
         );
         destinationBeacon.update(camera, planeState.position);
         scene.userData.followSun(airplane.position);
+        parkedAircraft.update(camera.position, scene.userData.quality);
         renderer.render(scene, camera);
         document.getElementById('scenery-loading')?.remove();
         frames++;
