@@ -1,3 +1,4 @@
+import { jetDrag } from './jetAerodynamics.js';
 import { updateJetAttitude } from './jetAttitude.js';
 import { groundLevel, getGeography } from './geography.js';
 const clamp = (
@@ -7,7 +8,7 @@ const clamp = (
 ) => Math.max(a, Math.min(b, n));
 /** Arcade jet in world meters and seconds; state speed remains meters per 60 Hz tick. */
 export function jetSettings() {
-    return { stallSpeed: 0.92, minTakeoffSpeed: 1.18, maxSpeed: 6.2 };
+    return { stallSpeed: 0.92, minTakeoffSpeed: 1.18 };
 }
 /** @param {import('./physics.js').PlaneState} s */
 export function clearAfterburner(s) {
@@ -63,20 +64,19 @@ export function updateJetPhysics(s, k, dt) {
             ? 0.0006 * speed * speed
             : 13
         : 0;
-    const drag =
-        (0.00007 + gear * 0.00011) * speed * speed +
-        (s.isAirborne
-            ? 0.9 +
-              Math.max(0, (s.gForce ?? 1) ** 2 - 1) * 0.22 +
-              Math.abs(rudder) * speed * 0.025
-            : 1.8);
+    const drag = jetDrag(speed, {
+        gear,
+        gForce: s.gForce ?? 1,
+        rudder,
+        airborne: s.isAirborne
+    });
     const acceleration =
         10 * s.enginePower +
         (s.afterburner ? 7 : 0) -
         drag -
         braking -
         (s.isAirborne ? 9.81 * direction.y : 0);
-    s.speed = clamp(speed + acceleration * dt, 0, 370) / 60;
+    s.speed = Math.max(0, speed + acceleration * dt) / 60;
     if (!s.isAirborne && s.speed >= 1.18 && pitch > 0 && s.pitchAngle > 0.055)
         s.isAirborne = true;
     s.isStalling = s.isAirborne && s.speed < 0.92;

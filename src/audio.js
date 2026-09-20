@@ -1,3 +1,4 @@
+import { synthesizeSonicBoom } from './sonicBoom.js';
 /** Audio mix derived from flight state; speed is metres per 60 Hz tick.
  * @param {import('./physics.js').PlaneState} state */
 export function flightMix(state, cockpit = false) {
@@ -36,6 +37,9 @@ export function createFlightAudio() {
     let gear = 1;
     let gearSoundUntil = 0;
     let nextShot = 0;
+    let boomUntil = 0;
+    /** @type {AudioBuffer} */
+    let boom;
     /** @type {AudioBuffer} */
     let shot;
     /** @type {AudioBuffer} */
@@ -142,6 +146,9 @@ export function createFlightAudio() {
                 .connect(master)
                 .connect(context.destination);
             impact = noise(0.35);
+            const boomData = synthesizeSonicBoom(context.sampleRate);
+            boom = context.createBuffer(1, boomData.length, context.sampleRate);
+            boom.copyToChannel(boomData, 0);
             loop('wind', noise(3), 2400);
             loop('boost', noise(3), 900);
             const motor = noise(2);
@@ -168,7 +175,13 @@ export function createFlightAudio() {
         capture: true,
         signal: abort.signal
     });
+    const stopVoices = () => {
+        for (const voice of voices) voice.stop();
+        voices.clear();
+        boomUntil = 0;
+    };
     const silence = () => {
+        stopVoices();
         active = false;
         if (context) {
             master.gain.cancelScheduledValues(context.currentTime);
@@ -233,13 +246,22 @@ export function createFlightAudio() {
         /** @param {import('./physics.js').PlaneState} state @param {import('./input.js').KeyboardState} keyboard @param {boolean} paused @param {boolean} cockpit */
         update(state, keyboard, paused, cockpit) {
             if (!context) return;
-            active = !paused && !document.hidden && !state.isCrashed;
+            const nextActive = !paused && !document.hidden && !state.isCrashed;
+            if ((active && !nextActive) || muted) stopVoices();
+            active = nextActive;
             const mix = flightMix(state, cockpit);
             if (Math.abs((state.gearExtension ?? 1) - gear) > 0.00001)
                 gearSoundUntil = context.currentTime + 0.12;
             const gearMoving = context.currentTime < gearSoundUntil;
             // Leave room for foreground effects without changing the volume setting.
-            const background = keyboard.space ? 0.4 : gearMoving ? 0.6 : 1;
+            const background =
+                context.currentTime < boomUntil
+                    ? 0.3
+                    : keyboard.space
+                      ? 0.4
+                      : gearMoving
+                        ? 0.6
+                        : 1;
             ramp(master.gain, active && !muted ? volume * mix.cabin : 0, 0.025);
             ramp(filter.frequency, mix.cutoff);
             const engine = state.aircraft === 'mirage' ? 'jet' : 'propeller';
@@ -273,6 +295,16 @@ export function createFlightAudio() {
                     context.currentTime +
                     (state.aircraft === 'mirage' ? 0.055 : 0.15);
             }
+        },
+        sonicBoom() {
+            if (!context || !active || muted || document.hidden) return;
+            boomUntil = context.currentTime + 0.9;
+            burst(boom, 0.95, 1.25, 1, 0.16);
+        },
+        reset() {
+            stopVoices();
+            nextShot = 0;
+            gearSoundUntil = 0;
         },
         /** @param {number} sink */
         touchdown(sink) {

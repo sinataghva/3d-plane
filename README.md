@@ -19,6 +19,14 @@ portrait and landscape; flying on phones uses landscape. Both experiences defaul
 
 ### Mirage controls and handling
 
+The jet has no fixed top-speed clamp. Thrust and gravity compete with drag that
+rises smoothly through the transonic range and at higher supersonic speeds.
+Clean, level flight with sustained afterburner approaches roughly Mach 2; dives
+can exceed that equilibrium, while gear, airbrakes and high-G maneuvers add drag.
+This is arcade tuning inspired by the [manufacturer's Mach 2.2+ specification](https://www.dassault-aviation.com/fr/defense/soutien-militaire/avions-soutenus/mirage-2000/),
+not a reproduction of its performance envelope. Mach uses a fixed 343 m/s reference;
+air density, temperature and engine performance do not currently vary with altitude.
+
 - **W/S** adjust thrust. Hold **W** at 100% to engage **110% afterburner**;
   release W to return to 100%. The orange/red exhaust lights only during boost.
 - On mobile, hold the throttle slider beyond **100%** in the right end zone
@@ -592,6 +600,13 @@ Flight Data is unchanged; radar headings are removed on both layouts.
 ### Audio
 
 Both aircraft have locally bundled CC0 engine sounds and firing effects, with generated wind, afterburner, gear motion, and touchdown audio. Engine pitch and volume follow power; cockpit view muffles exterior sound. Settings → Sound provides saved mute and volume controls. Audio starts after a user gesture and stops while paused or in the background.
+
+The Mirage gives a brief vapor-cone effect and procedural sonic-boom cue when
+accelerating through Mach 1. The cone fades after 1.4 seconds and is hidden in
+cockpit view; cockpit audio remains muffled. The trigger re-arms below Mach 0.96
+after a six-second cooldown, preventing repeated booms near the threshold. These
+are stylized gameplay cues, not a simulation of atmospheric condensation or
+sound propagation to ground observers.
 
 See the [audio credits and listening checklist](public/audio/README.md) for every sound, its source, and how to trigger it individually.
 

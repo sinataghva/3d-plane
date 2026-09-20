@@ -1,3 +1,4 @@
+import { MACH_REFERENCE_SPEED } from './jetAerodynamics.js';
 import { clearAfterburner } from './jetPhysics.js';
 import { isEditableTarget } from './input.js';
 /** @param {import('./physics.js').PlaneState} state @param {() => void} takeover */
@@ -91,7 +92,7 @@ export function createJetControls(state, takeover) {
             boost.dataset.active = String(Boolean(state.afterburner));
             const out = document.getElementById('jet-readout');
             if (out)
-                out.textContent = `Mach ${((state.speed * 60) / 343).toFixed(2)} · ${(state.gForce ?? 1).toFixed(1)} G · ${gear.textContent?.replace(' [G]', '')}${state.airbrake ? ' · BRAKING' : ''}${state.afterburner ? ' · AFTERBURNER' : state.gearDown && state.speed > 2 ? ' · RETRACT GEAR' : extension < 0.98 && state.isAirborne && state.speed < 1.7 ? ' · GEAR UP — CHECK LANDING' : ''}`;
+                out.textContent = `Mach ${((state.speed * 60) / MACH_REFERENCE_SPEED).toFixed(2)} · ${(state.gForce ?? 1).toFixed(1)} G · ${gear.textContent?.replace(' [G]', '')}${state.airbrake ? ' · BRAKING' : ''}${state.afterburner ? ' · AFTERBURNER' : state.gearDown && state.speed > 2 ? ' · RETRACT GEAR' : extension < 0.98 && state.isAirborne && state.speed < 1.7 ? ' · GEAR UP — CHECK LANDING' : ''}`;
         }
     };
 }

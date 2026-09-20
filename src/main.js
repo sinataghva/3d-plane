@@ -1,3 +1,4 @@
+import { createMachEffect, createMachTransition } from './machTransition.js';
 import { getVerticalSpeed } from './flightMetrics.js';
 import { createFlightAudio } from './audio.js';
 import { setupMobileViewport } from './mobileViewport.js';
@@ -248,6 +249,10 @@ async function startApp() {
     }
     const crashEffect = createCrashEffect(scene);
     const machineGun = createMachineGun(scene);
+    const machTransition = createMachTransition();
+    let machBoomPending = false;
+    const machEffect =
+        mission.aircraft === 'mirage' ? createMachEffect(airplane) : null;
 
     const keyboard = createKeyboardState(mission.aircraft);
     const planePhysics = createPlanePhysics();
@@ -266,6 +271,7 @@ async function startApp() {
     timer.connect(document);
     disposeFlight = () => {
         flightAudio.dispose();
+        machEffect?.dispose();
         groundDetail.dispose();
         destinationBeacon.dispose();
         machineGun.dispose();
@@ -306,6 +312,10 @@ async function startApp() {
         clearDestination();
         worldMap.resetView();
         groundDetail.waterEffects.reset();
+        machTransition.reset();
+        machBoomPending = false;
+        machEffect?.reset();
+        flightAudio.reset();
         window.dispatchEvent(new Event('flight-input-clear'));
         resetPlaneState(planeState);
         crashElapsed = 0;
@@ -373,6 +383,16 @@ async function startApp() {
         });
         updateCamera({ camera, controls, airplane, cameraMode });
         updateMirage(airplane, planeState, keyboard, 0);
+        if (visualScenario.name === 'mach') {
+            machEffect?.trigger();
+            machEffect?.advance(0.2);
+            machEffect?.render(false, false);
+            airplane.updateMatrixWorld(true);
+            camera.position.copy(
+                airplane.localToWorld(new THREE.Vector3(-15, 7, 16))
+            );
+            camera.lookAt(airplane.localToWorld(new THREE.Vector3(-1, 0.8, 0)));
+        }
         if (visualScenario.name === 'exhaust') {
             airplane.updateMatrixWorld(true);
             camera.position.copy(
@@ -445,6 +465,11 @@ async function startApp() {
             ? { ...planeState, position: { ...planeState.position } }
             : null;
         updatePlanePhysics({ planeState, keyboard, planePhysics, delta });
+        machEffect?.advance(delta);
+        if (machTransition.update(planeState, delta)) {
+            machEffect?.trigger();
+            machBoomPending = true;
+        }
         if (before) {
             experience.afterStep(before);
             if (!planeState.isAirborne && !planeState.isCrashed)
@@ -576,12 +601,18 @@ async function startApp() {
         updateMirage(airplane, planeState, keyboard, timestamp / 1000);
         syncPlaneMesh({ airplane, propeller, planeState });
         const mode = cameraMode.getMode();
+        machEffect?.render(mode === 'cockpit', planeState.isCrashed);
         flightAudio.update(
             planeState,
             keyboard,
             experience.paused || !document.hasFocus(),
             mode === 'cockpit'
         );
+        // Resolve this frame's pause/cockpit mix before playing the crossing cue.
+        if (machBoomPending) {
+            flightAudio.sonicBoom();
+            machBoomPending = false;
+        }
         const modeChanged = mode !== lastCameraMode;
         lastCameraMode = mode;
         updateAirplaneCockpitVisibility({
@@ -633,6 +664,7 @@ async function startApp() {
                 triangles: renderer.info.render.triangles,
                 geometries: renderer.info.memory.geometries,
                 textures: renderer.info.memory.textures,
+                machTransitions: machTransition.count,
                 ...groundDetail.stats(),
                 ...airbase.userData.summary
             });

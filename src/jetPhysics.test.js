@@ -97,57 +97,60 @@ test('light aircraft never boosts and automation pause/release clears jet boost'
     api.release();
     expect(s.afterburner).toBe(false);
 });
-test('jet sweep detects a narrow building crossed between fast ticks', () => {
-    const world = createGeography(
-        {
-            origin: [0, 0],
-            bounds: [-0.01, -0.01, 0.01, 0.01],
-            places: [],
-            timestamp: 'test',
-            features: [
-                {
-                    id: 'r',
-                    kind: 'runway',
-                    name: '',
-                    points: [
-                        [-800, -200],
-                        [800, -200]
-                    ],
-                    holes: [],
-                    line: true,
-                    width: 45
-                },
-                {
-                    id: 'b',
-                    kind: 'building',
-                    name: '',
-                    points: [
-                        [1, -2],
-                        [2, -2],
-                        [2, 2],
-                        [1, 2],
-                        [1, -2]
-                    ],
-                    holes: [],
-                    line: false,
-                    height: 80
-                }
-            ]
-        },
-        { size: 2, values: [0, 0, 0, 0] }
-    );
-    setGeography(world);
-    const s = createPlaneState('mirage'),
-        k = createInputController().state;
-    s.position = { x: 0, y: 50, z: 0 };
-    s.yawAngle = 0;
-    s.speed = 6;
-    s.isAirborne = true;
-    s.gearDown = false;
-    tick(s, k);
-    expect(s.isCrashed).toBe(true);
-    expect(s.crashReason).toBe('building');
-});
+test.each([360, 750])(
+    'jet sweep detects a narrow building at %i m/s',
+    (speed) => {
+        const world = createGeography(
+            {
+                origin: [0, 0],
+                bounds: [-0.01, -0.01, 0.01, 0.01],
+                places: [],
+                timestamp: 'test',
+                features: [
+                    {
+                        id: 'r',
+                        kind: 'runway',
+                        name: '',
+                        points: [
+                            [-800, -200],
+                            [800, -200]
+                        ],
+                        holes: [],
+                        line: true,
+                        width: 45
+                    },
+                    {
+                        id: 'b',
+                        kind: 'building',
+                        name: '',
+                        points: [
+                            [1, -2],
+                            [2, -2],
+                            [2, 2],
+                            [1, 2],
+                            [1, -2]
+                        ],
+                        holes: [],
+                        line: false,
+                        height: 80
+                    }
+                ]
+            },
+            { size: 2, values: [0, 0, 0, 0] }
+        );
+        setGeography(world);
+        const s = createPlaneState('mirage'),
+            k = createInputController().state;
+        s.position = { x: 0, y: 50, z: 0 };
+        s.yawAngle = 0;
+        s.speed = speed / 60;
+        s.isAirborne = true;
+        s.gearDown = false;
+        tick(s, k);
+        expect(s.isCrashed).toBe(true);
+        expect(s.crashReason).toBe('building');
+    }
+);
 
 test('Mirage flame, gear and airbrake geometry follow flight state', async () => {
     const { createMirage, updateMirage } = await import('./mirage.js');
