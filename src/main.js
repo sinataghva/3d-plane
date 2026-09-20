@@ -1,3 +1,4 @@
+import { createRoadTraffic } from './scenery/roadTraffic.js';
 import { createPhotoMode } from './ui/photoMode.js';
 import { createRunwayLights } from './rendering/timeOfDay.js';
 import { createFpsCounter } from './ui/fps.js';
@@ -263,6 +264,8 @@ async function startApp() {
     const serviceVehicles = createServiceVehicles(world, parkedAircraft.spots);
     scene.add(serviceVehicles.group);
     airbase.userData.summary.serviceVehicles = serviceVehicles.spots.length;
+    const roadTraffic = createRoadTraffic(world);
+    scene.add(roadTraffic.mesh);
     const groundDetail = createGroundDetail(world);
     scene.add(groundDetail.group);
 
@@ -298,6 +301,7 @@ async function startApp() {
         photoMode.dispose();
         flightAudio.dispose();
         machEffect?.dispose();
+        roadTraffic.dispose();
         groundDetail.dispose();
         destinationBeacon.dispose();
         machineGun.dispose();
@@ -339,6 +343,7 @@ async function startApp() {
     const resetFlight = () => {
         clearDestination();
         worldMap.resetView();
+        roadTraffic.reset();
         groundDetail.waterEffects.reset();
         machTransition.reset();
         machBoomPending = false;
@@ -402,6 +407,20 @@ async function startApp() {
             };
         }
 
+        if (visualScenario.name === 'traffic-detail') {
+            const p = roadTraffic.preview();
+            if (p) {
+                roadTraffic.update(
+                    { x: p.x, y: 0, z: p.z },
+                    scene.userData.quality,
+                    0
+                );
+                const matrix = new THREE.Matrix4();
+                roadTraffic.mesh.getMatrixAt(0, matrix);
+                const car = new THREE.Vector3().setFromMatrixPosition(matrix);
+                planeState.position = { x: car.x, z: car.z, y: car.y + 8 };
+            }
+        }
         // Static screenshot scenes need fully built and faded-in detail tiles.
         for (let step = 0; step < 120; step++) {
             groundDetail.update(
@@ -466,7 +485,9 @@ async function startApp() {
                         visualScenario.name
                     )
                         ? new THREE.Vector3(65, 45, 65)
-                        : visualScenario.name === 'service-detail'
+                        : ['service-detail', 'traffic-detail'].includes(
+                                visualScenario.name
+                            )
                           ? new THREE.Vector3(10, 8, 12)
                           : visualScenario.name === 'road-detail'
                             ? new THREE.Vector3(70, 95, 70)
@@ -526,6 +547,7 @@ async function startApp() {
             document.documentElement.dataset.sceneryStats = JSON.stringify({
                 calls: renderer.info.render.calls,
                 triangles: renderer.info.render.triangles,
+                ...roadTraffic.stats(),
                 ...groundDetail.stats(),
                 ...airbase.userData.summary
             });
@@ -666,6 +688,101 @@ async function startApp() {
         ?.addEventListener('pointerdown', () => {
             if (automation?.active) automation.release();
         });
+    /** @type {{position:()=>void,sample:(timestamp:number,trafficMs:number)=>void}|null} */
+    let trafficBench = null;
+    if (
+        import.meta.env.DEV &&
+        new URLSearchParams(location.search).has('trafficBenchmark')
+    ) {
+        const route = [...roadTraffic.paths]
+            .sort((a, b) => b.length - a.length)
+            .at(0);
+        Object.assign(window, {
+            trafficBenchmark: {
+                renderer: renderer
+                    .getContext()
+                    .getParameter(renderer.getContext().RENDERER),
+                run(/** @type {number} */ count, frames = 90, travel = 0) {
+                    if (!route) throw new Error('No traffic benchmark road');
+                    return new Promise((resolve) => {
+                        roadTraffic.setLimit(count);
+                        roadTraffic.reset();
+                        let frame = 0,
+                            previous = 0;
+                        /** @type {object[]} */
+                        const samples = [];
+                        trafficBench = {
+                            position() {
+                                const town = world.data.places.find((p) =>
+                                    p.name.includes(
+                                        mission.id === 'luxeuil'
+                                            ? 'Luxeuil-les-Bains'
+                                            : 'Saint-Cyr'
+                                    )
+                                );
+                                const origin =
+                                    town?.point ||
+                                    route.points[
+                                        Math.floor(route.points.length / 2)
+                                    ];
+                                const p = [
+                                    origin[0] + frame * travel,
+                                    origin[1]
+                                ];
+                                const angle = frame * 0.001;
+                                planeState.position.x =
+                                    p[0] + Math.sin(angle) * 200;
+                                planeState.position.z =
+                                    p[1] + Math.cos(angle) * 200;
+                                planeState.position.y =
+                                    world.height(p[0], p[1]) + 75;
+                                camera.position.set(
+                                    p[0] + Math.sin(angle) * 220,
+                                    planeState.position.y + 30,
+                                    p[1] + Math.cos(angle) * 220
+                                );
+                                camera.lookAt(
+                                    p[0],
+                                    world.height(p[0], p[1]),
+                                    p[1]
+                                );
+                            },
+                            sample(
+                                /** @type {number} */ timestamp,
+                                /** @type {number} */ trafficMs
+                            ) {
+                                if (frame >= 15)
+                                    samples.push({
+                                        frameMs: timestamp - previous,
+                                        trafficMs,
+                                        cars: roadTraffic.stats().trafficCars,
+                                        ...(travel
+                                            ? {
+                                                  population:
+                                                      roadTraffic.snapshot(),
+                                                  camera: {
+                                                      x: camera.position.x,
+                                                      z: camera.position.z
+                                                  }
+                                              }
+                                            : {}),
+                                        calls: renderer.info.render.calls,
+                                        triangles:
+                                            renderer.info.render.triangles
+                                    });
+                                previous = timestamp;
+                                frame++;
+                                if (frame >= frames + 15) {
+                                    trafficBench = null;
+                                    resolve(samples);
+                                }
+                            }
+                        };
+                    });
+                }
+            }
+        });
+    }
     /** @param {number} timestamp */
     function animate(timestamp) {
         if (closed) return;
@@ -673,7 +790,7 @@ async function startApp() {
         timer.update(timestamp);
         if (automation?.active && !document.hidden)
             automation.update(timer.getDelta());
-        if (!automation?.active && !experience.paused) {
+        if (!trafficBench && !automation?.active && !experience.paused) {
             simulationClock.update(timer.getDelta(), (delta) =>
                 simulate(delta, keyboard)
             );
@@ -711,6 +828,7 @@ async function startApp() {
                 cameraMode,
                 delta: timer.getDelta()
             });
+        if (trafficBench) trafficBench.position();
         cockpitOverlay.update({ planeState, cameraMode });
         if (modeChanged || timestamp - lastHudUpdate >= 100) {
             experience.update();
@@ -742,9 +860,19 @@ async function startApp() {
         scene.userData.followSun(airplane.position);
         parkedAircraft.update(camera.position, scene.userData.quality);
         serviceVehicles.update(camera.position, scene.userData.quality);
+        const trafficStarted = performance.now();
+        roadTraffic.update(
+            camera.position,
+            scene.userData.quality,
+            experience.paused || document.hidden
+                ? 0
+                : Math.min(timer.getDelta(), 0.1)
+        );
+        const trafficMs = performance.now() - trafficStarted;
         renderer.render(scene, camera);
         document.getElementById('scenery-loading')?.remove();
         fpsCounter.update(timestamp);
+        if (trafficBench) trafficBench.sample(timestamp, trafficMs);
         frames++;
         if (import.meta.env.DEV && timestamp - statsAt > 1000) {
             document.documentElement.dataset.sceneryStats = JSON.stringify({
@@ -754,6 +882,7 @@ async function startApp() {
                 geometries: renderer.info.memory.geometries,
                 textures: renderer.info.memory.textures,
                 machTransitions: machTransition.count,
+                ...roadTraffic.stats(),
                 ...groundDetail.stats(),
                 ...airbase.userData.summary
             });

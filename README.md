@@ -742,3 +742,23 @@ fingers to pan. **Reset view** frames the aircraft again. **Hide controls** clea
 the photo toolbar; tap/click the scene to restore it. **Return to flying** or
 **Esc** resumes the flight with your previous camera view. Use your device's
 normal screenshot controls; there is no capture, download or save feature.
+
+### Moving road traffic
+
+Small decorative cars follow suitable mapped civilian roads, with fewer cars in
+rural Luxeuil. Nearby limits are **20 on Balanced / 40 on High at Saint-Cyr** and
+**10 / 20 at Luxeuil**; Low disables traffic. These are maximum active populations, not
+guaranteed visible counts or totals across the whole map. Cars are visible up to
+1.5 km away, with a separate 1.8 km retention radius to prevent boundary popping.
+Cars use shared instanced geometry with no shadows and pause in Settings or Photo
+mode. They keep to the right, avoid paths, airfield service routes, tunnels and
+bridges. Population is spread across geographic cells and weighted by road length
+and class. Cars keep their identities, follow connected mapped road segments,
+and turn around at dead ends. New cars enter beyond visibility; distant cars
+fade without shrinking. This is decorative traffic, without traffic-light rules,
+collision simulation or engine audio.
+
+The development benchmark is `HEADED=1 node scripts/flight/benchmark-traffic.mjs`.
+It compares identical scripted town flyovers at 0/20/40/80 cars, records frame
+times and traffic CPU cost, and saves results under ignored `note/traffic-benchmark/`.
+Headed Chromium can use the native GPU; headless results may use software rendering.

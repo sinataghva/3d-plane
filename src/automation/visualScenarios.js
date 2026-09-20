@@ -178,6 +178,7 @@ export function getVisualScenario() {
 
     if (
         [
+            'traffic-detail',
             'town-detail',
             'airfield-detail',
             'shelter-detail',
