@@ -1,3 +1,10 @@
+:root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -1820,14 +1827,12 @@ body:has(.automation-status) .warning-banner {
 }
 
 /* Compact mission picker: keep both choices and the launch action in view. */
-@media (max-width: 700px), (max-height: 500px) {
+@media (pointer: coarse), (max-width: 700px), (max-height: 500px) {
     #mission-select {
         height: 100dvh;
         overflow: hidden;
-        padding: max(12px, env(safe-area-inset-top))
-            max(16px, env(safe-area-inset-right))
-            max(12px, env(safe-area-inset-bottom))
-            max(16px, env(safe-area-inset-left));
+        padding: calc(12px + var(--safe-top)) calc(16px + var(--safe-right))
+            calc(12px + var(--safe-bottom)) calc(16px + var(--safe-left));
         display: grid;
         grid-template-rows: auto minmax(0, 1fr) auto;
         gap: 12px;
@@ -1907,7 +1912,7 @@ body:has(.automation-status) .warning-banner {
 @media (pointer: coarse), (max-width: 900px) and (max-height: 500px) {
     .jet-flight #jet-controls {
         display: flex;
-        bottom: max(12px, env(safe-area-inset-bottom));
+        bottom: max(12px, var(--safe-bottom));
     }
     #jet-controls #gear-button {
         min-height: 44px;
@@ -1968,13 +1973,12 @@ body:has(.automation-status) .warning-banner {
         touch-action: none;
     }
     #touch-controls {
-        padding: 8px max(8px, env(safe-area-inset-right))
-            max(8px, env(safe-area-inset-bottom))
-            max(8px, env(safe-area-inset-left));
+        padding: 8px max(8px, var(--safe-right)) max(8px, var(--safe-bottom))
+            max(8px, var(--safe-left));
     }
     #flight-data {
-        top: max(8px, env(safe-area-inset-top));
-        left: max(8px, env(safe-area-inset-left));
+        top: max(8px, var(--safe-top));
+        left: max(8px, var(--safe-left));
         bottom: auto;
         width: 225px;
         max-width: 34vw;
@@ -2029,8 +2033,8 @@ body:has(.automation-status) .warning-banner {
         line-height: 1.25;
     }
     #mini-map {
-        top: max(8px, env(safe-area-inset-top));
-        right: max(8px, env(safe-area-inset-right));
+        top: max(8px, var(--safe-top));
+        right: max(8px, var(--safe-right));
         bottom: auto;
         width: 104px;
         padding: 4px;
@@ -2040,8 +2044,18 @@ body:has(.automation-status) .warning-banner {
         height: 96px;
     }
     #settings-button {
-        top: max(8px, env(safe-area-inset-top));
-        right: calc(max(8px, env(safe-area-inset-right)) + 114px);
+        top: calc(8px + var(--safe-top));
+        right: calc(122px + var(--safe-right));
+    }
+    #settings-dialog {
+        inset: calc(12px + var(--safe-top)) calc(12px + var(--safe-right))
+            calc(12px + var(--safe-bottom)) calc(12px + var(--safe-left));
+        margin: auto;
+        width: min(
+            460px,
+            calc(100vw - 24px - var(--safe-left) - var(--safe-right))
+        );
+        max-height: calc(100dvh - 24px - var(--safe-top) - var(--safe-bottom));
     }
 }
 
@@ -2055,7 +2069,7 @@ body:has(.automation-status) .warning-banner {
 
 /* Touchdown feedback stays at the edge of the view, away from the aircraft. */
 #flight-feedback {
-    top: max(12px, env(safe-area-inset-top));
+    top: max(12px, var(--safe-top));
     bottom: auto;
     left: 50%;
     transform: translateX(-50%);
@@ -2070,7 +2084,7 @@ body:has(.automation-status) .warning-banner {
     #flight-feedback {
         left: 35vw;
         transform: none;
-        max-width: calc(65vw - 175px - env(safe-area-inset-right));
+        max-width: calc(65vw - 175px - var(--safe-right));
         padding: 6px 8px;
         font-size: 11px;
     }
@@ -2098,4 +2112,12 @@ body:has(.automation-status) .warning-banner {
 }
 .audio-settings legend {
     padding: 0 5px;
+}
+
+@media (pointer: coarse), (max-width: 900px) and (max-height: 500px) {
+    #world-map {
+        box-sizing: border-box;
+        padding: calc(12px + var(--safe-top)) calc(12px + var(--safe-right))
+            calc(12px + var(--safe-bottom)) calc(12px + var(--safe-left));
+    }
 }

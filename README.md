@@ -584,7 +584,9 @@ Mobile flight uses a compact Flight Data panel; tap **Flight details** for the
 secondary instruments. The smaller radar still rotates with heading and opens
 the full map on tap. Game surfaces suppress text selection, long-press callouts
 and browser zoom gestures while the map retains its own pinch zoom. Safe-area
-padding keeps touch controls away from the notch and home indicator. Desktop
+padding keeps touch controls away from the notch and home indicator. The scenario
+picker, settings button/dialog, and full-screen map also leave space inside the
+iPhone safe areas, including landscape and Home Screen layouts. Desktop
 Flight Data is unchanged; radar headings are removed on both layouts.
 
 ### Audio
