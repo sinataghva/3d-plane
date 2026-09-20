@@ -1,3 +1,12 @@
+import {
+    indexScenerySurfaces,
+    createBallastTexture
+} from './scenerySurfaces.js';
+import {
+    isSurfaceFeature,
+    bridgeProfile,
+    surfaceElevation
+} from './surfaceFeatures.js';
 import * as THREE from 'three';
 
 export const GROUND_DETAIL_PRESETS = {
@@ -7,9 +16,9 @@ export const GROUND_DETAIL_PRESETS = {
 };
 const TILE = 500;
 const CACHE_LIMIT = 80;
-/** @typedef {'road'|'asphalt'|'grass'|'paint'|'wear'|'number0'|'number1'} SurfaceKind */
-/** @typedef {{ax:number,az:number,bx:number,bz:number,width:number,kind:SurfaceKind}} Strip */
-/** @typedef {{x:number,z:number,y:number,strips:Strip[],priority:number}} Tile */
+/** @typedef {'road'|'asphalt'|'grass'|'paint'|'wear'|'number0'|'number1'|'ballast'|'rail'|'water'|'bank'} SurfaceKind */
+/** @typedef {{ax:number,az:number,bx:number,bz:number,width:number,kind:SurfaceKind,bridge?:number[]}} Strip */
+/** @typedef {{x:number,z:number,y:number,strips:Strip[],patches?:import('./scenerySurfaces.js').SurfacePatch[],priority:number}} Tile */
 /** Interpolate the same triangles as the existing 256×256 terrain mesh. */
 /** @param {import('./geography.js').Geography} world */
 export function createRenderedHeight(world) {
@@ -158,8 +167,8 @@ export function createGroundDetail(world) {
     group.name = 'nearby-ground-detail';
     const height = createRenderedHeight(world);
     /** @type {Map<string,Tile>} */ const index = new Map();
-    /** @param {number} ax @param {number} az @param {number} bx @param {number} bz @param {number} width @param {SurfaceKind} kind */
-    function add(ax, az, bx, bz, width, kind) {
+    /** @param {number} ax @param {number} az @param {number} bx @param {number} bz @param {number} width @param {SurfaceKind} kind @param {number[]} [bridge] */
+    function add(ax, az, bx, bz, width, kind, bridge) {
         const n = kind.startsWith('number')
             ? 1
             : Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 20));
@@ -183,13 +192,25 @@ export function createGroundDetail(world) {
                 index.set(key, tile);
             }
             tile.priority = Math.min(tile.priority, kind === 'road' ? 1 : 0);
-            tile.strips.push({ ax: x1, az: z1, bx: x2, bz: z2, width, kind });
+            tile.strips.push({
+                ax: x1,
+                az: z1,
+                bx: x2,
+                bz: z2,
+                width,
+                kind,
+                bridge
+            });
         }
     }
     const jet = Boolean(world.data.airfield?.includes('LFSX'));
     let numbers = ['11', '29'];
     for (const f of world.data.features) {
-        if (!f.line || !['road', 'runway', 'taxiway'].includes(f.kind))
+        if (
+            !isSurfaceFeature(f) ||
+            !f.line ||
+            !['road', 'runway', 'taxiway'].includes(f.kind)
+        )
             continue;
         // Pedestrian paths remain in the distant base map.
         if (
@@ -215,7 +236,8 @@ export function createGroundDetail(world) {
                 f.points[i][0],
                 f.points[i][1],
                 width,
-                kind
+                kind,
+                bridgeProfile(f, height)
             );
         if (f.kind !== 'runway') continue;
         const a = f.points[0],
@@ -284,11 +306,27 @@ export function createGroundDetail(world) {
                     line(t, t + 4, side * width * 0.47, 1.5, 'paint');
         }
     }
+    indexScenerySurfaces(world, TILE, (x, z, patch) => {
+        const key = `${x},${z}`;
+        let tile = index.get(key);
+        if (!tile) {
+            tile = {
+                x: (x + 0.5) * TILE,
+                z: (z + 0.5) * TILE,
+                y: height((x + 0.5) * TILE, (z + 0.5) * TILE),
+                strips: [],
+                priority: 2
+            };
+            index.set(key, tile);
+        }
+        (tile.patches ??= []).push(patch);
+    });
+    const ballast = createBallastTexture();
     const grain = noiseTexture(512, false),
         grass = noiseTexture(512, true),
         coarse = noiseTexture(128, false);
     const numberMaps = numbers.map(numberTexture);
-    const textures = [grain, grass, coarse, ...numberMaps];
+    const textures = [ballast, grain, grass, coarse, ...numberMaps];
     /** @typedef {{group:THREE.Group,materials:THREE.MeshStandardMaterial[],alpha:number,last:number}} CachedTile */
     /** @type {Map<string,CachedTile>} */ const cache = new Map();
     let scan = 0,
@@ -335,7 +373,12 @@ export function createGroundDetail(world) {
             // Corner-only height sampling lets long/wide strips cut through hills.
             const triangles = clipToTerrain(corners, world);
             for (const [x, z] of triangles) {
-                bucket.p.push(x, height(x, z) + (overlay ? 0.08 : 0.04), z);
+                bucket.p.push(
+                    x,
+                    surfaceElevation(strip.bridge, x, z, height(x, z)) +
+                        (overlay ? 0.08 : 0.04),
+                    z
+                );
                 if (strip.kind.startsWith('number')) {
                     bucket.uv.push(
                         0.5 -
@@ -346,6 +389,45 @@ export function createGroundDetail(world) {
                             (len * len)
                     );
                 } else bucket.uv.push(x / 4, z / 4);
+            }
+        }
+        for (const patch of tile.patches || []) {
+            let bucket = buckets.get(patch.kind);
+            if (!bucket) {
+                bucket = { p: [], uv: [] };
+                buckets.set(patch.kind, bucket);
+            }
+            const triangles = clipToTerrain(patch.points, world);
+            for (let i = 0; i < triangles.length; i += 3) {
+                const tri = triangles.slice(i, i + 3);
+                if (
+                    (tri[1][0] - tri[0][0]) * (tri[2][1] - tri[0][1]) -
+                        (tri[1][1] - tri[0][1]) * (tri[2][0] - tri[0][0]) >
+                    0
+                )
+                    tri.reverse();
+                for (const [x, z] of tri) {
+                    const y = surfaceElevation(
+                        patch.bridge,
+                        x,
+                        z,
+                        height(x, z)
+                    );
+                    bucket.p.push(x, y + (patch.offset ?? 0.035), z);
+                    if (
+                        patch.kind === 'ballast' &&
+                        patch.origin &&
+                        patch.direction
+                    ) {
+                        const [dx, dz] = patch.direction,
+                            rx = x - patch.origin[0],
+                            rz = z - patch.origin[1];
+                        bucket.uv.push(
+                            0.5 + (-rx * dz + rz * dx) / 3.4,
+                            (rx * dx + rz * dz) / 0.75
+                        );
+                    } else bucket.uv.push(x / 4, z / 4);
+                }
             }
         }
         for (const [kind, b] of buckets) {
@@ -363,17 +445,26 @@ export function createGroundDetail(world) {
             const paint = kind === 'paint' || kind.startsWith('number'),
                 wear = kind === 'wear';
             const material = new THREE.MeshStandardMaterial({
-                color: paint
-                    ? 0xf0edce
-                    : wear
-                      ? 0x33363a
-                      : kind === 'grass'
-                        ? 0x94ab70
-                        : kind === 'road'
-                          ? 0x929798
-                          : 0x939ca3,
-                roughness: 1,
-                metalness: 0,
+                color:
+                    kind === 'water'
+                        ? 0x4b8d9b
+                        : kind === 'bank'
+                          ? 0x797a58
+                          : kind === 'rail'
+                            ? 0xaab0b4
+                            : kind === 'ballast'
+                              ? 0xb8b2a7
+                              : paint
+                                ? 0xf0edce
+                                : wear
+                                  ? 0x33363a
+                                  : kind === 'grass'
+                                    ? 0x94ab70
+                                    : kind === 'road'
+                                      ? 0x929798
+                                      : 0x939ca3,
+                roughness: kind === 'rail' ? 0.45 : 1,
+                metalness: kind === 'rail' ? 0.35 : 0,
                 transparent: true,
                 opacity: 0,
                 depthWrite: false,
@@ -391,7 +482,14 @@ export function createGroundDetail(world) {
             mesh.receiveShadow = true;
             // Composite terrain overlays before transparent airborne effects
             // (afterburner, canopy, etc.), while retaining surface/paint order.
-            mesh.renderOrder = paint || wear ? -1 : -2;
+            mesh.renderOrder =
+                kind === 'bank'
+                    ? -4
+                    : kind === 'water'
+                      ? -3
+                      : kind === 'rail' || paint || wear
+                        ? -1
+                        : -2;
             root.add(mesh);
         }
         group.add(root);
@@ -432,14 +530,24 @@ export function createGroundDetail(world) {
                         )
                             wanted.push({ key, distance });
                     }
-                wanted.sort((a, b) => a.distance - b.distance);
+                wanted.sort(
+                    (a, b) =>
+                        a.distance +
+                        (index.get(a.key)?.priority || 0) * 80 -
+                        (b.distance + (index.get(b.key)?.priority || 0) * 80)
+                );
                 wanted = wanted.slice(0, settings.tiles);
                 scan = 0.25;
             }
             const distances = new Map(wanted.map((t) => [t.key, t.distance]));
             let built = 0;
+            const buildStart = performance.now();
             for (const { key } of wanted)
-                if (!cache.has(key) && built < 2) {
+                if (
+                    !cache.has(key) &&
+                    built < 2 &&
+                    (built === 0 || performance.now() - buildStart < 4)
+                ) {
                     if (cache.size >= CACHE_LIMIT) {
                         const candidate = [...cache]
                             .filter(([k]) => !distances.has(k))
@@ -466,8 +574,22 @@ export function createGroundDetail(world) {
                 if (distance !== undefined) tile.last = clock;
                 for (const material of tile.materials) {
                     const kind = material.userData.kind;
-                    if (
-                        !['paint', 'wear', 'number0', 'number1'].includes(kind)
+                    if (kind === 'ballast') {
+                        const map = settings.fine ? ballast : coarse;
+                        if (material.map !== map) {
+                            material.map = map;
+                            material.needsUpdate = true;
+                        }
+                    } else if (
+                        ![
+                            'water',
+                            'bank',
+                            'rail',
+                            'paint',
+                            'wear',
+                            'number0',
+                            'number1'
+                        ].includes(kind)
                     ) {
                         const map =
                             kind === 'grass'
@@ -485,6 +607,7 @@ export function createGroundDetail(world) {
                         }
                     }
                     material.opacity = tile.alpha * material.userData.maximum;
+                    material.depthWrite = material.opacity > 0.995;
                     if (kind === 'wear' && !settings.fine) material.opacity = 0;
                 }
             }

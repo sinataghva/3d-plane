@@ -594,3 +594,23 @@ Flight Data is unchanged; radar headings are removed on both layouts.
 Both aircraft have locally bundled CC0 engine sounds and firing effects, with generated wind, afterburner, gear motion, and touchdown audio. Engine pitch and volume follow power; cockpit view muffles exterior sound. Settings → Sound provides saved mute and volume controls. Audio starts after a user gesture and stops while paused or in the background.
 
 See the [audio credits and listening checklist](public/audio/README.md) for every sound, its source, and how to trigger it individually.
+
+### Nearby railways and water
+
+Both regions now share the road-detail tile budget with railway and water surfaces.
+Balanced shows ballast, rails, and sharp static water geometry; High adds repeating
+rail sleepers and finer gravel. Low keeps the lightweight regional map texture.
+Nearby detail fades with distance and altitude; no more than 80 tiles are cached,
+with up to two built per frame and a time check before starting the second tile.
+
+Rivers, streams, canals, lakes and ponds use separate surfaces, preserving polygon
+islands. Mapped tunnels, culverts, covered channels and inactive railway sections
+are excluded from surface detail. Existing water polygons take precedence over
+centreline detail. Stream widths are estimated by type when absent from OSM.
+Bridges use approximate endpoint elevations; detailed bridge structures are not
+modeled. Narrow shoreline heights remain limited by the regional elevation grid.
+
+Surface waterways participate in water-landing detection; covered channels do not.
+Water is deliberately static: animated ripples and reflections remain a future
+iteration. All data comes from the existing local caches; no new downloads were
+needed. See [scenery data notes](data/README.md) for reproduction and attribution.

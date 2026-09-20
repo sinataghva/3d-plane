@@ -1,4 +1,9 @@
-/** @typedef {{id:string,kind:string,name:string,points:number[][],holes:number[][][],line:boolean,width?:number,height?:number,palace?:boolean,ref?:string,class?:string}} GeoFeature */
+import {
+    isSurfaceFeature,
+    isFlowingWater,
+    distanceToLine
+} from './surfaceFeatures.js';
+/** @typedef {{id:string,kind:string,name:string,points:number[][],holes:number[][][],line:boolean,width?:number,height?:number,palace?:boolean,ref?:string,class?:string,bridge?:string,tunnel?:string,covered?:string,layer?:string,intermittent?:string,railwayType?:string,waterwayType?:string,waterType?:string,gauge?:number,widthEstimated?:boolean}} GeoFeature */
 /** @typedef {{airfield?:string,origin:number[],bounds:number[],features:GeoFeature[],places:{id:number,name:string,kind:string,point:number[]}[],timestamp:string}} GeoData */
 /** @typedef {{size:number,values:number[]}} ElevationData */
 /** @typedef {ReturnType<typeof createGeography>} Geography */
@@ -99,19 +104,21 @@ export function createGeography(data, dem) {
     };
     /** @type {Map<string,GeoFeature[]>} */
     const cells = new Map();
-    for (const f of data.features.filter((f) =>
-        ['building', 'water'].includes(f.kind)
+    for (const f of data.features.filter(
+        (f) =>
+            ['building', 'water', 'waterway'].includes(f.kind) &&
+            isSurfaceFeature(f)
     )) {
         const xs = f.points.map((p) => p[0]),
             zs = f.points.map((p) => p[1]);
         for (
-            let ix = Math.floor(Math.min(...xs) / 250);
-            ix <= Math.floor(Math.max(...xs) / 250);
+            let ix = Math.floor((Math.min(...xs) - (f.width || 0)) / 250);
+            ix <= Math.floor((Math.max(...xs) + (f.width || 0)) / 250);
             ix++
         )
             for (
-                let iz = Math.floor(Math.min(...zs) / 250);
-                iz <= Math.floor(Math.max(...zs) / 250);
+                let iz = Math.floor((Math.min(...zs) - (f.width || 0)) / 250);
+                iz <= Math.floor((Math.max(...zs) + (f.width || 0)) / 250);
                 iz++
             ) {
                 const key = `${ix},${iz}`;
@@ -122,7 +129,12 @@ export function createGeography(data, dem) {
     }
     const waterLevels = new Map(
         data.features
-            .filter((f) => f.kind === 'water')
+            .filter(
+                (f) =>
+                    f.kind === 'water' &&
+                    isSurfaceFeature(f) &&
+                    !isFlowingWater(f)
+            )
             .map((f) => {
                 const samples = f.points
                     .map((p) => sample(p[0], p[1]) - baseElevation)
@@ -154,7 +166,7 @@ export function createGeography(data, dem) {
         for (const f of cells.get(
             `${Math.floor(x / 250)},${Math.floor(z / 250)}`
         ) || []) {
-            if (f.kind === 'water' && inFeature(x, z, f))
+            if (waterLevels.has(f) && inFeature(x, z, f))
                 return waterLevels.get(f) ?? h;
         }
         return h;
@@ -178,6 +190,19 @@ export function createGeography(data, dem) {
         for (const f of cells.get(
             `${Math.floor(x / 250)},${Math.floor(z / 250)}`
         ) || []) {
+            if (f.kind === 'waterway') {
+                if (
+                    f.line &&
+                    distanceToLine(x, z, f.points) <=
+                        ((f.width || 2) *
+                            (f.intermittent === 'yes' ? 0.6 : 1)) /
+                            2 &&
+                    y <= height(x, z) + 0.7 &&
+                    (!f.bridge || f.bridge === 'no')
+                )
+                    return 'water';
+                continue;
+            }
             if (!inFeature(x, z, f)) continue;
             if (f.kind === 'water' && y <= height(x, z) + 0.7) return 'water';
             if (f.kind === 'building') {

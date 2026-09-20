@@ -3,6 +3,7 @@ Usage: python3 scripts/import-osm.py /tmp/saint-cyr-osm.json
 Coordinates are meters east/south from the local origin. No network requests.
 """
 import json,math,sys,pathlib,gzip
+from scenery_metadata import surface_metadata
 raw=json.load(gzip.open(sys.argv[1], 'rt') if sys.argv[1].endswith('.gz') else open(sys.argv[1])); assert 'remark' not in raw,raw.get('remark')
 from scenery_regions import ORIGIN, BOUNDS, MAP_FILE
 origin=ORIGIN; south,west,north,east=BOUNDS
@@ -80,7 +81,7 @@ for e in raw['elements']:
             if len(p)>1:(inner if m.get('role')=='inner' else outer).append(p)
         rings=join(outer);holes=join(inner)
     for ri,r in enumerate(rings):
-        r=simplify(r,1 if kind in ('building','runway','water') else 3)
+        r=simplify(r,.2 if kind in ('rail','waterway') else 1 if kind in ('building','runway','water') else 3)
         if not line and (len(r)<4 or area(r)<(35 if kind=='building' else 12)):continue
         if max(p[0] for p in r)<(west-origin[1])*mx or min(p[0] for p in r)>(east-origin[1])*mx or max(p[1] for p in r)<(origin[0]-north)*my or min(p[1] for p in r)>(origin[0]-south)*my:continue
         def number(v,default):
@@ -90,8 +91,9 @@ for e in raw['elements']:
         width=number(t.get('width'),{'runway':50,'taxiway':12,'road':6,'waterway':4,'rail':3}.get(kind,0))
         name=t.get('name','')
         f=dict(id=f"{e['type'][0]}{e['id']}-{ri}",kind=kind,name=name,points=r,holes=[simplify(h,1) for h in holes if inside(h[0],r)],line=line)
+        f.update(surface_metadata(t,kind))
         if kind=='building':f.update(height=height,roof=t.get('roof:shape',''),palace=('château de versailles' in name.lower() or t.get('wikidata')=='Q2946'))
-        if line:f['width']=width
+        if line and 'width' not in f:f['width']=width
         if kind=='runway':f['ref']=t.get('ref','11/29')
         if kind=='road':f['class']=t.get('highway');f['width']={'motorway':16,'trunk':12,'primary':10,'secondary':8,'tertiary':7,'path':2,'footway':2,'track':3}.get(t.get('highway'),6)
         features.append(f)

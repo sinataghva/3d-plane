@@ -158,6 +158,16 @@ export function getVisualScenario() {
     const params = new URLSearchParams(window.location.search);
     const scenarioName = params.get('visual');
 
+    if (
+        ['rail-detail', 'water-detail', 'river-detail'].includes(
+            scenarioName || ''
+        )
+    )
+        return {
+            name: scenarioName || '',
+            cameraMode: 'chase',
+            plane: { isAirborne: true }
+        };
     if (!scenarioName) {
         return null;
     }
@@ -209,6 +219,58 @@ export function applyVisualScenario({
             z: p[1] + 100
         };
         planeState.yawAngle = 0.4;
+    }
+    if (world && visualScenario.name.endsWith('-detail')) {
+        const kind =
+            visualScenario.name === 'rail-detail'
+                ? 'rail'
+                : visualScenario.name === 'river-detail'
+                  ? 'waterway'
+                  : 'water';
+        const feature = world.data.features
+            .filter(
+                (f) =>
+                    f.kind === kind &&
+                    !f.tunnel &&
+                    !f.covered &&
+                    f.points.length > 3
+            )
+            .sort((a, b) => {
+                const score = (
+                    /** @type {import('./geography.js').GeoFeature} */ f
+                ) =>
+                    kind === 'water'
+                        ? f.name === 'Grand Canal' ||
+                          f.name === 'Lac des Sept Chevaux'
+                            ? 0
+                            : 1e8
+                        : kind === 'waterway'
+                          ? f.name === 'La Lanterne' || f.name === 'Ru de Gally'
+                              ? 0
+                              : 1e8
+                          : 0;
+                return (
+                    score(a) -
+                    score(b) +
+                    Math.hypot(
+                        a.points[0][0] - world.spawn.x,
+                        a.points[0][1] - world.spawn.z
+                    ) -
+                    Math.hypot(
+                        b.points[0][0] - world.spawn.x,
+                        b.points[0][1] - world.spawn.z
+                    )
+                );
+            })[0];
+        if (feature) {
+            const p = feature.points[Math.floor(feature.points.length / 2)];
+            planeState.position = {
+                x: p[0],
+                y: world.height(p[0], p[1]) + 8,
+                z: p[1]
+            };
+            planeState.yawAngle = 0;
+        }
     }
     cameraMode.setMode(visualScenario.cameraMode);
 }

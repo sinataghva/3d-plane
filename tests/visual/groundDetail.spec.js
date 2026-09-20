@@ -54,7 +54,7 @@ for (const mission of ['saint-cyr', 'luxeuil'])
             JSON.parse(document.documentElement.dataset.sceneryStats)
         );
         expect(end.groundDetailTiles).toBeLessThanOrEqual(80);
-        expect(end.groundDetailGeometries).toBeLessThanOrEqual(80 * 7);
+        expect(end.groundDetailGeometries).toBeLessThanOrEqual(80 * 11);
     });
 for (const mission of ['saint-cyr', 'luxeuil'])
     test(`mobile ${mission} detail stays readable on the runway and in flight`, async ({
@@ -104,7 +104,12 @@ test('detail cache stays capped across travel, fades at altitude, and disposes',
     const result = await page.evaluate(async () => {
         const { createGroundDetail } =
             await import('/3d-plane/src/groundDetail.js');
-        const { getGeography } = await import('/3d-plane/src/geography.js');
+        // Vite may append an HMR timestamp; read the running game's singleton.
+        const geographyUrl = performance
+            .getEntriesByType('resource')
+            .map((r) => r.name)
+            .find((n) => /\/src\/geography\.js(?:\?|$)/.test(n));
+        const { getGeography } = await import(geographyUrl);
         const world = getGeography();
         const detail = createGroundDetail(world);
         let maximum = 0;

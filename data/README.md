@@ -28,3 +28,16 @@ Overpass responses and nine zoom-11 Terrarium tiles live in `luxeuil/cache/`.
 Run the three scenery scripts with `--luxeuil` to reproduce this region. The
 merged `osm.json.gz` is regenerable and ignored, while original layer responses
 are kept. Gameplay never downloads map data from third-party services.
+
+## Railway and water detail
+
+Processed surface features retain bridge/tunnel/covered tags, waterway type,
+intermittency, railway gauge, and width metadata from the existing caches. Railway
+and waterway line coordinates preserve the original geometry at decimetre projected
+precision for nearby rendering. Missing waterway widths use conservative estimates:
+river 12 m, stream 2 m, canal 4 m, ditch 0.7 m, drain 0.5 m; `widthEstimated` records
+this distinction. These are visual approximations, not measured channel widths.
+
+`python3 scripts/upgrade-surface-cache.py` restores these fields and line coordinates
+from both regions' original cached responses without network access or changing
+unrelated features/source dates. The normal OSM importer also retains this metadata.

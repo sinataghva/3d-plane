@@ -1,3 +1,4 @@
+import { isSurfaceFeature } from './surfaceFeatures.js';
 /** @typedef {import('./geography.js').Geography} Geography */
 export const LAND_COLORS = {
     forest: '#345d3f',
@@ -48,6 +49,7 @@ export function createGeographicCanvas(world, size = 2048, map = false) {
     for (const kind of order) {
         if (kind === 'building' && !map) continue;
         for (const f of world.data.features.filter((f) => f.kind === kind)) {
+            if (!isSurfaceFeature(f)) continue;
             ctx.beginPath();
             path(f.points);
             for (const h of f.holes) {

@@ -143,3 +143,38 @@ it('keeps a water surface level across sloped elevation samples', () => {
     });
     expect(world.height(220, 220)).toBe(world.height(280, 280));
 });
+
+it('surface stream collisions follow visible width and omit buried channels', () => {
+    const stream = {
+        ...data.features[0],
+        id: 'stream',
+        kind: 'waterway',
+        points: [
+            [500, 500],
+            [700, 500]
+        ],
+        width: 4
+    };
+    const world = createGeography(
+        {
+            ...data,
+            features: [
+                ...data.features,
+                stream,
+                {
+                    ...stream,
+                    id: 'buried',
+                    points: [
+                        [500, 600],
+                        [700, 600]
+                    ],
+                    tunnel: 'culvert'
+                }
+            ]
+        },
+        { size: 2, values: [100, 100, 100, 100] }
+    );
+    expect(world.obstacle(550, 500, 0.5)).toBe('water');
+    expect(world.obstacle(550, 504, 0.5)).toBe('');
+    expect(world.obstacle(550, 600, 0.5)).toBe('');
+});

@@ -381,6 +381,17 @@ async function startApp() {
                 airplane.localToWorld(new THREE.Vector3(-5, 0.85, 0))
             );
         }
+        if (visualScenario.name.endsWith('-detail')) {
+            camera.position
+                .copy(airplane.position)
+                .add(new THREE.Vector3(30, 35, 35));
+            camera.lookAt(
+                airplane.position.x,
+                airplane.position.y - 8,
+                airplane.position.z
+            );
+            airplane.visible = false;
+        }
         if (visualScenario.name === 'card') {
             camera.position
                 .copy(airplane.position)
