@@ -141,11 +141,38 @@ airframe or a historical reconstruction of the present-day cached map.
 The F-4 shares the Mirage's arcade jet handling, afterburner, G gear toggle,
 airbrakes, instruments, jet audio and camera modes. The same takeoff/landing
 guidance above applies; this is not real-world flight guidance. The Phantom has
-**no gun in this game**: Space is reserved for bombs and the disabled mobile
-button says “Bombs · soon”. Pressing Space produces neither cannon visuals nor
-gun audio, and does not duck the engine sound. Bomb release, visible stores, impact prediction and
-reloading are not implemented. This gameplay choice is not a claim that all real
-Phantom variants were gunless. Other aircraft retain their existing gunfire.
+**no gun in this game**. Each **Space** press or mobile **Drop bomb** tap releases
+one of six visible, procedural Mk-82 stores; holding the control does not repeat.
+Release is blocked below **10 m above local ground** (configurable through
+`BOMB_CONFIG.minimumReleaseHeight` in `src/flight/bombs.js`). A blocked press
+does not consume ammunition or queue a release for later.
+
+Released bombs inherit aircraft motion and use arcade gravity and drag. A
+terrain-draped crosshair tracks the next bomb's predicted surface impact,
+including buildings and water. It is hidden below the 10 m release
+height, dimmed during reloading, and hidden if the impact is off-screen
+or no valid impact is found. Its ground footprint scales with camera distance
+to keep its longest screen dimension near 160 pixels, while retaining the
+terrain's slope and perspective foreshortening (it never faces the camera).
+Its axes align with the aircraft's heading rather than the map axes.
+Gravity is 9.81 m/s². Arcade tuning retains full horizontal and downward velocity
+but only 25% of upward velocity at release, with linear drag of 0.08/s to shorten
+forward travel. Both values are configurable in `BOMB_CONFIG`; prediction uses
+the same tuned motion as the falling bombs.
+After the sixth release, all six stores return together after **30 simulation
+seconds**, including while landed. The HUD shows remaining bombs and the reload
+countdown. Pausing or backgrounding freezes the simulation; reset restores the
+loadout and clears falling bombs/effects.
+
+Solid impacts produce enlarged stylized explosions; water produces splashes, with
+quiet distance-attenuated impact audio. There is **no damage or destruction**.
+Prediction and flight share one trajectory model. Nearby ground uses the rendered
+terrain triangles; building hits use the game's simplified static collision
+envelopes, not architectural detail. Prediction work and effect pools are bounded.
+Bombs outside the mapped region or older than 120 seconds are discarded. At the
+30-active-bomb limit, new releases are refused without consuming a store.
+This gameplay choice is not a claim that all real Phantom variants were gunless.
+The light aircraft and Mirage retain their existing gunfire.
 
 - Procedural Cessna-style light aircraft, Mirage 2000 and F-4 Phantom models
 - Arcade flight physics with thrust, lift, gravity, stalls, banking, rudder, and landing behavior
@@ -288,8 +315,10 @@ http://127.0.0.1:4173/3d-plane/
 - **Arrow Left / Arrow Right**: Bank and turn left/right
 - **Arrow Down**: Pitch nose up
 - **Arrow Up**: Pitch nose down
-- **Space**: Fire tracer rounds. Clicking game buttons does not keep keyboard focus;
-  Space remains the aircraft weapon input during flight (F-4 bombs are pending). Use Enter to activate a keyboard-focused minimap.
+- **Space**: Fire tracer rounds on the light aircraft/Mirage, or release one bomb
+  per press on the F-4 (minimum 10 m above ground). Clicking game buttons does not
+  keep keyboard focus; Space remains the aircraft weapon input during flight.
+  Use Enter to activate a keyboard-focused minimap.
 - **G**: Toggle jet landing gear in flight
 - **P**: Open/close settings and pause/resume
 - **C**: Cycle camera mode between chase, cockpit, and orbit
@@ -510,6 +539,12 @@ Throttle is 0–1. Pitch, roll, and rudder are -1–1: positive means nose up,
 bank right, and yaw right respectively. `fire` is a boolean. Partial commands
 preserve unspecified controls; inputs persist until changed. Invalid values
 are rejected before any changes are applied.
+
+For the Phantom, each `fire: false` → `fire: true` transition requests one bomb;
+holding `fire: true` does not repeat. Telemetry includes `plane.bombs` with
+remaining count, reload seconds, active falling bombs and the latest predicted
+impact. Prediction is prepared incrementally on rendered frames, not on every
+headless physics substep.
 
 `step` advances the existing physics at 60 Hz for 1/60–10 simulated seconds,
 rounded to the nearest tick, and stops early on a crash. Telemetry includes

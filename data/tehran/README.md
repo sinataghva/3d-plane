@@ -57,8 +57,17 @@ grass, take precedence. The overview and nearby surface detail share this defaul
 The F-4 has a continuous framed two-seat canopy, twin exhausts, retractable gear
 and airbrakes, with a locally generated, era-inspired IIAF livery. It uses arcade
 jet handling, shared camera modes, instruments and jet audio. It has **no gun in
-this game**: Space produces neither gunfire nor gun audio. Bomb release, visible
-bomb stores, impact prediction and reloading are not implemented.
+this game**: Space produces neither gunfire nor gun audio. Six visible procedural
+Mk-82 bombs release individually with Space or the mobile Drop bomb button,
+only at least 10 m above local ground (a configurable game parameter).
+The last release starts a 30-simulation-second full-loadout reload, continuing
+on the ground; the HUD shows remaining stores and the countdown. A predicted
+terrain-draped crosshair scales with distance for screen readability and tracks impacts on terrain and static building
+collision envelopes, is hidden below the release limit, remains dimmed while
+reloading, and disappears if the impact is off-screen or no intersection is found. Solid
+impacts create enlarged arcade explosions, water impacts create splashes, and
+neither causes damage or destruction. All motion, prediction and effects are
+local, with bounded work and resources. See [bomb controls and limits](../../README.md#f-4-phantom--iiaf).
 
 Eight static F-5 Tigers occupy mapped military apron way 28670023. Three generic
 Airbus-style airliners occupy civilian apron ways 1044518738 and 1044507318.

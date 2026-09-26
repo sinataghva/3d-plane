@@ -8,6 +8,100 @@ import { Vector3 } from 'three';
 import { tehranLandmarks, createTehranLandmarks } from './tehranLandmarks.js';
 import { createRenderedHeight } from './groundDetail.js';
 import { createUniversitySetting } from './universitySetting.js';
+import { createBombSurfaces } from './bombSurfaces.js';
+import { inFeature } from './geography.js';
+import {
+    bombLaunch,
+    advanceBomb,
+    createBombSimulation
+} from '../flight/bombs.js';
+import { createPlaneState } from '../flight/physics.js';
+
+test('bomb contacts use real Tehran roof, lake and hill surfaces', () => {
+    const world = createGeography({ ...data, airfield: 'OIII' }, dem, {
+            icao: 'OIII',
+            runwayRef: '11R/29L'
+        }),
+        surface = createBombSurfaces(world);
+    const compareTrajectory = (x, z, height, kind) => {
+        const state = createPlaneState('phantom');
+        Object.assign(state, {
+            position: { x: x + 2.4, y: height + 40, z: z + 2 },
+            speed: 0,
+            verticalSpeed: 0,
+            yawAngle: 0,
+            pitchAngle: 0,
+            rollAngle: 0,
+            isAirborne: true
+        });
+        const preview = bombLaunch(state, 0),
+            previous = new Vector3();
+        let predicted;
+        for (let i = 0; i < 1200 && !predicted; i++) {
+            previous.copy(preview.position);
+            advanceBomb(preview);
+            predicted = surface.sweep(previous, preview.position);
+        }
+        const sim = createBombSimulation(surface.sweep, surface.inside);
+        let hits = sim.step(state, true, 40);
+        for (let i = 0; i < 1200 && !hits.length; i++)
+            hits = sim.step(state, false, 40);
+        expect(predicted?.kind).toBe(kind);
+        expect(hits).toHaveLength(1);
+        expect(hits[0].position.distanceTo(predicted.position)).toBeLessThan(
+            0.1
+        );
+    };
+    let roofChecked = false;
+    for (const f of data.features.filter(
+        (f) =>
+            f.kind === 'building' &&
+            f.height > 20 &&
+            f.points.length === 5 &&
+            !f.holes.length
+    )) {
+        const p = f.points.slice(0, -1),
+            x = p.reduce((a, p) => a + p[0], 0) / 4,
+            z = p.reduce((a, p) => a + p[1], 0) / 4;
+        if (!inFeature(x, z, f)) continue;
+        const roof = world.height(f.points[0][0], f.points[0][1]) + f.height;
+        const hit = surface.sweep(
+            new Vector3(x, roof + 10, z),
+            new Vector3(x, roof - 1, z)
+        );
+        if (hit?.kind === 'building' && Math.abs(hit.position.y - roof) < 0.1) {
+            compareTrajectory(x, z, roof, 'building');
+            roofChecked = true;
+            break;
+        }
+    }
+    expect(roofChecked).toBe(true);
+    const f = data.features.find((f) => f.id === 'r8128152-0'),
+        x = f.points.reduce((a, p) => a + p[0], 0) / f.points.length,
+        z = f.points.reduce((a, p) => a + p[1], 0) / f.points.length;
+    const water = surface.sweep(
+        new Vector3(x, surface.height(x, z) + 30, z),
+        new Vector3(x, surface.height(x, z) - 5, z)
+    );
+    expect(water.kind).toBe('water');
+    compareTrajectory(x, z, surface.height(x, z), 'water');
+    expect(Math.abs(water.position.y - surface.height(x, z))).toBeLessThan(0.1);
+    const hill = surface.sweep(
+        new Vector3(15000, surface.height(15000, -17000) + 40, -17000),
+        new Vector3(15000, surface.height(15000, -17000) - 5, -17000)
+    );
+    expect(hill.kind).toBe('ground');
+    compareTrajectory(15000, -17000, surface.height(15000, -17000), 'ground');
+    compareTrajectory(
+        world.spawn.x,
+        world.spawn.z,
+        surface.height(world.spawn.x, world.spawn.z),
+        'ground'
+    );
+    expect(
+        Math.abs(hill.position.y - surface.height(15000, -17000))
+    ).toBeLessThan(0.1);
+});
 
 test('Azadi garden triangles follow the actual sloped terrain with constant clearance', () => {
     const world = createGeography({ ...data, airfield: 'OIII' }, dem, {

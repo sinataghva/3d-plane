@@ -29,6 +29,7 @@ import {
  *
  * @typedef {object} PlaneState
  * @property {{x:number,y:number,z:number,w:number}} [attitude]
+ * @property {{remaining:number,reloadSeconds:number,active:number,prediction:{x:number,y:number,z:number,kind:string}|null}} [bombs]
  * @property {boolean} [elevatorManeuver]
  * @property {number} [airbrakeExtension]
  * @property {number} [gearExtension]

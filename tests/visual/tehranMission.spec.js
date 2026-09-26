@@ -144,7 +144,7 @@ for (const mobile of [false, true]) {
         );
         await ready(page);
         expect(maps.some((u) => /saint-cyr|luxeuil/.test(u))).toBe(false);
-        await expect(page.locator('.touch-fire')).toBeDisabled();
+        await expect(page.locator('.touch-fire')).toBeEnabled();
         let state = await page.evaluate(() =>
             window.planeAutomation.getState()
         );

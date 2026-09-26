@@ -1401,6 +1401,13 @@ body:has(.automation-status) .warning-banner {
 .bomb-aircraft .cockpit-reticle {
     display: none;
 }
+.bomb-readout {
+    margin-top: 6px;
+    color: #ffda82;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
 .mission-card {
     overflow: hidden;
     text-align: left;

@@ -1,8 +1,8 @@
-/** Shared behavior, independent of a mission's display name. Bomb simulation is not implemented. */
+/** Shared behavior, independent of a mission's display name. */
 export const AIRCRAFT_CAPABILITIES = Object.freeze({
     cessna: Object.freeze({ jet: false, weapon: 'gun', weaponReady: true }),
     mirage: Object.freeze({ jet: true, weapon: 'gun', weaponReady: true }),
-    phantom: Object.freeze({ jet: true, weapon: 'bomb', weaponReady: false })
+    phantom: Object.freeze({ jet: true, weapon: 'bomb', weaponReady: true })
 });
 /** @param {string|undefined} aircraft */
 export function aircraftCapabilities(aircraft) {

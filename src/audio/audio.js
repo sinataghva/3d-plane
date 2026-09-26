@@ -309,6 +309,24 @@ export function createFlightAudio() {
             boomUntil = context.currentTime + 0.9;
             burst(boom, 0.95, 1.25, 1, 0.16);
         },
+        /** Small procedural impact cue, attenuated with distance. No delayed playback.
+         * @param {string} kind @param {number} distance */
+        bombImpact(kind, distance) {
+            if (
+                !context ||
+                !active ||
+                muted ||
+                document.hidden ||
+                distance > 2500
+            )
+                return;
+            burst(
+                impact,
+                0.45 / (1 + distance / 250),
+                kind === 'water' ? 0.3 : 0.6,
+                kind === 'water' ? 1.5 : 0.65
+            );
+        },
         reset() {
             stopVoices();
             nextShot = 0;

@@ -22,6 +22,34 @@ function setup() {
 }
 
 describe('flight automation', () => {
+    it('retains short Phantom fire edges between ticks and returns detached bomb telemetry', () => {
+        const planeState = createPlaneState('phantom');
+        /** @type {(number|undefined)[]} */ const pulses = [];
+        planeState.bombs = {
+            remaining: 6,
+            reloadSeconds: 0,
+            active: 0,
+            prediction: { x: 1, y: 2, z: 3, kind: 'ground' }
+        };
+        const api = createFlightAutomation({
+            planeState,
+            render: () => {},
+            reset: () => {},
+            advance: (_dt, k) => pulses.push(k.bombPresses)
+        });
+        api.setControls({ fire: true });
+        api.setControls({ fire: false });
+        api.step({ seconds: 1 / 60 });
+        expect(pulses).toEqual([1]);
+        const snapshot = api.getState();
+        if (snapshot.plane.bombs?.prediction)
+            snapshot.plane.bombs.prediction.x = 999;
+        expect(api.getState().plane.bombs?.prediction?.x).toBe(1);
+        api.setControls({ fire: true });
+        api.pause();
+        api.step({ seconds: 1 / 60 });
+        expect(pulses).toEqual([1, 0]);
+    });
     it('sets full throttle immediately without advancing time', () => {
         const { api } = setup();
         const state = api.setControls({ throttle: 1 });

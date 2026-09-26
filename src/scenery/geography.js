@@ -251,8 +251,8 @@ export function createGeography(data, dem, departure) {
                 ) <=
                 (r.width || 50) / 2
         );
-    /** @param {number} x @param {number} z @param {number} y */
-    const obstacle = (x, z, y) => {
+    /** @param {number} x @param {number} z @param {number} y @param {number} [clearance] */
+    const obstacle = (x, z, y, clearance = 1) => {
         for (const l of landmarks) {
             if (
                 l.id === 'tabiat' &&
@@ -296,7 +296,7 @@ export function createGeography(data, dem, departure) {
             if (f.kind === 'water' && y <= height(x, z) + 0.7) return 'water';
             if (f.kind === 'building') {
                 const p = f.points[0];
-                if (y < height(p[0], p[1]) + (f.height || 8) + 1)
+                if (y < height(p[0], p[1]) + (f.height || 8) + clearance)
                     return 'building';
             }
         }

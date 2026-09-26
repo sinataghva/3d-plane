@@ -50,6 +50,8 @@ import { createCockpitOverlay } from './ui/cockpitOverlay.js';
 import { createHud } from './ui/hud.js';
 import { createKeyboardState } from './flight/input.js';
 import { createMachineGun } from './effects/machineGun.js';
+import { createBombing } from './effects/bombing.js';
+import { BOMB_CONFIG } from './flight/bombs.js';
 import { createMiniMap } from './map/minimap.js';
 import {
     createPlanePhysics,
@@ -208,11 +210,11 @@ async function startApp() {
     if (capabilities.weapon === 'bomb') {
         const fire = document.querySelector('.touch-fire');
         if (fire instanceof HTMLButtonElement) {
-            fire.textContent = 'Bombs · soon';
-            fire.disabled = true;
+            fire.textContent = 'Drop bomb';
+            fire.disabled = false;
             fire.setAttribute(
                 'aria-label',
-                'Bomb release is not available yet'
+                `Drop one bomb (minimum height ${BOMB_CONFIG.minimumReleaseHeight} metres)`
             );
         }
     }
@@ -223,7 +225,7 @@ async function startApp() {
             if (item.textContent?.includes('Fire tracers')) item.hidden = true;
         });
         const help = document.createElement('li');
-        help.textContent = `${mission.name}: hold W at full thrust for 110% afterburner; release to return to 100%. G: landing gear. Hold S at zero thrust: airbrakes. ${capabilities.weapon === 'gun' ? 'Space: cannon.' : 'No gun. Bomb release is not available yet.'} P: settings. Mobile: full slider + hold Boost.`;
+        help.textContent = `${mission.name}: hold W at full thrust for 110% afterburner; release to return to 100%. G: landing gear. Hold S at zero thrust: airbrakes. ${capabilities.weapon === 'gun' ? 'Space: cannon.' : `Space / Drop bomb: one bomb per press, minimum height ${BOMB_CONFIG.minimumReleaseHeight} m. Six bombs; ${BOMB_CONFIG.reloadSeconds} s reload when empty.`} P: settings. Mobile: full slider + hold Boost.`;
         list?.append(help);
     }
     const loading = document.getElementById('scenery-loading');
@@ -321,6 +323,12 @@ async function startApp() {
     }
     const crashEffect = createCrashEffect(scene);
     const machineGun = createMachineGun(scene);
+    const bombing =
+        capabilities.weapon === 'bomb'
+            ? createBombing(scene, airplane, world, (kind, distance) =>
+                  flightAudio.bombImpact(kind, distance)
+              )
+            : null;
     const machTransition = createMachTransition();
     let machBoomPending = false;
     const machEffect = isJet(mission.aircraft)
@@ -351,6 +359,7 @@ async function startApp() {
         groundTexture.dispose();
         destinationBeacon.dispose();
         machineGun.dispose();
+        bombing?.dispose();
         controls.dispose();
         timer.dispose();
         const geometries = new Set();
@@ -403,6 +412,7 @@ async function startApp() {
         crashOverlayElement.hidden = true;
         crashEffect.hide();
         machineGun.clear();
+        bombing?.reset(planeState);
         simulationClock.reset();
     };
     const experience = createExperience({
@@ -669,6 +679,123 @@ async function startApp() {
             }
         }
         experience.update();
+        if (bombing && visualScenario.name.startsWith('bombs-')) {
+            const name = visualScenario.name;
+            const feature =
+                name === 'bombs-water'
+                    ? world.data.features.find((f) => f.id === 'r8128152-0')
+                    : name === 'bombs-building'
+                      ? world.data.features.find(
+                            (f) =>
+                                f.kind === 'building' &&
+                                (f.height || 0) > 20 &&
+                                (f.height || 0) < 50 &&
+                                f.points.length === 5 &&
+                                !f.holes.length
+                        )
+                      : null;
+            const x = feature
+                ? feature.points.reduce((a, p) => a + p[0], 0) /
+                  feature.points.length
+                : name === 'bombs-slope'
+                  ? 15000
+                  : world.spawn.x;
+            const z = feature
+                ? feature.points.reduce((a, p) => a + p[1], 0) /
+                  feature.points.length
+                : name === 'bombs-slope'
+                  ? -17000
+                  : world.spawn.z;
+            Object.assign(planeState, {
+                position: { x, y: world.height(x, z) + 40, z },
+                speed: 0,
+                verticalSpeed: 0,
+                yawAngle: 0,
+                pitchAngle: 0,
+                rollAngle: 0,
+                isAirborne: true
+            });
+            delete planeState.attitude;
+            if (name === 'bombs-partial') {
+                bombing.step(planeState, true, 1 / 60);
+                bombing.step(planeState, false, 1 / 60);
+            }
+            if (['bombs-reloading', 'bombs-restored'].includes(name)) {
+                for (let i = 0; i < 6; i++) {
+                    bombing.step(planeState, true, 1 / 60);
+                    bombing.step(planeState, false, 1 / 60);
+                }
+                if (name === 'bombs-restored')
+                    for (let i = 0; i < 1800; i++)
+                        bombing.step(planeState, false, 1 / 60);
+            }
+            if (name === 'bombs-building')
+                planeState.position.y += feature?.height || 0;
+            const impact = [
+                'bombs-impact',
+                'bombs-water',
+                'bombs-building'
+            ].includes(name);
+            if (impact) {
+                bombing.step(planeState, true, 1 / 60);
+                for (let i = 0; i < 1200 && bombing.sim.active.length; i++)
+                    bombing.step(planeState, false, 1 / 60);
+                for (let i = 0; i < 12; i++)
+                    bombing.step(planeState, false, 1 / 60);
+                airplane.visible = false;
+                const surface =
+                    world.height(x, z) +
+                    (name === 'bombs-building' ? feature?.height || 0 : 0);
+                camera.position.set(x + 18, surface + 14, z + 18);
+                camera.lookAt(x - 2.4, surface + 1, z - 2);
+            } else {
+                syncPlaneMesh({ airplane, propeller, planeState });
+                camera.position.set(x + 12, planeState.position.y - 3, z + 13);
+                camera.lookAt(x - 1, planeState.position.y, z);
+            }
+            if (['bombs-slope', 'bombs-low', 'bombs-high'].includes(name)) {
+                if (name === 'bombs-low')
+                    planeState.position.y = world.height(x, z) + 5;
+                if (name === 'bombs-high')
+                    planeState.position.y = world.height(x, z) + 1500;
+                airplane.visible = false;
+                const distance = name === 'bombs-high' ? 1500 : 30;
+                camera.position.set(
+                    x + distance,
+                    world.height(x, z) + distance,
+                    z + distance
+                );
+                camera.lookAt(x - 2.4, world.height(x, z), z - 2);
+                if (name === 'bombs-high') {
+                    planeState.yawAngle = 0.6;
+                    camera.position.set(
+                        x - Math.cos(0.6) * distance,
+                        world.height(x, z) + distance,
+                        z + Math.sin(0.6) * distance
+                    );
+                    camera.lookAt(x, world.height(x, z), z);
+                }
+            }
+            // These fixtures relocate after the shared preparation pass.
+            for (let i = 0; i < 120; i++)
+                groundDetail.update(
+                    planeState.position,
+                    scene.userData.quality,
+                    0.1,
+                    0
+                );
+            for (let i = 0; i < 120; i++) {
+                groundTexture.update(
+                    planeState.position,
+                    scene.userData.quality,
+                    0.1
+                );
+                const stats = groundTexture.stats();
+                if (stats.groundTextureReady && !stats.groundTexturePending)
+                    break;
+                await new Promise((resolve) => requestAnimationFrame(resolve));
+            }
+        }
         hud.update({ planeState, cameraMode });
         cockpitOverlay.update({ planeState, cameraMode });
         miniMap.update({ planeState });
@@ -709,6 +836,11 @@ async function startApp() {
         updateRegionDetail(airbase, camera.position, scene.userData.quality);
         serviceVehicles.update(camera.position, scene.userData.quality);
         roadTraffic.update(camera.position, scene.userData.quality, 0, camera);
+        if (bombing) {
+            for (let i = 0; i < 60; i++)
+                bombing.render(planeState, cameraMode.getMode() === 'cockpit');
+            bombing.projectMarker(camera, planeState);
+        }
         renderer.render(scene, camera);
         document.getElementById('scenery-loading')?.remove();
         if (import.meta.env.DEV)
@@ -718,6 +850,7 @@ async function startApp() {
                 ...roadTraffic.stats(),
                 ...groundDetail.stats(),
                 ...groundTexture.stats(),
+                ...bombing?.stats(),
                 ...airbase.userData.summary
             });
         document.documentElement.dataset.visualReady = 'true';
@@ -769,6 +902,13 @@ async function startApp() {
             delta
         });
         machineGun.update({ planeState, keyboard, delta });
+        bombing?.step(
+            planeState,
+            keyboard.space,
+            delta,
+            Boolean(keyboard.bombPresses)
+        );
+        if (keyboard.bombPresses) keyboard.bombPresses--;
         updateMirage(airplane, planeState, keyboard, performance.now() / 1000);
         warningBanner.update({
             planeState,
@@ -974,6 +1114,7 @@ async function startApp() {
             updateMirage(airplane, planeState, keyboard, timestamp / 1000);
         syncPlaneMesh({ airplane, propeller, planeState });
         const mode = photoMode.active ? 'orbit' : cameraMode.getMode();
+        bombing?.render(planeState, mode === 'cockpit');
         machEffect?.render(mode === 'cockpit', planeState.isCrashed);
         flightAudio.update(
             planeState,
@@ -1003,6 +1144,7 @@ async function startApp() {
                 delta: timer.getDelta()
             });
         if (trafficBench) trafficBench.position();
+        bombing?.projectMarker(camera, planeState);
         cockpitOverlay.update({ planeState, cameraMode });
         if (modeChanged || timestamp - lastHudUpdate >= 100) {
             experience.update();
@@ -1063,6 +1205,7 @@ async function startApp() {
                 geometries: renderer.info.memory.geometries,
                 textures: renderer.info.memory.textures,
                 machTransitions: machTransition.count,
+                ...bombing?.stats(),
                 ...roadTraffic.stats(),
                 ...groundDetail.stats(),
                 ...groundTexture.stats(),

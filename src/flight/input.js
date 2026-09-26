@@ -13,6 +13,7 @@ import { isJet } from '../aircraft/capabilities.js';
  * @property {boolean} arrowUp
  * @property {boolean} arrowDown
  * @property {boolean} space
+ * @property {number} [bombPresses]
  * @property {number} stickRoll
  * @property {number} stickPitch
  * @property {number} [stickRudder]
@@ -47,6 +48,7 @@ export function applyStickCurve(value, authority) {
 export function createInputController(aircraft = 'cessna') {
     /** @type {KeyboardState} */
     const state = {
+        bombPresses: 0,
         brake: false,
         boost: false,
         w: false,
@@ -68,8 +70,11 @@ export function createInputController(aircraft = 'cessna') {
     /** @type {number | null} */
     let stickPointer = null;
     const sync = () => {
+        const wasPressed = state.space;
         for (const key of new Set(Object.values(KEY_BINDINGS)))
             state[key] = keys.has(key) || [...pointers.values()].includes(key);
+        if (aircraft === 'phantom' && state.space && !wasPressed)
+            state.bombPresses = Math.min(6, (state.bombPresses || 0) + 1);
     };
     return {
         state,
@@ -122,6 +127,7 @@ export function createInputController(aircraft = 'cessna') {
             return true;
         },
         reset() {
+            state.bombPresses = 0;
             keys.clear();
             pointers.clear();
             stickPointer = null;
@@ -232,7 +238,8 @@ export function createKeyboardState(aircraft = 'cessna') {
                     target.closest('button, [role="button"]')
                 )
                     target.blur();
-                input.key(' ', type === 'keydown');
+                if (!(aircraft === 'phantom' && event.repeat))
+                    input.key(' ', type === 'keydown');
             },
             { capture: true }
         );
@@ -243,7 +250,8 @@ export function createKeyboardState(aircraft = 'cessna') {
             isEditableTarget(event.target) ||
             event.metaKey ||
             event.ctrlKey ||
-            event.altKey
+            event.altKey ||
+            (aircraft === 'phantom' && event.code === 'Space' && event.repeat)
         )
             return;
         if (input.key(event.code === 'Space' ? ' ' : event.key, true))

@@ -7,11 +7,11 @@ import { createInputController } from '../flight/input.js';
 import { createMachineGun } from '../effects/machineGun.js';
 import { updateAirplaneCockpitVisibility } from './airplane.js';
 
-test('Phantom is a jet with deferred bombs, never a gun-equipped aircraft', () => {
+test('Phantom is a bomb-equipped jet, never a gun-equipped aircraft', () => {
     expect(isJet('phantom')).toBe(true);
     expect(aircraftCapabilities('phantom')).toMatchObject({
         weapon: 'bomb',
-        weaponReady: false
+        weaponReady: true
     });
     const scene = new THREE.Scene(),
         gun = createMachineGun(scene),

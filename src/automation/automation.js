@@ -23,6 +23,7 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
     let accumulator = 0;
     let routeStatus = 'idle';
     let routeError = '';
+    let bombPresses = 0;
     /** @type {FlightControls} */
     let controls = {
         throttle: 0,
@@ -71,6 +72,16 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
         plane: {
             ...planeState,
             position: { ...planeState.position },
+            ...(planeState.bombs
+                ? {
+                      bombs: {
+                          ...planeState.bombs,
+                          prediction: planeState.bombs.prediction
+                              ? { ...planeState.bombs.prediction }
+                              : null
+                      }
+                  }
+                : {}),
             ...(planeState.attitude
                 ? { attitude: { ...planeState.attitude } }
                 : {})
@@ -97,6 +108,8 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
             return getState();
         },
         pause() {
+            bombPresses = 0;
+            if (planeState.aircraft === 'phantom') controls.fire = false;
             controls.boost = false;
             clearAfterburner(planeState);
             continuous = false;
@@ -119,6 +132,12 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
         setControls(values) {
             assertActive();
             validateControls(values);
+            if (
+                planeState.aircraft === 'phantom' &&
+                values.fire &&
+                !controls.fire
+            )
+                bombPresses = Math.min(6, bombPresses + 1);
             controls = { ...controls, ...values };
             planeState.thrust = controls.throttle;
             if (!controls.boost) clearAfterburner(planeState);
@@ -141,6 +160,7 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
                 throw new Error('seconds must be between 1/60 and 10.');
             const count = Math.round(seconds * 60);
             const input = {
+                bombPresses: 0,
                 boost: Boolean(controls.boost),
                 brake: Boolean(controls.airbrake),
                 w: false,
@@ -157,6 +177,8 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
                 space: controls.fire
             };
             for (let i = 0; i < count && !planeState.isCrashed; i++) {
+                input.bombPresses = bombPresses > 0 ? 1 : 0;
+                if (bombPresses > 0) bombPresses--;
                 planeState.thrust = controls.throttle;
                 advance(1 / 60, input);
                 ticks++;
@@ -280,6 +302,7 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
                 throw new Error(
                     'Wait for the animated flight before resetting.'
                 );
+            bombPresses = 0;
             controls = {
                 throttle: 0,
                 pitch: 0,
@@ -300,6 +323,7 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
             return getState();
         },
         release() {
+            bombPresses = 0;
             clearAfterburner(planeState);
             active = false;
             continuous = false;

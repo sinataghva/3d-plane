@@ -180,6 +180,20 @@ const VISUAL_SCENARIOS = {
 export function getVisualScenario() {
     const params = new URLSearchParams(window.location.search);
     const scenarioName = params.get('visual');
+    if (scenarioName?.startsWith('bombs-'))
+        return {
+            name: scenarioName,
+            cameraMode: 'orbit',
+            plane: {
+                isAirborne: true,
+                gearDown: false,
+                gearExtension: 0,
+                speed: 0,
+                pitchAngle: 0,
+                rollAngle: 0,
+                yawAngle: 0
+            }
+        };
     if (TEHRAN_LANDMARKS.some((l) => scenarioName === `landmark-${l.id}`))
         return {
             name: scenarioName || '',

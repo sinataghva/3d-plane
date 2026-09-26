@@ -31,7 +31,7 @@ export function createPhantomPaint() {
 }
 
 /** Stylized IIAF Phantom: twin engines, tandem canopy, raised outer wings and
- * drooped stabilators. No gun, stores or bomb behavior.
+ * drooped stabilators. The bombing system attaches its six visible stores.
  * +X forward; shared jet gear, controls and exhaust animation contract. */
 export function createPhantom() {
     const airplane = new THREE.Group();
