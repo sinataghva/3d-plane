@@ -1,12 +1,12 @@
 import { destinationProjection } from './destination.js';
 /** @typedef {{zoom:number,panX:number,panY:number}} MapView */
-/** @param {number} width @param {number} height @param {{minX:number,minZ:number,width:number,depth:number}} world */
-export function createMapViewport(width, height, world) {
+/** @param {number} width @param {number} height @param {{minX:number,minZ:number,width:number,depth:number}} world @param {number} [zoomLimit] */
+export function createMapViewport(width, height, world, zoomLimit = 4) {
     const view = { zoom: 1, panX: 0, panY: 0 };
     let w = width,
         h = height;
     const base = () => destinationProjection(w, h, world);
-    const maxZoom = () => 4;
+    const maxZoom = () => zoomLimit;
     function constrain() {
         view.zoom = Math.max(1, Math.min(maxZoom(), view.zoom));
         const b = base();

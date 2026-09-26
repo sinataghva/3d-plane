@@ -66,6 +66,7 @@ data/saint-cyr/cache/osm.json.gz
 
 # Reproducible scenery intermediates
 data/luxeuil/cache/osm.json.gz
+data/tehran/cache/osm.json.gz
 **/__pycache__/
 
 # Local working notes and temporary plans

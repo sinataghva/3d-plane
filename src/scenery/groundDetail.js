@@ -1,8 +1,12 @@
-import { pavedAirfieldSurface } from './surfaceFeatures.js';
+import {
+    pavedAirfieldSurface,
+    pavedAirfieldDefault
+} from './surfaceFeatures.js';
 import {
     indexScenerySurfaces,
     createBallastTexture,
-    offsetLine
+    offsetLine,
+    clipRectangle
 } from './scenerySurfaces.js';
 import {
     isSurfaceFeature,
@@ -152,6 +156,46 @@ export function roadRibbon(source, width) {
         corners: [left[i], left[i + 1], right[i + 1], right[i]]
     }));
 }
+
+/** Fill shared endpoints across separate OSM ways. Interior bends already share
+ * mitered ribbon vertices. Keep separate elevation layers and bridges isolated.
+ * @param {import('./geography.js').GeoFeature[]} features */
+export function roadJunctionPatches(features) {
+    /** @type {Map<string,{point:number[],radius:number,count:number}>} */
+    const ends = new Map();
+    for (const f of features) {
+        if (
+            f.kind !== 'road' ||
+            !f.line ||
+            f.points.length < 2 ||
+            !isSurfaceFeature(f) ||
+            (f.bridge && f.bridge !== 'no') ||
+            ['footway', 'path', 'steps', 'cycleway'].includes(f.class || '')
+        )
+            continue;
+        const a = f.points[0],
+            b = f.points[f.points.length - 1];
+        if (Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.01) continue;
+        for (const point of [a, b]) {
+            const key = `${point[0].toFixed(1)},${point[1].toFixed(1)},${f.layer || '0'}`;
+            const end = ends.get(key) || { point, radius: 0, count: 0 };
+            end.radius = Math.max(end.radius, (f.width || 5) / 2);
+            end.count++;
+            ends.set(key, end);
+        }
+    }
+    return [...ends.values()]
+        .filter((e) => e.count > 1)
+        .map(({ point: [x, z], radius }) =>
+            Array.from({ length: 16 }, (_, i) => {
+                const angle = (i * Math.PI) / 8;
+                return [
+                    x + Math.cos(angle) * radius,
+                    z + Math.sin(angle) * radius
+                ];
+            })
+        );
+}
 /** @param {number} size @param {boolean} grass */
 function noiseTexture(size, grass) {
     const data = new Uint8Array(size * size * 4);
@@ -260,7 +304,7 @@ export function createGroundDetail(world) {
             });
         }
     }
-    const jet = Boolean(world.data.airfield?.includes('LFSX'));
+    const defaultPaved = pavedAirfieldDefault(world.data);
     let numbers = ['11', '29'];
     for (const f of world.data.features) {
         if (
@@ -278,7 +322,7 @@ export function createGroundDetail(world) {
         const kind =
             f.kind === 'road'
                 ? 'road'
-                : pavedAirfieldSurface(f, jet)
+                : pavedAirfieldSurface(f, defaultPaved)
                   ? 'asphalt'
                   : 'grass';
         const width = f.width || (f.kind === 'road' ? 5 : 20);
@@ -374,7 +418,8 @@ export function createGroundDetail(world) {
                     line(t, t + 4, side * width * 0.47, 1.5, 'paint');
         }
     }
-    indexScenerySurfaces(world, TILE, (x, z, patch) => {
+    /** @param {number} x @param {number} z @param {import('./scenerySurfaces.js').SurfacePatch} patch */
+    const addPatch = (x, z, patch) => {
         const key = `${x},${z}`;
         let tile = index.get(key);
         if (!tile) {
@@ -383,14 +428,43 @@ export function createGroundDetail(world) {
                 z: (z + 0.5) * TILE,
                 y: height((x + 0.5) * TILE, (z + 0.5) * TILE),
                 strips: [],
-                priority: 2
+                priority: patch.kind === 'road' ? 1 : 2
             };
             index.set(key, tile);
         }
         if (patch.kind === 'asphalt' || patch.kind === 'grass')
             tile.priority = 0;
         (tile.patches ??= []).push(patch);
-    });
+    };
+    for (const points of roadJunctionPatches(world.data.features)) {
+        const xs = points.map((p) => p[0]),
+            zs = points.map((p) => p[1]);
+        for (
+            let x = Math.floor(Math.min(...xs) / TILE);
+            x <= Math.floor(Math.max(...xs) / TILE);
+            x++
+        )
+            for (
+                let z = Math.floor(Math.min(...zs) / TILE);
+                z <= Math.floor(Math.max(...zs) / TILE);
+                z++
+            ) {
+                const clipped = clipRectangle(
+                    points,
+                    x * TILE,
+                    z * TILE,
+                    (x + 1) * TILE,
+                    (z + 1) * TILE
+                );
+                if (clipped.length >= 3)
+                    addPatch(x, z, {
+                        points: clipped,
+                        kind: 'road',
+                        offset: 0.04
+                    });
+            }
+    }
+    indexScenerySurfaces(world, TILE, addPatch);
     const waterEffects = createWaterEffects();
     const ballast = createBallastTexture();
     const grain = noiseTexture(512, false),

@@ -4,22 +4,41 @@ import {
 } from './buildingLights.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { createGeographicCanvas } from '../map/cartography.js';
-import { pavedAirfieldSurface } from './surfaceFeatures.js';
+import {
+    createGeographicCanvas,
+    createReliefCanvas
+} from '../map/cartography.js';
+import {
+    pavedAirfieldSurface,
+    pavedAirfieldDefault
+} from './surfaceFeatures.js';
 import { inFeature } from './geography.js';
 import { airfieldBuilding, appendAirfieldBuilding } from './airfieldScenery.js';
+import {
+    isMehrabad,
+    MEHRABAD_MILITARY_APRONS,
+    nearMilitaryApron
+} from './mehrabad.js';
 import { instanceStaticScenery } from '../rendering/instancing.js';
+import { addRegionDistanceFade } from './regionDetail.js';
+import { createTehranLandmarks, tehranLandmarks } from './tehranLandmarks.js';
 
 /** @param {import('./geography.js').Geography} world */
 export function createTerrain(world) {
     const group = new THREE.Group();
     group.name = world.data.airfield || 'Saint-Cyr – Versailles';
-    const surface = createGeographicCanvas(world, 4096);
+    const groundRelief = isMehrabad(world.data)
+        ? createReliefCanvas(world)
+        : undefined;
+    const surface = createGeographicCanvas(world, 4096, false, groundRelief);
     const texture = new THREE.CanvasTexture(surface);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = 4;
     const ground = new THREE.PlaneGeometry(world.width, world.depth, 256, 256);
     ground.rotateX(-Math.PI / 2);
+    const centerX = (world.minX + world.maxX) / 2;
+    const centerZ = (world.minZ + world.maxZ) / 2;
+    ground.translate(centerX, 0, centerZ);
     const positions = ground.getAttribute('position');
     for (let i = 0; i < positions.count; i++)
         positions.setY(i, world.height(positions.getX(i), positions.getZ(i)));
@@ -29,21 +48,42 @@ export function createTerrain(world) {
         new THREE.MeshLambertMaterial({ map: texture })
     );
     terrain.receiveShadow = true;
+    if (groundRelief) terrain.userData.groundRelief = groundRelief;
     group.add(terrain);
     // A muted continuation permits unrestricted flight beyond the detailed area.
+    // Cut out the detailed region AND its 3 km transition shoulders. A solid
+    // plane at -35 m otherwise covers terrain below the departure elevation.
+    const outerShape = new THREE.Shape([
+        new THREE.Vector2(-50000, -50000),
+        new THREE.Vector2(50000, -50000),
+        new THREE.Vector2(50000, 50000),
+        new THREE.Vector2(-50000, 50000)
+    ]);
+    outerShape.closePath();
+    const opening = new THREE.Path([
+        new THREE.Vector2(world.minX - 3000, -world.maxZ - 3000),
+        new THREE.Vector2(world.maxX + 3000, -world.maxZ - 3000),
+        new THREE.Vector2(world.maxX + 3000, -world.minZ + 3000),
+        new THREE.Vector2(world.minX - 3000, -world.minZ + 3000)
+    ]);
+    opening.closePath();
+    outerShape.holes.push(opening);
     const outer = new THREE.Mesh(
-        new THREE.PlaneGeometry(100000, 100000),
-        new THREE.MeshLambertMaterial({ color: 0x798861 })
+        new THREE.ShapeGeometry(outerShape),
+        new THREE.MeshLambertMaterial({
+            color: world.data.landscape === 'arid' ? 0xa9987a : 0x798861
+        })
     );
+    outer.name = 'Distant plain outside mapped terrain';
     outer.rotation.x = -Math.PI / 2;
     outer.position.y = -35;
     group.add(outer);
     // Join the detailed tile to the distant plain using the same collision height.
     for (const [cx, cz, w, d] of [
-        [world.minX - 1500, 0, 3000, world.depth + 6000],
-        [world.maxX + 1500, 0, 3000, world.depth + 6000],
-        [0, world.minZ - 1500, world.width, 3000],
-        [0, world.maxZ + 1500, world.width, 3000]
+        [world.minX - 1500, centerZ, 3000, world.depth + 6000],
+        [world.maxX + 1500, centerZ, 3000, world.depth + 6000],
+        [centerX, world.minZ - 1500, world.width, 3000],
+        [centerX, world.maxZ + 1500, world.width, 3000]
     ]) {
         const apron = new THREE.PlaneGeometry(w, d, 64, 64);
         apron.rotateX(-Math.PI / 2);
@@ -58,8 +98,17 @@ export function createTerrain(world) {
     const chunks = new Map();
     const boundaries = world.data.features.filter((f) => f.kind === 'airfield');
     const military = Boolean(world.data.airfield?.includes('LFSX'));
+    const militaryAprons = isMehrabad(world.data)
+        ? world.data.features.filter((f) =>
+              MEHRABAD_MILITARY_APRONS.includes(f.id)
+          )
+        : [];
     let detailedBuildings = 0;
+    const landmarkSources = new Set(
+        tehranLandmarks(world.data).map((l) => l.source)
+    );
     for (const f of world.data.features.filter((f) => f.kind === 'building')) {
+        if (landmarkSources.has(f.id)) continue;
         const ring = f.points.slice(0, -1);
         if (ring.length < 3) continue;
         const x = ring.reduce((s, p) => s + p[0], 0) / ring.length,
@@ -71,7 +120,12 @@ export function createTerrain(world) {
             chunks.set(key, chunk);
         }
         if (airfieldBuilding(f, boundaries)) {
-            appendAirfieldBuilding(f, world, chunk, military);
+            appendAirfieldBuilding(
+                f,
+                world,
+                chunk,
+                military || nearMilitaryApron(f, militaryAprons)
+            );
             while (chunk.windows.length < chunk.positions.length)
                 chunk.windows.push(0);
             detailedBuildings++;
@@ -196,6 +250,8 @@ export function createTerrain(world) {
         side: THREE.DoubleSide
     });
     addBuildingWindowShader(material);
+    if (isMehrabad(world.data)) addRegionDistanceFade(material);
+    group.add(createTehranLandmarks(world));
     for (const c of chunks.values()) {
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute(
@@ -284,7 +340,8 @@ export function createTerrain(world) {
         boardMaterial = new THREE.MeshBasicMaterial({ color: 0xfff7df });
     const boards = [];
     for (const runway of world.runways) {
-        if (pavedAirfieldSurface(runway, military)) continue;
+        if (pavedAirfieldSurface(runway, pavedAirfieldDefault(world.data)))
+            continue;
         const a = runway.points[0],
             b = runway.points[runway.points.length - 1],
             dx = b[0] - a[0],

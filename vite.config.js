@@ -11,6 +11,9 @@ export default defineConfig({
             name: 'local-scenery-data',
             generateBundle() {
                 for (const file of [
+                    'tehran/map.json',
+                    'tehran/elevation.json',
+                    'tehran/map-pois.json',
                     'luxeuil/map.json',
                     'luxeuil/elevation.json',
                     'saint-cyr/map.json',

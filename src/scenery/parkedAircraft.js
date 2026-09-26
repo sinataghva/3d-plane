@@ -2,13 +2,19 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createAirplane } from '../aircraft/airplane.js';
 import { createMirage } from '../aircraft/mirage.js';
+import { createStaticAircraft } from '../aircraft/staticAircraft.js';
+import {
+    isMehrabad,
+    MEHRABAD_MILITARY_APRONS,
+    MEHRABAD_CIVIL_APRONS
+} from './mehrabad.js';
 import { inFeature, segmentDistance } from './geography.js';
 import { createRenderedHeight } from './groundDetail.js';
 
 /** @typedef {{x:number,z:number,yaw:number,apron:string,radius:number}} ParkingSpot */
 /** Deterministic fictional parking, constrained by the cached apron geometry.
  * @param {import('./geography.js').Geography} world @param {boolean} jet
- * @param {{radius?:number,limit?:number,perApron?:number,occupied?:ParkingSpot[],slope?:number}} [options]
+ * @param {{radius?:number,limit?:number,perApron?:number,occupied?:ParkingSpot[],slope?:number,apronIds?:string[]}} [options]
  * @returns {ParkingSpot[]} */
 export function planAircraftParking(world, jet, options = {}) {
     const radius = options.radius ?? (jet ? 8.5 : 7);
@@ -18,6 +24,7 @@ export function planAircraftParking(world, jet, options = {}) {
         (f) =>
             f.aeroway === 'apron' &&
             !f.line &&
+            (!options.apronIds || options.apronIds.includes(f.id)) &&
             boundaries.some((b) => inFeature(f.points[0][0], f.points[0][1], b))
     );
     const routes = world.data.features.filter(
@@ -156,9 +163,14 @@ export function planAircraftParking(world, jet, options = {}) {
 
 /** Bake the existing game aircraft into one opaque, static, vertex-colored mesh.
  * Engines are off, gear is down, no flight simulation or audio instances.
- * @param {boolean} jet */
-function parkedGeometry(jet) {
-    const { airplane } = jet ? createMirage() : createAirplane();
+ * @param {boolean|'f5'|'airliner'} jet */
+export function parkedGeometry(jet) {
+    const { airplane } =
+        typeof jet === 'string'
+            ? createStaticAircraft(jet)
+            : jet
+              ? createMirage()
+              : createAirplane();
     airplane.updateMatrixWorld(true);
     /** @type {THREE.BufferGeometry[]} */
     const parts = [];
@@ -208,8 +220,44 @@ function parkedGeometry(jet) {
 }
 /** @param {import('./geography.js').Geography} world */
 export function createParkedAircraft(world) {
+    if (isMehrabad(world.data)) {
+        const military = planAircraftParking(world, true, {
+            radius: 8.5,
+            limit: 8,
+            perApron: 8,
+            apronIds: MEHRABAD_MILITARY_APRONS
+        });
+        const civil = planAircraftParking(world, false, {
+            radius: 24,
+            limit: 6,
+            perApron: 3,
+            occupied: military,
+            apronIds: MEHRABAD_CIVIL_APRONS
+        });
+        const fleets = [
+            createFleet(world, military, 'f5'),
+            createFleet(world, civil, 'airliner')
+        ];
+        const group = new THREE.Group();
+        group.name = 'Mehrabad · fictional static aircraft';
+        fleets.forEach((fleet) => group.add(fleet.group));
+        return {
+            group,
+            spots: [...military, ...civil],
+            /** @param {THREE.Vector3} position @param {string} quality */
+            update(position, quality) {
+                fleets.forEach((fleet) => fleet.update(position, quality));
+            }
+        };
+    }
     const jet = Boolean(world.data.airfield?.includes('LFSX'));
     const spots = planAircraftParking(world, jet);
+    return createFleet(world, spots, jet);
+}
+
+/** @param {import('./geography.js').Geography} world @param {ParkingSpot[]} spots
+ * @param {boolean|'f5'|'airliner'} jet */
+function createFleet(world, spots, jet) {
     const group = new THREE.Group();
     group.name = 'Parked aircraft · fictional apron scenery';
     if (!spots.length) return { group, spots, update() {} };
@@ -229,7 +277,14 @@ export function createParkedAircraft(world) {
     const transform = new THREE.Object3D();
     for (const cell of cells.values()) {
         const mesh = new THREE.InstancedMesh(geometry, material, cell.length);
-        mesh.name = jet ? 'Parked Mirage 2000' : 'Parked light aircraft';
+        mesh.name =
+            jet === 'f5'
+                ? 'Parked F-5 Tiger'
+                : jet === 'airliner'
+                  ? 'Parked Airbus-style airliner'
+                  : jet
+                    ? 'Parked Mirage 2000'
+                    : 'Parked light aircraft';
         cell.forEach((p, i) => {
             transform.position.set(p.x, height(p.x, p.z) + 0.08, p.z);
             transform.rotation.set(0, p.yaw, 0);

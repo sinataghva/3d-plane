@@ -1,12 +1,12 @@
 """Convert Overpass `out geom` data to a compact local, attributed feature set.
-Usage: python3 scripts/scenery/import-osm.py /tmp/saint-cyr-osm.json
+Usage: python3 scripts/scenery/import-osm.py data/saint-cyr/cache/osm.json.gz
 Coordinates are meters east/south from the local origin. No network requests.
 """
 import json,math,sys,pathlib,gzip
 from scenery_metadata import surface_metadata
 from airfield_metadata import airfield_metadata
 raw=json.load(gzip.open(sys.argv[1], 'rt') if sys.argv[1].endswith('.gz') else open(sys.argv[1])); assert 'remark' not in raw,raw.get('remark')
-from scenery_regions import ORIGIN, BOUNDS, MAP_FILE
+from scenery_regions import ORIGIN, BOUNDS, MAP_FILE, REGION
 origin=ORIGIN; south,west,north,east=BOUNDS
 mx=111320*math.cos(math.radians(origin[0])); my=111320
 def project(g):return [round((g['lon']-origin[1])*mx,1),round((origin[0]-g['lat'])*my,1)]
@@ -45,6 +45,7 @@ def join(parts):
         if len(ring)>3 and ring[0]==ring[-1]:rings.append(ring)
     return rings
 def category(t):
+    if REGION == 'tehran' and t.get('natural') in ('sand','bare_rock','scree','scrub','heath'):return 'dry'
     if t.get('aeroway') in ('hangar','shelter','tower'):return 'building'
     if t.get('aeroway')=='landing_light':return 'airfieldLight'
     if t.get('building') and t.get('building')!='no':return 'building'
@@ -102,6 +103,7 @@ for e in raw['elements']:
         if kind=='road':f['class']=t.get('highway');f['width']={'motorway':16,'trunk':12,'primary':10,'secondary':8,'tertiary':7,'path':2,'footway':2,'track':3}.get(t.get('highway'),6)
         features.append(f)
 result=dict(origin=origin,bounds=[south,west,north,east],features=features,places=places,source='© OpenStreetMap contributors',license='ODbL-1.0',sourceUrl='https://www.openstreetmap.org/copyright',timestamp=raw.get('osm3s',{}).get('timestamp_osm_base'),retrieved=__import__('datetime').date.today().isoformat())
+if REGION == 'tehran':result['landscape']='arid'
 out=MAP_FILE;out.write_text(json.dumps(result,ensure_ascii=False,separators=(',',':')))
 from collections import Counter
 print(Counter(f['kind'] for f in features));print('Places:',[(p['name'],p['point']) for p in places]);print('Runways:',[f for f in features if f['kind']=='runway']);print('Palace:',[f['name'] for f in features if f.get('palace')]);print(out.stat().st_size,'bytes')

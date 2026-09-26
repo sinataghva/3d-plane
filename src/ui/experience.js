@@ -1,3 +1,4 @@
+import { isJet } from '../aircraft/capabilities.js';
 import { isEditableTarget } from '../flight/input.js';
 import { jetWaypoints } from '../flight/jetNavigation.js';
 import { getGeography } from '../scenery/geography.js';
@@ -48,7 +49,9 @@ export function describeTouchdown(before, after) {
         return 'Landing limits exceeded. Approach at 260–340 km/h, wings level, with gear down and less than 5 m/s descent.';
     const sink = Math.max(0, -getVerticalSpeed(before) * 60);
     if (after.crashReason === 'water')
-        return 'Water landing. Return to the grass runway for a safe touchdown.';
+        return isJet(after.aircraft)
+            ? 'Water impact. Return to the runway for a safe touchdown.'
+            : 'Water landing. Return to the grass runway for a safe touchdown.';
     if (after.crashReason === 'building')
         return 'Building impact. Climb above rooftops before crossing the town.';
     if (after.isCrashed) {
@@ -131,7 +134,7 @@ export function createExperience({
     const throttle = /** @type {HTMLInputElement} */ (
         document.getElementById('touch-throttle')
     );
-    const jet = planeState.aircraft === 'mirage';
+    const jet = isJet(planeState.aircraft);
     const world = getGeography();
     const waypoints = jet && world ? jetWaypoints(world) : [];
     let waypoint = 0;
@@ -311,7 +314,7 @@ export function createExperience({
             } else if (!planeState.isAirborne) {
                 hint = completed
                     ? 'Circuit complete. Keep exploring or select another guide.'
-                    : planeState.aircraft === 'mirage'
+                    : isJet(planeState.aircraft)
                       ? 'Set full thrust; hold W for afterburner. At 260 km/h gently pitch up, then retract gear (G). Mobile: full slider + hold boost.'
                       : 'Set full thrust, build speed to 135 km/h, then gently pitch up (↓ or pull the stick).';
             } else if (guide.value === 'takeoff') {

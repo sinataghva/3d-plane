@@ -1,21 +1,22 @@
-# Open Skies — Saint-Cyr & Luxeuil
+# Open Skies — Saint-Cyr, Luxeuil & Tehran
 
 An educational browser-based 3D airplane simulator built with Three.js and Vite.
 
-Choose a Cessna-style light aircraft at Saint-Cyr-l’École near Versailles, or a Mirage 2000 at Luxeuil–Saint-Sauveur. Explore cached, real-world-inspired scenery with arcade flight physics, three camera modes, live instruments, radar and a full-screen regional map. Free flight is the default; guides and landing challenges are optional.
+Choose a Cessna-style light aircraft at Saint-Cyr-l’École near Versailles, a Mirage 2000 at Luxeuil–Saint-Sauveur, or an IIAF-liveried F-4 Phantom at Tehran Mehrabad. Explore cached, real-world-inspired scenery with arcade flight physics, three camera modes, live instruments, radar and a full-screen regional map. Free flight is the default; guides and landing challenges are optional.
 
 ## Choose your flight
 
-The startup screen offers two visual cards captured from the game itself:
+The startup screen offers three visual cards captured from the game itself:
 
 | Experience             | Aircraft                    | Flying style                                             |
 | ---------------------- | --------------------------- | -------------------------------------------------------- |
 | Saint-Cyr · Versailles | Cessna-style light aircraft | Relaxed sightseeing, gardens and villages                |
 | Luxeuil · Haute-Saône  | Mirage 2000                 | Jet flight, banked turns and optional navigation circuit |
+| Tehran · Mehrabad | F-4 Phantom · IIAF | Jet flight, city/desert exploration and optional navigation circuit |
 
 Select a card and press **Fly**. **Change flight** returns to selection with a
 fresh simulation. Find it in the settings menu. The picker fits phone screens in
-portrait and landscape; flying on phones uses landscape. Both experiences default to unrestricted free flight.
+portrait and landscape; flying on phones uses landscape. All experiences default to unrestricted free flight.
 
 ### Mirage controls and handling
 
@@ -51,7 +52,7 @@ air density, temperature and engine performance do not currently vary with altit
 - Chase view keeps the horizon upright and follows turns with a little lag;
   cockpit view rotates with the aircraft.
 - **Space** fires the visual-only rapid cannon (touch: Fire). Jet tracers and
-  brief muzzle flashes use a bounded pool. No audio is included.
+  brief muzzle flashes use a bounded pool, with gunfire audio when sound is enabled.
 - **P** or the settings icon opens a paused menu for camera, graphics, guides,
   restart and changing flight. Close with P, Esc or × to resume. **C** still
   cycles cameras directly. Desktop jet buttons are hidden; Mach, G and gear/
@@ -76,13 +77,77 @@ node scripts/flight/validate-jet-flight.mjs
 
 Source layers and nine original elevation tiles stay in `data/luxeuil/cache/`.
 Normal play loads only local `data/luxeuil/map.json` and `elevation.json`.
-Credits below apply to both maps. Successful downloads are reused; the importer
+Credits below apply to all three regions. Successful downloads are reused; the importer
 works offline once the cache is complete. `OVERPASS_ENDPOINT` can select another
 public instance if the default is unavailable; no authentication is required.
 
 ## Features
 
-- Procedural Cessna-style light aircraft and Mirage 2000 models
+### Tehran landmarks and skyline
+
+Tehran includes eight stylized procedural landmarks: Azadi Tower and its square,
+Milad Tower, Golestan Palace, Tabiat Bridge, Saadabad's White Palace, Niavaran
+Palace, the University of Tehran gate and Azadi Stadium. Gold map markers and
+labels help locate them. Azadi receives the most architectural detail, and the
+Tehran selection card shows the F-4 flying over it. Distant Alborz ridges and a
+snow-topped Damavand extend the horizon without expanding the playable map.
+See [landmark references and modeling limits](data/tehran/LANDMARKS.md).
+
+Tehran's full map uses a **2,048-pixel overview through 400%**, locally rendered
+**4,096-pixel-equivalent detail above 400–800%**, and **8,192-pixel-equivalent
+detail above 800–1,200%**. Visible tiles show sharper surface geometry with street
+names. A curated selection of 40 civic/public places appears progressively as you zoom in; cyan
+POI labels are separate from the eight gold 3D-landmark markers. Overlapping
+labels are filtered, and businesses are not listed. Tiles are prepared locally
+on demand within one shared 24-tile limit, with lower-resolution imagery visible while loading; gameplay makes no external
+map requests. Saint-Cyr and Luxeuil have a 400% cap; the minimap uses the overview.
+Tehran's 3D ground uses label-free **8,192-pixel-equivalent detail (about 6.2 m/pixel)**
+near the aircraft on Balanced and High, fading back to the 4,096-pixel regional
+texture with distance and altitude. Low retains the regional texture. This
+sharpens mapped surfaces without adding terrain geometry or satellite imagery.
+See the [data audit and rendering notes](data/tehran/MAP-DETAIL.md).
+
+Tehran's decorative road traffic supports surface highways and one-way routes,
+with up to **120 cars on Balanced / 240 on High** nearby; Low disables it.
+Only visible cars are submitted to the renderer, in one instanced batch.
+Birds are not enabled.
+
+The [Tehran / Mehrabad region](data/tehran/README.md) is cached locally and playable
+with the F-4 Phantom. Its roughly **50.6 × 35.6 km** perimeter covers
+**35.53–35.85 N, 51.10–51.66 E**, including Mehrabad, central Tehran,
+the full mapped Saadabad complex, Darband and southeastern dry terrain.
+The current processed map contains **71,209 building features** and **144,660
+road segments**, within 231,215 total features, plus 953 place labels. Road
+segments are not a count of distinct named streets.
+Departure is from the western end
+of Mehrabad runway 11R/29L; connected source segments form one continuous runway.
+The data notes describe reproduction and terrain performance measurements.
+The scenery includes eight parked F-5 Tigers and three parked
+Airbus-style airliners on separate mapped military/civilian aprons. These are
+procedural, non-playable decorations with fictional placements, not current
+airport operations.
+
+### F-4 Phantom · IIAF
+
+The original procedural model has twin exhausts, one framed canopy over both crew seats, swept wings,
+raised outer wing panels, drooped stabilators, retractable gear and airbrakes.
+Its stylized pre-1979 Imperial Iranian Air Force livery uses tan/brown/green
+camouflage, green-white-red roundels, a plain tricolor fin flash and IIAF lettering.
+The texture and markings are generated locally; no external aircraft assets are
+loaded. Historical context: [IIAF Association's Phantom history](https://www.iiafassociation.com/fightersf4).
+This is an era-inspired game aircraft, not a precise restoration of a particular
+airframe or a historical reconstruction of the present-day cached map.
+
+The F-4 shares the Mirage's arcade jet handling, afterburner, G gear toggle,
+airbrakes, instruments, jet audio and camera modes. The same takeoff/landing
+guidance above applies; this is not real-world flight guidance. The Phantom has
+**no gun in this game**: Space is reserved for bombs and the disabled mobile
+button says “Bombs · soon”. Pressing Space produces neither cannon visuals nor
+gun audio, and does not duck the engine sound. Bomb release, visible stores, impact prediction and
+reloading are not implemented. This gameplay choice is not a claim that all real
+Phantom variants were gunless. Other aircraft retain their existing gunfire.
+
+- Procedural Cessna-style light aircraft, Mirage 2000 and F-4 Phantom models
 - Arcade flight physics with thrust, lift, gravity, stalls, banking, rudder, and landing behavior
 - Animated propeller and animated control surfaces for ailerons, elevator, rudder, and automatic flaps
 - Chase, cockpit, and orbit camera modes
@@ -91,8 +156,8 @@ public instance if the default is unavailable; no authentication is required.
 - Heading-up radar/minimap centered on the plane
 - Warning banners for low altitude, stall risk, and crash states
 - Crash handling with visual feedback and restart flow
-- Machine-gun tracer fire with space bar
-- Saint-Cyr–Versailles and Luxeuil scenery from cached OpenStreetMap geometry and regional elevation
+- Machine-gun tracer fire with Space for gun-equipped aircraft
+- Saint-Cyr–Versailles, Luxeuil and Tehran scenery from cached OpenStreetMap geometry and regional elevation
 - Zoomable full map with a selectable destination and a red world-space beacon
 - Distance-based road/runway surface detail and three graphics presets
 - Real runway alignment, town labels, palace, Grand Canal, roads, woodland and terrain collisions
@@ -146,8 +211,8 @@ Thank you to the contributors and projects that make this scenery possible:
 - **© [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)** —
   airfield geometry, building footprints, roads, land cover, waterways, and place
   names. The map data is available under the **Open Database License (ODbL 1.0)**.
-  Our simplified, projected derived databases for [Saint-Cyr](data/saint-cyr/map.json)
-  and [Luxeuil](data/luxeuil/map.json) are distributed with the project and
+  Our simplified, projected derived databases for [Saint-Cyr](data/saint-cyr/map.json),
+  [Luxeuil](data/luxeuil/map.json) and [Tehran](data/tehran/map.json) are distributed with the project and
   linked from each in-game full map.
 - **[Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API)** — the
   open-source query service used to extract the OSM features. Thanks to its
@@ -161,12 +226,17 @@ Thank you to the contributors and projects that make this scenery possible:
   [terrain-attribution.md](data/terrain-attribution.md), from the
   [upstream attribution document](https://github.com/tilezen/joerd/blob/master/docs/attribution.md).
 
-Original downloads are preserved in [Saint-Cyr cache](data/saint-cyr/cache/) and
-[Luxeuil cache](data/luxeuil/cache/), with source timestamps and checksums in
+Original downloads are preserved in [Saint-Cyr cache](data/saint-cyr/cache/),
+[Luxeuil cache](data/luxeuil/cache/) and [Tehran cache](data/tehran/cache/), with source timestamps and checksums in
 their respective `manifest.json` files.
 Source dates can differ between layers; this is a cached scenery snapshot,
 not a live map. These data-source credits and licenses apply to the geographic
 data separately from the application code.
+
+At runtime, the browser loads processed map, elevation and POI assets from the
+game's own website, never from map providers. Higher-detail map and ground tiles
+are generated locally from those assets. Repository source caches are not a
+browser offline cache; the app does not provide offline caching.
 
 ## Getting Started
 
@@ -219,8 +289,8 @@ http://127.0.0.1:4173/3d-plane/
 - **Arrow Down**: Pitch nose up
 - **Arrow Up**: Pitch nose down
 - **Space**: Fire tracer rounds. Clicking game buttons does not keep keyboard focus;
-  Space remains gunfire during flight. Use Enter to activate a keyboard-focused minimap.
-- **G**: Toggle Mirage landing gear in flight
+  Space remains the aircraft weapon input during flight (F-4 bombs are pending). Use Enter to activate a keyboard-focused minimap.
+- **G**: Toggle jet landing gear in flight
 - **P**: Open/close settings and pause/resume
 - **C**: Cycle camera mode between chase, cockpit, and orbit
 - **Hold M**: Show the full regional map; release to close
@@ -299,7 +369,7 @@ npm run test:visual:update
 
 ```text
 src/
-  aircraft/     Procedural light aircraft and Mirage models
+  aircraft/     Procedural light aircraft, Mirage, Phantom and static aircraft models
   flight/       Physics, controls, metrics and simulation clock
   scenery/      Geography, terrain, surfaces and airfield objects
   rendering/    Scene, cameras, quality and instancing
@@ -310,7 +380,7 @@ src/
   automation/   Machine flight control and screenshot scenarios
   main.js       Application setup and game loop
 scripts/
-  scenery/      Offline map/elevation download and import tools
+  scenery/      Map/elevation source download and cached-data import tools
   flight/       Flight validation, planning and performance tools
   capture/      In-game preview capture
 data/          Each region has map.json, elevation.json and cache/
@@ -356,13 +426,14 @@ To change the plane model, edit:
 ```text
 src/aircraft/airplane.js  # Light aircraft
 src/aircraft/mirage.js    # Mirage 2000
+src/aircraft/phantom.js   # F-4 Phantom
 ```
 
 To change flight behavior, edit:
 
 ```text
 src/flight/physics.js     # Light aircraft
-src/flight/jetPhysics.js  # Mirage 2000
+src/flight/jetPhysics.js  # Shared Mirage 2000 / F-4 Phantom handling
 ```
 
 To add larger world objects such as buildings or future targets, start with:
@@ -480,14 +551,14 @@ Trees share geometry/materials in spatial instancing batches, preserving culling
 of off-screen regions. Soft cloud billboards share one instanced draw call; wind
 is applied in the shader without per-frame instance uploads. The HUD updates at 10 Hz
 and radar at 15 Hz, while cameras, cockpit instruments and flight animation
-follow the browser frame rate. Automation substeps no longer submit duplicate
-render frames. Flight physics and automatic wing leveling are unchanged.
+follow the browser frame rate. Automation physics substeps do not each submit
+a render frame.
 
 ## Simulation timing and inputs
 
 Keyboard/touch play advances the same 60 Hz physics ticks as automation,
-independently of rendering refresh rate. Existing automatic wing leveling and
-60 Hz flight tuning are preserved. Frames longer than 250 ms have bounded
+independently of rendering refresh rate, including automatic wing leveling.
+Frames longer than 250 ms have bounded
 catch-up, and hidden-page transitions clear leftover fractional time.
 
 The vertical-speed instrument, flight condition labels, terrain warnings, and
@@ -498,7 +569,7 @@ wraps to 000–359 through repeated turns.
 
 Losing window focus or hiding the page releases held keyboard and touch input.
 Touch cancellation/lost capture also releases controls; multiple fingers and
-keyboard/touch presses no longer cancel each other prematurely. Camera cycling
+keyboard/touch presses are tracked independently. Camera cycling
 ignores key repeat, and flight keys leave focused form controls alone.
 
 ### Flight experience
@@ -506,14 +577,14 @@ ignores key repeat, and flight keys leave focused form controls alone.
 Free flight is the default. The Guide menu offers dismissible takeoff tips,
 landing help, and optional circuit challenges: Saint-Cyr asks for a climb to
 50 m and a full turn before landing in the takeoff direction; Luxeuil uses four
-waypoints above 150 m AGL. There is no timer or forced
+waypoints above 150 m AGL, as does Tehran. There is no timer or forced
 landing. Collapsible controls leave more room for the view.
 
 The settings menu pauses flight and provides camera, guide, graphics and time-of-day
 dropdowns, sound controls, and restart/change-flight buttons. Its compact grid fits
 desktop and mobile screens, including phone landscape safe margins. The touch throttle slider sets thrust directly, including immediate
 100%. Using pause, restart, or the slider takes control from an automation flight.
-Crashes now wait for **Return to runway**; feedback explains excessive descent or
+Crashes wait for **Return to runway**; feedback explains excessive descent or
 attitude. Successful touchdowns report runway/off-field location and descent rate.
 The chase camera eases its position while cockpit view follows the aircraft bank.
 Grass runway markings and edge boards help alignment; roads, field boundaries,
@@ -529,8 +600,8 @@ the icon stays at the map edge and the position readout indicates this explicitl
 
 Cloud banks cover the whole region and continue beyond the detailed map. Varied
 cumulus banks sit roughly 420–1,100 m above the airfield datum, with sparse,
-stretched high clouds above them. Locally generated soft silhouettes replace the
-old faceted spheres and straight cloud strips; no cloud images are downloaded.
+stretched high clouds above them. Clouds use locally generated soft silhouettes;
+no cloud images are downloaded.
 
 A light westerly wind moves the clouds 3 m/s east and 1 m/s north. This is visual
 weather and does not change aircraft handling. Clouds fade into the distance and
@@ -539,17 +610,36 @@ freezes their movement; visual regression fixtures use a fixed cloud state.
 
 ## Experience development and automation
 
-`src/ui/missions.js` defines experiences; `src/aircraft/mirage.js` creates the jet, and
-`src/flight/jetPhysics.js` implements its handling. Use `?mission=luxeuil&automation=1`
+`src/ui/missions.js` defines experiences; `src/aircraft/mirage.js` and
+`src/aircraft/phantom.js` create the jets, while `src/aircraft/capabilities.js`
+declares jet and weapon behavior. `src/flight/jetPhysics.js` implements shared
+arcade handling. Use `?mission=luxeuil&automation=1` or `?mission=tehran&automation=1`
 for opt-in machine control. `setControls` accepts `boost`, `gearDown`, and
 `airbrake` booleans in addition to the existing inputs. Hold boost with
 `{throttle: 1, boost: true}` and release with `{boost: false}`. Pausing, human
 takeover, reset, focus loss, or the end of a bounded animated flight clears boost.
 Telemetry includes `plane.aircraft`, `plane.mission`, engine power and gear state.
 
+Tehran also has reproducible regional views at
+`?mission=tehran&visual=tehran-city` and
+`?mission=tehran&visual=tehran-desert`. These freeze the aircraft 700 m above
+local terrain for presentation checks. The shared `chase`, `cockpit`, `card`,
+and `exhaustBoost` views work with the Phantom too; `&time=sunset` or
+`&time=night` selects deterministic lighting.
+
+Tehran's dense building scenery uses 3 / 6 / 10 km draw ranges on Low / Balanced /
+High, with a screen-door fade over the outer quarter of each range and building
+shadows limited to the nearby 1.5 km. Distant roads and land-cover textures remain visible.
+This reduces submitted geometry and draw calls, not the memory needed to load the
+whole cached region. French scenery keeps its existing building visibility.
+Ground-detail, traffic and parked-aircraft budgets remain bounded by their
+existing presets. The 50.6 × 35.6 km perimeter includes the complete mapped
+Saadabad complex and Darband with a foothill margin. All geographic assets are
+cached locally. Native-phone memory use and frame-rate performance remain unverified.
+
 To regenerate the selection artwork, run the dev server on port 5174 and then
 `node scripts/capture/capture-previews.mjs`. It captures the actual local scene with the
-HUD hidden at 2× pixel density. Pass `luxeuil` or `saint-cyr` to capture only
+HUD hidden at 2× pixel density. Pass `luxeuil`, `saint-cyr` or `tehran` to capture only
 one card; `PREVIEW_ORIGIN` overrides the default `http://127.0.0.1:5174`.
 Artwork is stored in `public/previews/` and uses the same map credits.
 Run `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:visual` and
@@ -567,13 +657,18 @@ removes it. Reaching it never forces a landing or changes your controls.
 The full map supports zoom and pan: scroll down to zoom in, up to zoom out;
 click and drag to pan. On touchscreens, pinch to zoom and drag with one finger.
 The +/− buttons change zoom by 20 percentage points, and **Fit map** resets zoom and pan. Zoom cannot go
-below the whole-region view or above **400% (4×)**. Zoom/pan persist when closing the map;
+below the whole-region view or above **400% (4×)** in Saint-Cyr/Luxeuil or
+**1,200% (12×)** in Tehran. Tehran adds detail above 400% and 800%.
+Zoom/pan persist when closing the map;
 restart or changing missions resets them. Dragging and pinching never place a
 destination. Short clicks/taps still select accurately at the current zoom.
 
 ### Ground surface detail
 
-Nearby roads, taxiways and runways now use separate terrain-aligned geometry.
+Nearby roads, taxiways and runways use separate terrain-aligned geometry.
+Road bends share ribbon edges within each mapped way; shared endpoints between
+separate surface-road ways have rounded junction fills to prevent triangular gaps.
+Bridges, tunnels and different mapped elevation layers are not joined together.
 Luxeuil has sharp runway edges, centre lines, threshold stripes and numbers;
 Saint-Cyr retains grass strips with sparse boundary indicators. Markings are
 stylized from cached map geometry and runway references. Asphalt/grass grain
@@ -589,8 +684,11 @@ Distance includes altitude. Detail fades through the outer 40% of the range and
 blends over time. A shared pool keeps at most 80 cached tiles, building at most
 two per frame. Recently used tiles remain available beyond the activation
 range to avoid rebuilding when crossing a boundary. The original physics and
-collision terrain remain authoritative. Distant fields and forests still use
-the regional texture; this is a focused road/runway upgrade, not satellite scenery.
+collision terrain remain authoritative. Distant fields and forests use the
+regional texture. Tehran also refines nearby land-cover textures on Balanced/High
+with its independent 8,192-pixel-equivalent ground level; see
+[ground-texture budgets and transitions](data/tehran/MAP-DETAIL.md#low-altitude-3d-ground).
+Neither system uses satellite imagery.
 
 For local comparative measurements, run `node scripts/flight/benchmark-ground.mjs current`
 with the dev server running. Results and ground screenshots go into
@@ -611,13 +709,20 @@ and browser zoom gestures while the map retains its own pinch zoom. Safe-area
 padding keeps touch controls away from the notch and home indicator. The scenario
 picker, settings button/dialog, and full-screen map also leave space inside the
 iPhone safe areas, including landscape and Home Screen layouts. Desktop
-Flight Data is unchanged; radar headings are removed on both layouts.
+Flight Data displays the full instrument panel; neither radar layout has heading labels.
 
 ### Audio
 
-Both aircraft have locally bundled CC0 engine sounds and firing effects, with generated wind, afterburner, gear motion, and touchdown audio. Engine pitch and volume follow power; cockpit view muffles exterior sound. Settings → Sound provides saved mute and volume controls. Audio starts after a user gesture and stops while paused or in the background.
+All three aircraft use locally bundled CC0 engine sounds: the light aircraft
+uses the propeller sample, while the Mirage and Phantom share the jet sample.
+Only the light aircraft and Mirage have firing effects; the Phantom produces
+no gunfire or gun audio. Wind and touchdown audio are generated, as are jet
+afterburner and gear-motion sounds. Engine pitch and volume follow power;
+cockpit view muffles exterior sound. Settings → Sound provides saved mute and
+volume controls. Audio starts after a user gesture and stops while paused or
+in the background.
 
-The Mirage gives a brief vapor-cone effect and procedural sonic-boom cue when
+Both the Mirage and Phantom give a brief vapor-cone effect and procedural sonic-boom cue when
 accelerating through Mach 1. The cone fades after 1.4 seconds and is hidden in
 cockpit view; cockpit audio remains muffled. The trigger re-arms below Mach 0.96
 after a six-second cooldown, preventing repeated booms near the threshold. These
@@ -628,7 +733,7 @@ See the [audio credits and listening checklist](public/audio/README.md) for ever
 
 ### Nearby railways and water
 
-Both regions now share the road-detail tile budget with railway and water surfaces.
+All three regions share the road-detail tile budget with railway and water surfaces.
 Balanced shows ballast, rails, and sharp water geometry; High adds repeating
 rail sleepers and finer gravel. Low keeps the lightweight regional map texture.
 Nearby detail fades with distance and altitude; no more than 80 tiles are cached,
@@ -654,9 +759,10 @@ wind-driven decoration, not a simulation of downstream currents. Highlights come
 from the scene's sun; water does not mirror aircraft or buildings. The effect adds
 no reflection render pass or extra surface draw calls and uses one shared 128×128
 procedural texture. Animation freezes while paused or in the background and resets
-with the flight. Surface geometry, shorelines and collision heights stay unchanged.
+with the flight. Water animation affects shading only, not surface geometry,
+shorelines or collision heights.
 
-All data comes from the existing local caches; no new downloads were needed. See [scenery data notes](data/README.md) for reproduction and attribution.
+All data comes from local caches. See [scenery data notes](data/README.md) for reproduction and attribution.
 
 ### Airfield scenery
 
@@ -667,10 +773,10 @@ cached OpenStreetMap footprints and existing height estimates; facade colors,
 doors and roof profiles are stylized, not surveyed architectural reproductions.
 No new building locations are invented. Parked aircraft and service vehicles are separate fictional scenery, as described below.
 
-Nearby mapped aprons now have crisp terrain-aligned surfaces. Explicit grass,
+Nearby mapped aprons have crisp terrain-aligned surfaces. Explicit grass,
 asphalt and concrete tags take precedence over mission defaults, including
 Saint-Cyr's mix of grass and paved taxiways. Unspecified surfaces use paved
-Luxeuil taxiways and aprons, and grass Saint-Cyr taxiways. Yellow centerlines
+Luxeuil and Mehrabad taxiways and aprons, and grass Saint-Cyr taxiways. Yellow centerlines
 follow mapped paved taxiway lines; they are illustrative markings, not surveyed
 paint layouts. Grass runway boards remain at Saint-Cyr. Luxeuil's mapped
 landing-light row has simple unlit-in-daylight fixture geometry with a bright
@@ -678,14 +784,15 @@ material; it does not add dynamic lights or a complete night-lighting system.
 
 Building detail shares the existing spatial batches on every graphics preset.
 Apron and taxiway detail uses the same Balanced/High distance ranges and bounded
-tile cache as roads; Low keeps the regional ground texture. All data is local,
-and the additional aviation tags were restored from the preserved source caches.
+tile cache as roads; Low keeps the regional ground texture. All data and aviation
+tags come from the preserved local source caches.
 
 
 ### Parked aircraft
 
 Saint-Cyr has eight parked light aircraft on suitable mapped apron areas,
 including grass parking. Luxeuil has twelve parked Mirage 2000s on mapped aprons.
+Mehrabad has eight parked F-5 Tigers and three generic Airbus-style airliners.
 These are fictional decorative placements, not a representation of present-day
 base inventories or operations. They reuse the game aircraft models with engines
 off, stationary propellers and landing gear down; they have no separate audio,
@@ -694,7 +801,7 @@ flight simulation or collision bodies.
 Placement is reproducible and keeps the aircraft envelope inside each apron,
 outside holes, clear of buildings, roads, runway/taxiway corridors and the departure
 spawn. Steep ground and crowded areas are skipped. One shared baked mesh per
-mission is instanced in spatial batches, with visibility ranges of 700 m on Low,
+aircraft type is instanced in spatial batches, with visibility ranges of 700 m on Low,
 1,400 m on Balanced and 2,500 m on High. No external models or textures are loaded.
 
 
@@ -720,7 +827,7 @@ A stable 60 FPS is the target on a 60 Hz screen; simulation ticks remain separat
 ### Time of day
 
 In Settings, choose **Day**, **Sunset** or **Night**. Day is the default;
-your choice is saved on this device and applies to both scenarios. Changing
+your choice is saved on this device and applies to all three scenarios. Changing
 the setting updates the lighting immediately without restarting the flight.
 
 Sunset and Night include decorative runway edge and threshold lights.

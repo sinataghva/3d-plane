@@ -1,0 +1,449 @@
+{
+  "source": "© OpenStreetMap contributors",
+  "license": "ODbL-1.0",
+  "sourceUrl": "https://www.openstreetmap.org/copyright",
+  "sourceTimestamp": "2026-09-25T20:38:51Z",
+  "note": "Curated map-only public places; incomplete by design. Centers are approximate, not entrances.",
+  "pois": [
+    {
+      "id": "node/5904296730",
+      "name": "میدان سربند",
+      "nameEn": "Sarband Square",
+      "category": "square",
+      "minZoom": 4,
+      "point": [
+        4215,
+        -17037
+      ]
+    },
+    {
+      "id": "relation/5581508",
+      "name": "موزه ایران باستان",
+      "nameEn": "Iran National Museum",
+      "category": "museum",
+      "minZoom": 4,
+      "point": [
+        3130,
+        -1349
+      ]
+    },
+    {
+      "id": "way/182083848",
+      "name": "مجلس شورای اسلامی",
+      "nameEn": "Parliament of Iran",
+      "category": "government",
+      "minZoom": 4,
+      "point": [
+        5013,
+        -1719
+      ]
+    },
+    {
+      "id": "way/4294984",
+      "name": "بوستان لاله",
+      "nameEn": "Laleh Park",
+      "category": "park",
+      "minZoom": 4,
+      "point": [
+        1191,
+        -4056
+      ]
+    },
+    {
+      "id": "way/206602673",
+      "name": "بوستان ملت",
+      "nameEn": "Mellat Park",
+      "category": "park",
+      "minZoom": 4,
+      "point": [
+        2715,
+        -11471
+      ]
+    },
+    {
+      "id": "relation/2064918",
+      "name": "کتابخانه ملی ایران",
+      "nameEn": "Iran National Library",
+      "category": "library",
+      "minZoom": 4,
+      "point": [
+        4900,
+        -8582
+      ]
+    },
+    {
+      "id": "way/1108354479",
+      "name": "میدان راه آهن",
+      "nameEn": "Rah Ahan Square",
+      "category": "square",
+      "minZoom": 4,
+      "point": [
+        1627,
+        1748
+      ]
+    },
+    {
+      "id": "way/161072043",
+      "name": "بوستان هنرمندان",
+      "nameEn": "Honarmandan Park",
+      "category": "park",
+      "minZoom": 5,
+      "point": [
+        3707,
+        -3892
+      ]
+    },
+    {
+      "id": "way/601652789",
+      "name": "موزه هنرهای معاصر تهران",
+      "nameEn": "",
+      "category": "museum",
+      "minZoom": 5,
+      "point": [
+        946,
+        -4033
+      ]
+    },
+    {
+      "id": "relation/2954356",
+      "name": "زندان قصر",
+      "nameEn": "Qasr Museum Garden",
+      "category": "museum",
+      "minZoom": 5,
+      "point": [
+        6178,
+        -5401
+      ]
+    },
+    {
+      "id": "node/10263363940",
+      "name": "میدان امام خمینی",
+      "nameEn": "Imam Khomeini Square",
+      "category": "square",
+      "minZoom": 5,
+      "point": [
+        3757,
+        -1190
+      ]
+    },
+    {
+      "id": "way/99886906",
+      "name": "باغ گیاه‌ شناسی ملی ایران",
+      "nameEn": "National Botanical Garden of Iran",
+      "category": "garden",
+      "minZoom": 5,
+      "point": [
+        -18476,
+        -7216
+      ]
+    },
+    {
+      "id": "way/211028560",
+      "name": "کتابخانه و موزه ملک",
+      "nameEn": "Malek National Museum and Library",
+      "category": "museum",
+      "minZoom": 6,
+      "point": [
+        3283,
+        -1337
+      ]
+    },
+    {
+      "id": "relation/4749898",
+      "name": "مدرسه دارالفنون",
+      "nameEn": "Dar ul-Funun",
+      "category": "museum",
+      "minZoom": 6,
+      "point": [
+        3791,
+        -976
+      ]
+    },
+    {
+      "id": "way/675091597",
+      "name": "موزه زمان",
+      "nameEn": "Time Museum",
+      "category": "museum",
+      "minZoom": 6,
+      "point": [
+        3551,
+        -14542
+      ]
+    },
+    {
+      "id": "way/279386264",
+      "name": "سازمان مرکزی دانشگاه صنعتی خواجه نصیرالدین طوسی",
+      "nameEn": "",
+      "category": "university",
+      "minZoom": 6,
+      "point": [
+        2962,
+        -9748
+      ]
+    },
+    {
+      "id": "node/9546674611",
+      "name": "میدان امام حسین (ع)",
+      "nameEn": "Imam Hossein Square",
+      "category": "square",
+      "minZoom": 6,
+      "point": [
+        6158,
+        -3023
+      ]
+    },
+    {
+      "id": "way/841633654",
+      "name": "خانه هنرمندان ایران",
+      "nameEn": "Iranian Artists Forum",
+      "category": "arts",
+      "minZoom": 7,
+      "point": [
+        3693,
+        -3823
+      ]
+    },
+    {
+      "id": "way/609222998",
+      "name": "مرکز اسناد و کتابخانه مجلس شورای اسلامی",
+      "nameEn": "",
+      "category": "library",
+      "minZoom": 7,
+      "point": [
+        4826,
+        -1706
+      ]
+    },
+    {
+      "id": "way/99887137",
+      "name": "بوستان جنگلی چیتگر",
+      "nameEn": "Chitgar Park",
+      "category": "park",
+      "minZoom": 8.01,
+      "point": [
+        -15352,
+        -6302
+      ]
+    },
+    {
+      "id": "way/222858917",
+      "name": "بوستان پردیسان",
+      "nameEn": "Pardisan Park",
+      "category": "park",
+      "minZoom": 8.01,
+      "point": [
+        -2258,
+        -7791
+      ]
+    },
+    {
+      "id": "way/340106928",
+      "name": "بوستان نهج البلاغه",
+      "nameEn": "Nahjol Balaqe Park",
+      "category": "park",
+      "minZoom": 8.01,
+      "point": [
+        -3532,
+        -8624
+      ]
+    },
+    {
+      "id": "way/174312146",
+      "name": "پارک شهر",
+      "nameEn": "Park-e Shahr",
+      "category": "park",
+      "minZoom": 8.01,
+      "point": [
+        3047,
+        -894
+      ]
+    },
+    {
+      "id": "way/30725482",
+      "name": "بوستان ساعی",
+      "nameEn": "Sa'i Park",
+      "category": "park",
+      "minZoom": 8.01,
+      "point": [
+        2824,
+        -6855
+      ]
+    },
+    {
+      "id": "way/175813833",
+      "name": "بوستان قیطریه",
+      "nameEn": "Qeytarieh park",
+      "category": "park",
+      "minZoom": 8.01,
+      "point": [
+        6285,
+        -13180
+      ]
+    },
+    {
+      "id": "way/206925858",
+      "name": "بوستان جمشیدیه",
+      "nameEn": "Jamshidieh Park",
+      "category": "park",
+      "minZoom": 8.01,
+      "point": [
+        7650,
+        -16824
+      ]
+    },
+    {
+      "id": "way/330809815",
+      "name": "کاخ موزه مرمر",
+      "nameEn": "Marmar Palace",
+      "category": "museum",
+      "minZoom": 8.01,
+      "point": [
+        1988,
+        -1564
+      ]
+    },
+    {
+      "id": "way/606828257",
+      "name": "پایانه و پارک‌ سوار شرق",
+      "nameEn": "",
+      "category": "transport",
+      "minZoom": 8.01,
+      "point": [
+        19045,
+        -5184
+      ]
+    },
+    {
+      "id": "way/220526199",
+      "name": "بوستان پرواز",
+      "nameEn": "Parvaz Park",
+      "category": "park",
+      "minZoom": 10,
+      "point": [
+        -2180,
+        -12726
+      ]
+    },
+    {
+      "id": "way/390584475",
+      "name": "بوستان دانشجو",
+      "nameEn": "Daneshjoo Park",
+      "category": "park",
+      "minZoom": 10,
+      "point": [
+        2382,
+        -2832
+      ]
+    },
+    {
+      "id": "way/31767608",
+      "name": "باغ موزه هنر ایرانی",
+      "nameEn": "Iranian Art Museum Garden",
+      "category": "museum",
+      "minZoom": 10,
+      "point": [
+        4019,
+        -13799
+      ]
+    },
+    {
+      "id": "way/1154040854",
+      "name": "موزه نقشه",
+      "nameEn": "Map Museum",
+      "category": "museum",
+      "minZoom": 10,
+      "point": [
+        9191,
+        -13978
+      ]
+    },
+    {
+      "id": "way/324470403",
+      "name": "سازمان زمین شناسی",
+      "nameEn": "Geological Survey and Mineral Exploration of Iran",
+      "category": "government",
+      "minZoom": 10,
+      "point": [
+        -4364,
+        -2381
+      ]
+    },
+    {
+      "id": "way/530406657",
+      "name": "سازمان نقشه برداری",
+      "nameEn": "National Cartographic Centre",
+      "category": "government",
+      "minZoom": 10,
+      "point": [
+        -4180,
+        -2496
+      ]
+    },
+    {
+      "id": "way/330482383",
+      "name": "استانداری تهران ساختمان اصلی",
+      "nameEn": "Tehran Provincial Government",
+      "category": "government",
+      "minZoom": 10,
+      "point": [
+        3650,
+        -8144
+      ]
+    },
+    {
+      "id": "way/739183424",
+      "name": "پایانه صنعت",
+      "nameEn": "",
+      "category": "transport",
+      "minZoom": 10,
+      "point": [
+        -945,
+        -8844
+      ]
+    },
+    {
+      "id": "way/615883391",
+      "name": "وزارت علوم، تحقیقات و فناوری",
+      "nameEn": "Ministry of Science, Research and Technology",
+      "category": "government",
+      "minZoom": 11.5,
+      "point": [
+        -617,
+        -9662
+      ]
+    },
+    {
+      "id": "way/180551019",
+      "name": "کنابخانه مرکزی",
+      "nameEn": "Central Library",
+      "category": "library",
+      "minZoom": 11.5,
+      "point": [
+        -2604,
+        -3303
+      ]
+    },
+    {
+      "id": "way/558042155",
+      "name": "کتابخانه عمومی نظامی گنجوی",
+      "nameEn": "Nezamiye Ganjavi Public Library",
+      "category": "library",
+      "minZoom": 11.5,
+      "point": [
+        -5307,
+        -11368
+      ]
+    },
+    {
+      "id": "way/486567543",
+      "name": "فرهنگسرای عطار نیشابوری",
+      "nameEn": "",
+      "category": "arts",
+      "minZoom": 11.5,
+      "point": [
+        -396,
+        -268
+      ]
+    }
+  ]
+}

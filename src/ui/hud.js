@@ -1,3 +1,4 @@
+import { isJet } from '../aircraft/capabilities.js';
 import {
     getAltitude,
     INTERNAL_SPEED_TO_KMH,
@@ -184,8 +185,7 @@ export function createHud() {
             setText(
                 speedValueElement,
                 formatSpeedKmh(
-                    planeState.speed *
-                        (planeState.aircraft === 'mirage' ? 2.4 : 1)
+                    planeState.speed * (isJet(planeState.aircraft) ? 2.4 : 1)
                 )
             );
             setText(altitudeValueElement, formatAltitudeMeters(altitude));

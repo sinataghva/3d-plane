@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { aircraftCapabilities } from '../aircraft/capabilities.js';
 
 /**
  * @typedef {import('../flight/input.js').KeyboardState} KeyboardState
@@ -155,6 +156,10 @@ export function createMachineGun(scene) {
          * @param {number} args.delta
          */
         update({ planeState, keyboard, delta }) {
+            if (aircraftCapabilities(planeState.aircraft).weapon !== 'gun') {
+                this.clear();
+                return;
+            }
             if (delta <= 0) return;
             flashTime = Math.max(0, flashTime - delta);
             if (

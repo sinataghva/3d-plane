@@ -1,5 +1,9 @@
+import { isJet } from '../aircraft/capabilities.js';
 import { updateJetPhysics } from './jetPhysics.js';
-import { getGeography, groundLevel as terrainGround } from '../scenery/geography.js';
+import {
+    getGeography,
+    groundLevel as terrainGround
+} from '../scenery/geography.js';
 import * as THREE from 'three';
 import {
     GROUND_LEVEL,
@@ -252,7 +256,7 @@ export function updatePlanePhysics({
     planePhysics,
     delta
 }) {
-    if (planeState.aircraft === 'mirage') {
+    if (isJet(planeState.aircraft)) {
         updateJetPhysics(planeState, keyboard, delta);
         return;
     }
@@ -563,7 +567,7 @@ export function syncPlaneMesh({ airplane, propeller, planeState }) {
         planeState.position.y,
         planeState.position.z
     );
-    if (planeState.aircraft === 'mirage' && planeState.attitude) {
+    if (isJet(planeState.aircraft) && planeState.attitude) {
         const q = planeState.attitude;
         airplane.quaternion.set(q.x, q.y, q.z, q.w);
     } else

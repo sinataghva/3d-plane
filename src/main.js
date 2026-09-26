@@ -1,3 +1,6 @@
+import { isJet } from './aircraft/capabilities.js';
+import { aircraftCapabilities } from './aircraft/capabilities.js';
+import { createPhantom } from './aircraft/phantom.js';
 import { createRoadTraffic } from './scenery/roadTraffic.js';
 import { createPhotoMode } from './ui/photoMode.js';
 import { createRunwayLights } from './rendering/timeOfDay.js';
@@ -12,6 +15,7 @@ import { getVerticalSpeed } from './flight/flightMetrics.js';
 import { createFlightAudio } from './audio/audio.js';
 import { setupMobileViewport } from './ui/mobileViewport.js';
 import { createGroundDetail } from './scenery/groundDetail.js';
+import { createGroundTextureDetail } from './scenery/groundTextureDetail.js';
 import {
     createDestinationBeacon,
     clearDestination
@@ -21,6 +25,9 @@ import { createMirage, updateMirage } from './aircraft/mirage.js';
 import { createJetControls } from './flight/jetControls.js';
 import { createGeography, setGeography } from './scenery/geography.js';
 import { createTerrain } from './scenery/terrain.js';
+import { createTehranHorizon } from './scenery/tehranHorizon.js';
+import { tehranLandmarks } from './scenery/tehranLandmarks.js';
+import { updateRegionDetail } from './scenery/regionDetail.js';
 import { createWorldMap } from './map/worldMap.js';
 import { createExperience, describeTouchdown } from './ui/experience.js';
 import './ui/styles.css';
@@ -193,15 +200,30 @@ async function startApp() {
 
     const flightAudio = createFlightAudio();
     const mission = await selectFlight();
+    const capabilities = aircraftCapabilities(mission.aircraft);
+    document.body.classList.toggle(
+        'bomb-aircraft',
+        capabilities.weapon === 'bomb'
+    );
+    if (capabilities.weapon === 'bomb') {
+        const fire = document.querySelector('.touch-fire');
+        if (fire instanceof HTMLButtonElement) {
+            fire.textContent = 'Bombs · soon';
+            fire.disabled = true;
+            fire.setAttribute(
+                'aria-label',
+                'Bomb release is not available yet'
+            );
+        }
+    }
     document.title = `${mission.title} · Open Skies`;
-    if (mission.aircraft === 'mirage') {
+    if (isJet(mission.aircraft)) {
         const list = document.querySelector('#instructions-panel ul');
         list?.querySelectorAll('li').forEach((item) => {
             if (item.textContent?.includes('Fire tracers')) item.hidden = true;
         });
         const help = document.createElement('li');
-        help.textContent =
-            'Mirage: hold W at full thrust for 110% afterburner; release to return to 100%. G: landing gear. Hold S at zero thrust: airbrakes. Space: cannon. P: settings. Mobile: full slider + hold Boost.';
+        help.textContent = `${mission.name}: hold W at full thrust for 110% afterburner; release to return to 100%. G: landing gear. Hold S at zero thrust: airbrakes. ${capabilities.weapon === 'gun' ? 'Space: cannon.' : 'No gun. Bomb release is not available yet.'} P: settings. Mobile: full slider + hold Boost.`;
         list?.append(help);
     }
     const loading = document.getElementById('scenery-loading');
@@ -244,12 +266,26 @@ async function startApp() {
     ]);
     if (closed) return;
     geoData.airfield = mission.airfield;
-    const world = createGeography(geoData, elevationData);
+    const world = createGeography(
+        geoData,
+        elevationData,
+        mission.id === 'tehran'
+            ? { icao: 'OIII', runwayRef: '11R/29L' }
+            : undefined
+    );
     setGeography(world);
     const { scene, camera, renderer, controls } = createScene({ container });
+    if (mission.id === 'tehran') {
+        camera.far = 150000;
+        camera.updateProjectionMatrix();
+    }
 
     const { airplane, propeller } =
-        mission.aircraft === 'mirage' ? createMirage() : createAirplane();
+        mission.aircraft === 'phantom'
+            ? createPhantom()
+            : mission.aircraft === 'mirage'
+              ? createMirage()
+              : createAirplane();
     const planeState = createPlaneState(mission.aircraft);
     planeState.mission = mission.id;
     syncPlaneMesh({ airplane, propeller, planeState });
@@ -257,6 +293,14 @@ async function startApp() {
 
     const restoreRandom = visualScenario ? useSeededRandom(12345) : null;
     const airbase = createTerrain(world);
+    const groundTexture = createGroundTextureDetail(
+        world,
+        /** @type {THREE.Mesh<THREE.BufferGeometry, THREE.MeshLambertMaterial>} */ (
+            airbase.children[0]
+        ).material,
+        airbase.children[0].userData.groundRelief
+    );
+    scene.add(createTehranHorizon(world));
     scene.add(airbase);
     const parkedAircraft = createParkedAircraft(world);
     scene.add(parkedAircraft.group);
@@ -279,8 +323,9 @@ async function startApp() {
     const machineGun = createMachineGun(scene);
     const machTransition = createMachTransition();
     let machBoomPending = false;
-    const machEffect =
-        mission.aircraft === 'mirage' ? createMachEffect(airplane) : null;
+    const machEffect = isJet(mission.aircraft)
+        ? createMachEffect(airplane)
+        : null;
 
     const keyboard = createKeyboardState(mission.aircraft);
     const planePhysics = createPlanePhysics();
@@ -303,6 +348,7 @@ async function startApp() {
         machEffect?.dispose();
         roadTraffic.dispose();
         groundDetail.dispose();
+        groundTexture.dispose();
         destinationBeacon.dispose();
         machineGun.dispose();
         controls.dispose();
@@ -345,6 +391,7 @@ async function startApp() {
         worldMap.resetView();
         roadTraffic.reset();
         groundDetail.waterEffects.reset();
+        groundTexture.reset();
         machTransition.reset();
         machBoomPending = false;
         machEffect?.reset();
@@ -422,6 +469,26 @@ async function startApp() {
             }
         }
         // Static screenshot scenes need fully built and faded-in detail tiles.
+        for (let step = 0; step < 300; step++) {
+            groundTexture.update(
+                planeState.position,
+                scene.userData.quality,
+                0.1
+            );
+            const stats = groundTexture.stats();
+            if (
+                !stats.groundTextureResolution ||
+                (stats.groundTextureReady && !stats.groundTexturePending)
+            )
+                break;
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+        }
+        for (let step = 0; step < 12; step++)
+            groundTexture.update(
+                planeState.position,
+                scene.userData.quality,
+                0.1
+            );
         for (let step = 0; step < 120; step++) {
             groundDetail.update(
                 planeState.position,
@@ -505,12 +572,101 @@ async function startApp() {
                 .copy(airplane.position)
                 .add(
                     new THREE.Vector3(
-                        mission.aircraft === 'mirage' ? 16 : 9,
-                        mission.aircraft === 'mirage' ? 10 : 9,
-                        mission.aircraft === 'mirage' ? 12 : 13
+                        isJet(mission.aircraft) ? 16 : 9,
+                        isJet(mission.aircraft) ? 10 : 9,
+                        isJet(mission.aircraft) ? 12 : 13
                     )
                 );
             camera.lookAt(airplane.position);
+        }
+        if (
+            mission.id === 'tehran' &&
+            ['card', 'azadi-detail', 'milad-detail', 'tehran-horizon'].includes(
+                visualScenario.name
+            )
+        ) {
+            const l = tehranLandmarks(world.data)[
+                    visualScenario.name === 'milad-detail' ? 1 : 0
+                ],
+                y = world.height(l.x, l.z);
+            if (visualScenario.name === 'card') {
+                // View the broad arch from the west, with Milad and Damavand beyond.
+                camera.position.set(l.x - 140, y + 85, l.z + 70);
+                camera.lookAt(l.x, y + 32, l.z);
+            } else if (visualScenario.name === 'azadi-detail') {
+                camera.position.set(l.x + 65, y + 27, l.z + 88);
+                const azadiView = new URLSearchParams(location.search).get(
+                    'azadi-view'
+                );
+                if (azadiView === 'east')
+                    camera.position.set(l.x + 100, y + 18, l.z);
+                if (azadiView === 'north')
+                    camera.position.set(l.x, y + 18, l.z - 100);
+                if (azadiView === 'west')
+                    camera.position.set(l.x - 100, y + 18, l.z);
+                if (azadiView === 'south')
+                    camera.position.set(l.x, y + 18, l.z + 100);
+                if (azadiView === 'surfaces')
+                    camera.position.set(l.x + 350, y + 300, l.z + 480);
+                camera.lookAt(l.x, y + 22, l.z);
+                airplane.visible = false;
+            } else if (visualScenario.name === 'milad-detail') {
+                camera.position.set(l.x + 430, y + 330, l.z + 420);
+                camera.lookAt(l.x, y + 220, l.z);
+                airplane.visible = false;
+            } else {
+                camera.position.copy(airplane.position);
+                camera.lookAt(
+                    (52.109 - world.data.origin[1]) *
+                        111320 *
+                        Math.cos((world.data.origin[0] * Math.PI) / 180),
+                    3500,
+                    (world.data.origin[0] - 35.951) * 111320
+                );
+                airplane.visible = false;
+            }
+        }
+        if (
+            mission.id === 'tehran' &&
+            visualScenario.name.startsWith('landmark-')
+        ) {
+            const l = tehranLandmarks(world.data).find(
+                (p) => visualScenario.name === `landmark-${p.id}`
+            );
+            if (l) {
+                const y = world.height(l.x, l.z),
+                    size =
+                        l.id === 'tabiat'
+                            ? 420
+                            : Math.max(l.width, l.depth, l.height);
+                camera.position.set(
+                    l.x + size * 0.7,
+                    y + size * 0.65,
+                    l.z + size
+                );
+                camera.lookAt(l.x, y + l.height * 0.35, l.z);
+                if (l.id === 'university') {
+                    camera.position.set(l.x, y + 2.8, l.z + 27);
+                    camera.lookAt(l.x, y + 5, l.z);
+                    if (
+                        new URLSearchParams(location.search).get(
+                            'gate-view'
+                        ) === 'street'
+                    ) {
+                        camera.position.set(l.x + 45, y + 25, l.z + 65);
+                        camera.lookAt(l.x, y + 2, l.z);
+                    }
+                    if (
+                        new URLSearchParams(location.search).get(
+                            'gate-view'
+                        ) === 'rear'
+                    ) {
+                        camera.position.set(l.x + 18, y + 9, l.z - 25);
+                        camera.lookAt(l.x, y + 5, l.z);
+                    }
+                }
+                airplane.visible = false;
+            }
         }
         experience.update();
         hud.update({ planeState, cameraMode });
@@ -527,8 +683,18 @@ async function startApp() {
             visualScenario || experience.paused ? 0 : timer.getDelta(),
             camera.position
         );
+        if (visualScenario.name.startsWith('landmark-'))
+            for (let i = 0; i < 12; i++)
+                groundDetail.update(
+                    camera.position,
+                    scene.userData.quality,
+                    1,
+                    0
+                );
         groundDetail.update(
-            planeState.position,
+            visualScenario.name.startsWith('landmark-')
+                ? camera.position
+                : planeState.position,
             scene.userData.quality,
             Math.min(timer.getDelta(), 0.1),
             visualScenario || experience.paused || document.hidden
@@ -540,7 +706,9 @@ async function startApp() {
         if (photoMode.active && beacon) beacon.visible = false;
         scene.userData.followSun(airplane.position);
         parkedAircraft.update(camera.position, scene.userData.quality);
+        updateRegionDetail(airbase, camera.position, scene.userData.quality);
         serviceVehicles.update(camera.position, scene.userData.quality);
+        roadTraffic.update(camera.position, scene.userData.quality, 0, camera);
         renderer.render(scene, camera);
         document.getElementById('scenery-loading')?.remove();
         if (import.meta.env.DEV)
@@ -549,6 +717,7 @@ async function startApp() {
                 triangles: renderer.info.render.triangles,
                 ...roadTraffic.stats(),
                 ...groundDetail.stats(),
+                ...groundTexture.stats(),
                 ...airbase.userData.summary
             });
         document.documentElement.dataset.visualReady = 'true';
@@ -721,7 +890,12 @@ async function startApp() {
                                     )
                                 );
                                 const origin =
-                                    town?.point ||
+                                    (mission.id === 'tehran'
+                                        ? [
+                                              tehranLandmarks(world.data)[1].x,
+                                              tehranLandmarks(world.data)[1].z
+                                          ]
+                                        : town?.point) ||
                                     route.points[
                                         Math.floor(route.points.length / 2)
                                     ];
@@ -842,6 +1016,11 @@ async function startApp() {
             lastRadarUpdate = timestamp;
         }
         // Render at most once per browser frame, including automation substeps.
+        groundTexture.update(
+            planeState.position,
+            scene.userData.quality,
+            Math.min(timer.getDelta(), 0.1)
+        );
         clouds.update(
             visualScenario || experience.paused ? 0 : timer.getDelta(),
             camera.position
@@ -859,6 +1038,7 @@ async function startApp() {
         if (photoMode.active && beacon) beacon.visible = false;
         scene.userData.followSun(airplane.position);
         parkedAircraft.update(camera.position, scene.userData.quality);
+        updateRegionDetail(airbase, camera.position, scene.userData.quality);
         serviceVehicles.update(camera.position, scene.userData.quality);
         const trafficStarted = performance.now();
         roadTraffic.update(
@@ -866,7 +1046,8 @@ async function startApp() {
             scene.userData.quality,
             experience.paused || document.hidden
                 ? 0
-                : Math.min(timer.getDelta(), 0.1)
+                : Math.min(timer.getDelta(), 0.1),
+            camera
         );
         const trafficMs = performance.now() - trafficStarted;
         renderer.render(scene, camera);
@@ -884,6 +1065,7 @@ async function startApp() {
                 machTransitions: machTransition.count,
                 ...roadTraffic.stats(),
                 ...groundDetail.stats(),
+                ...groundTexture.stats(),
                 ...airbase.userData.summary
             });
             statsAt = timestamp;

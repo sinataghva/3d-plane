@@ -501,6 +501,8 @@ export function updateAirplaneCockpitVisibility({
 }) {
     if (airplane.userData.lastCockpitVisibility === isCockpit) return;
     airplane.userData.lastCockpitVisibility = isCockpit;
+    if (airplane.userData.cockpitPosition && airplane.userData.jetParts?.canopy)
+        airplane.userData.jetParts.canopy.visible = !isCockpit;
     const cockpitView = airplane.userData.cockpitView;
     if (cockpitView instanceof THREE.Object3D) {
         cockpitView.visible = isCockpit;

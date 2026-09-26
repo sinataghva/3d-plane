@@ -1,0 +1,515 @@
+[
+  {
+    "file": "airfield-places.json.gz",
+    "sha256": "3e9660577b8daf7f80e3c6b950da39f6a4b57656e2293c2410756aa76d47550d",
+    "snapshot": "2026-09-25T20:44:59Z",
+    "elements": 1594,
+    "query": "(way[aeroway](35.53,51.23,35.82,51.58);node[place](35.53,51.23,35.82,51.58););"
+  },
+  {
+    "file": "roads.json.gz",
+    "sha256": "3f324e662eb861673ea9307ba89aa2536bda3303fdd00230b1ada5de1ed903c6",
+    "snapshot": "2026-09-25T20:38:51Z",
+    "elements": 125931,
+    "query": "(way[highway](35.53,51.23,35.82,51.58);way[railway=rail](35.53,51.23,35.82,51.58);way[waterway](35.53,51.23,35.82,51.58););"
+  },
+  {
+    "file": "relations-water.json.gz",
+    "sha256": "7f0cf631ba2ecbe243f5b176b9104733aac1cb043570c264b598d76e4c908e56",
+    "snapshot": "2026-09-25T20:39:50Z",
+    "elements": 21,
+    "query": "rel[natural=water](35.53,51.23,35.82,51.58);"
+  },
+  {
+    "file": "water.json.gz",
+    "sha256": "9b091652ed8fb2e047a9d5800864f9b2ceb383173ba57205f07079ecd40c987f",
+    "snapshot": "2026-09-25T20:39:50Z",
+    "elements": 715,
+    "query": "way[natural=water](35.53,51.23,35.82,51.58);"
+  },
+  {
+    "file": "wood.json.gz",
+    "sha256": "392fcc66dd342799954b6d3716963b7eb4d76ea22e633dcc7ebb8a7e210d6c47",
+    "snapshot": "2026-09-25T20:39:50Z",
+    "elements": 521,
+    "query": "way[natural=wood](35.53,51.23,35.82,51.58);"
+  },
+  {
+    "file": "parks.json.gz",
+    "sha256": "f774866eb8b290d3a265c498d757a91d100198a375bb8a7c7bf8a17fd1bc6655",
+    "snapshot": "2026-09-25T20:42:51Z",
+    "elements": 4488,
+    "query": "(way[leisure=park](35.53,51.23,35.82,51.58);way[leisure=garden](35.53,51.23,35.82,51.58););"
+  },
+  {
+    "file": "relations-buildings.json.gz",
+    "sha256": "8023e6276f78deeeedbd011349ccb428195b63f834881791494e5c4bddebdad9",
+    "snapshot": "2026-09-25T20:40:51Z",
+    "elements": 252,
+    "query": "relation[building](35.53,51.23,35.82,51.58);"
+  },
+  {
+    "file": "relations-forest.json.gz",
+    "sha256": "fb564541eb03f62707c08681d03e7806013526e9e57dcb9f20443dddc1c8f0a9",
+    "snapshot": "2026-09-25T20:46:01Z",
+    "elements": 10,
+    "query": "relation[landuse=forest](35.53,51.23,35.82,51.58);"
+  },
+  {
+    "file": "relations-wood.json.gz",
+    "sha256": "1993f23598d7584012ddc67e9cbacd2e5cdb19bd1532dc21014409ac0c84e975",
+    "snapshot": "2026-09-25T20:40:51Z",
+    "elements": 6,
+    "query": "relation[natural=wood](35.53,51.23,35.82,51.58);"
+  },
+  {
+    "file": "land-forest.json.gz",
+    "sha256": "5800f38a74653677d225ec288eb6af71a516bdbfadc56dc8f3d317ef052b0b99",
+    "snapshot": "2026-09-25T20:41:51Z",
+    "elements": 893,
+    "query": "way[landuse=forest](35.53,51.23,35.82,51.58);"
+  },
+  {
+    "file": "land-farmland.json.gz",
+    "sha256": "115dbbb72187975bc7ffcbd2789c75af76aae7f5ded0f4d38d7fee9e2a93f91e",
+    "snapshot": "2026-09-25T20:52:10Z",
+    "elements": 211,
+    "query": "way[landuse=farmland](35.53,51.23,35.82,51.58);"
+  },
+  {
+    "file": "land-meadow.json.gz",
+    "sha256": "d72930a93bdec399c753cdb094e1f46b8e3f8772ebfddbb93c284d72f245eef7",
+    "snapshot": "2026-09-25T20:46:01Z",
+    "elements": 35,
+    "query": "way[landuse=meadow](35.53,51.23,35.82,51.58);"
+  },
+  {
+    "file": "land-grass.json.gz",
+    "sha256": "7aa8832b828d78f278e5da857ec601270fefca525ef3b9b4ebc8f40b8f00fdba",
+    "snapshot": "2026-09-25T20:52:10Z",
+    "elements": 2326,
+    "query": "way[landuse=grass](35.53,51.23,35.82,51.58);"
+  },
+  {
+    "file": "land-residential.json.gz",
+    "sha256": "4089d9d8267ad5d2acaecc758e239746b1df985f774581be7479fbb8d6aaabb5",
+    "snapshot": "2026-09-25T20:47:05Z",
+    "elements": 900,
+    "query": "way[landuse=residential](35.53,51.23,35.82,51.58);"
+  },
+  {
+    "file": "land-industrial.json.gz",
+    "sha256": "a4c556c9d29f5e4264e025eece8e1f7c9a543a9fa02233e2d968afa1b1810ab0",
+    "snapshot": "2026-09-25T20:47:05Z",
+    "elements": 383,
+    "query": "way[landuse=industrial](35.53,51.23,35.82,51.58);"
+  },
+  {
+    "file": "land-commercial.json.gz",
+    "sha256": "6d9adc70b626b77435d9cd5d64e5e6c7a3b9fc4d8b26c19bebb904389d4b4d58",
+    "snapshot": "2026-09-25T20:47:05Z",
+    "elements": 198,
+    "query": "way[landuse=commercial](35.53,51.23,35.82,51.58);"
+  },
+  {
+    "file": "buildings-0-0.json.gz",
+    "sha256": "beeb175cdb8ea1da21f702443ededb335c01e3218caac8cbf4527e1c06f6860e",
+    "snapshot": "2026-09-25T20:47:05Z",
+    "elements": 158,
+    "query": "way[building](35.53,51.23,35.6025,51.3175);"
+  },
+  {
+    "file": "buildings-0-1.json.gz",
+    "sha256": "f325acd501fa4a8985e3cb26196e781df2bf9be17465407de052687c4084df24",
+    "snapshot": "2026-09-25T20:48:05Z",
+    "elements": 286,
+    "query": "way[building](35.53,51.3175,35.6025,51.405);"
+  },
+  {
+    "file": "buildings-0-2.json.gz",
+    "sha256": "7cc7ed5cac766bf60406118521ef335aaa265285e4d0edf3d380c8a698e9baeb",
+    "snapshot": "2026-09-25T20:48:05Z",
+    "elements": 1000,
+    "query": "way[building](35.53,51.405,35.6025,51.4925);"
+  },
+  {
+    "file": "buildings-0-3.json.gz",
+    "sha256": "ddfecf15947a50539cd4fded3602a4d6a6924c8690ecfd201880e0691232eda3",
+    "snapshot": "2026-09-25T20:48:05Z",
+    "elements": 98,
+    "query": "way[building](35.53,51.4925,35.6025,51.58);"
+  },
+  {
+    "file": "buildings-1-0.json.gz",
+    "sha256": "934f4b36d94ca4b5a34d5a43a63b83b622f135d30ad6b5bd892512132abb785b",
+    "snapshot": "2026-09-25T20:48:05Z",
+    "elements": 529,
+    "query": "way[building](35.6025,51.23,35.675,51.3175);"
+  },
+  {
+    "file": "buildings-1-1.json.gz",
+    "sha256": "b0ed80fb61c732cf5fc65ced37258559eb4345e99e73e7ae06b3c5d6b8945423",
+    "snapshot": "2026-09-25T20:48:05Z",
+    "elements": 2141,
+    "query": "way[building](35.6025,51.3175,35.675,51.405);"
+  },
+  {
+    "file": "buildings-1-2.json.gz",
+    "sha256": "8857ecca56e443c68086ba927e4e86cf2a8b09938383489852bfa433004bd26b",
+    "snapshot": "2026-09-25T20:48:05Z",
+    "elements": 2163,
+    "query": "way[building](35.6025,51.405,35.675,51.4925);"
+  },
+  {
+    "file": "buildings-1-3.json.gz",
+    "sha256": "614487d5a4c1c34883239c1fa6dd62172957604c18f4a3ae769e0c5510cc9daf",
+    "snapshot": "2026-09-25T20:49:03Z",
+    "elements": 1117,
+    "query": "way[building](35.6025,51.4925,35.675,51.58);"
+  },
+  {
+    "file": "buildings-2-0.json.gz",
+    "sha256": "68e3a6bfe0cb37c5bbb75ca2f787e95e645f1ced37baedc699031342bbc2a101",
+    "snapshot": "2026-09-25T20:53:15Z",
+    "elements": 5745,
+    "query": "way[building](35.675,51.23,35.7475,51.3175);"
+  },
+  {
+    "file": "buildings-2-1.json.gz",
+    "sha256": "605f1bacb40063c135603a1df614a6fb2f2376f0dee0b21675c5a0d1b066a6c6",
+    "snapshot": "2026-09-25T20:49:03Z",
+    "elements": 11072,
+    "query": "way[building](35.675,51.3175,35.7475,51.405);"
+  },
+  {
+    "file": "buildings-2-2.json.gz",
+    "sha256": "29d86d8fbd86770b6a8e96c176cb2902c50294a3b09f44f9d86efee499943b67",
+    "snapshot": "2026-09-25T20:49:03Z",
+    "elements": 6300,
+    "query": "way[building](35.675,51.405,35.7475,51.4925);"
+  },
+  {
+    "file": "buildings-2-3.json.gz",
+    "sha256": "0768f80ee81e8c5b3de4840a436532296f0fe6f1c19920ccc1c55ec68441ceb5",
+    "snapshot": "2026-09-25T20:50:06Z",
+    "elements": 1524,
+    "query": "way[building](35.675,51.4925,35.7475,51.58);"
+  },
+  {
+    "file": "buildings-3-0.json.gz",
+    "sha256": "4cc1c60f0cd825129902b359ac4da2c078f4012486f8678cd63aff4af40b483b",
+    "snapshot": "2026-09-25T20:50:06Z",
+    "elements": 3829,
+    "query": "way[building](35.7475,51.23,35.82,51.3175);"
+  },
+  {
+    "file": "buildings-3-1.json.gz",
+    "sha256": "bffff8353ffa9a552d5096d23002bebf78ecef29bcdaff6736e0dbfc5b8b5cca",
+    "snapshot": "2026-09-25T20:53:15Z",
+    "elements": 5189,
+    "query": "way[building](35.7475,51.3175,35.82,51.405);"
+  },
+  {
+    "file": "buildings-3-2.json.gz",
+    "sha256": "303841aa05a50cce27b686841fa4b85cd3da20a4527538f3ccb147269e2c486b",
+    "snapshot": "2026-09-25T20:51:05Z",
+    "elements": 14913,
+    "query": "way[building](35.7475,51.405,35.82,51.4925);"
+  },
+  {
+    "file": "buildings-3-3.json.gz",
+    "sha256": "02d1b49c5dc44c3550df63937342640658cd7a0cfce857064a9bb4b13b6b0ae7",
+    "snapshot": "2026-09-25T20:51:05Z",
+    "elements": 6023,
+    "query": "way[building](35.7475,51.4925,35.82,51.58);"
+  },
+  {
+    "file": "dry-land.json.gz",
+    "sha256": "daaeeb2af4e4ada3e8fcb2b00c427db0162ee097c43cf2a15169510506c4feaf",
+    "snapshot": "2026-09-25T20:51:05Z",
+    "elements": 45,
+    "query": "(way[natural~\"^(sand|bare_rock|scree|scrub|heath)$\"](35.53,51.23,35.82,51.58);relation[natural~\"^(sand|bare_rock|scree|scrub|heath)$\"](35.53,51.23,35.82,51.58););"
+  },
+  {
+    "file": "airfield-relations.json.gz",
+    "sha256": "96c51b1167bfb72761b96eea1613f9bc5d897309c4ad1cbd092e0c089e6986ee",
+    "snapshot": "2026-09-25T20:55:18Z",
+    "elements": 0,
+    "query": "relation[aeroway](35.53,51.23,35.82,51.58);"
+  },
+  {
+    "file": "extension-west-airfield-places.json.gz",
+    "sha256": "d343ccd0a8ee40a987d481b45eb07e6d2a14584f5acb24b16d7f3dc8eace47eb",
+    "snapshot": "2026-09-25T21:59:21Z",
+    "elements": 155,
+    "query": "(way[aeroway](35.53,51.1,35.82,51.23);node[place](35.53,51.1,35.82,51.23););"
+  },
+  {
+    "file": "extension-west-land.json.gz",
+    "sha256": "3b43d0856567d1d93802cf044e21da88e9de01193fb7aece0a4fd831b55e57f1",
+    "snapshot": "2026-09-25T22:00:21Z",
+    "elements": 1957,
+    "query": "(way[landuse](35.53,51.1,35.82,51.23);way[natural~\"^(water|wood|sand|bare_rock|scree|scrub|heath)$\"](35.53,51.1,35.82,51.23);way[leisure~\"^(park|garden)$\"](35.53,51.1,35.82,51.23););"
+  },
+  {
+    "file": "extension-west-relations.json.gz",
+    "sha256": "b96afb6429510199b20435b82b238c3d6b1ae7cf8d193667628611caf58409ad",
+    "snapshot": "2026-09-25T22:00:21Z",
+    "elements": 177,
+    "query": "(relation[building](35.53,51.1,35.82,51.23);relation[landuse=forest](35.53,51.1,35.82,51.23);relation[natural~\"^(water|wood|sand|bare_rock|scree|scrub|heath)$\"](35.53,51.1,35.82,51.23);relation[aeroway](35.53,51.1,35.82,51.23););"
+  },
+  {
+    "file": "extension-west-buildings-0.json.gz",
+    "sha256": "21acbfb73436cffdf5eedc9c37192ba12e59950876bf13e101e309362f979d13",
+    "snapshot": "2026-09-25T22:09:27Z",
+    "elements": 218,
+    "query": "way[building](35.53,51.1,35.6025,51.23);"
+  },
+  {
+    "file": "extension-west-roads-0.json.gz",
+    "sha256": "40e2dd04e866087fb83608727970c2582c526d6fa2cf51f6175f53148ca76545",
+    "snapshot": "2026-09-25T22:01:20Z",
+    "elements": 4500,
+    "query": "(way[highway](35.53,51.1,35.6025,51.23);way[railway=rail](35.53,51.1,35.6025,51.23);way[waterway](35.53,51.1,35.6025,51.23););"
+  },
+  {
+    "file": "extension-west-buildings-1.json.gz",
+    "sha256": "360866fa64a8033f4660683196c5037f1f8c2cdf2d9ed228f73a8fc9ff957024",
+    "snapshot": "2026-09-25T22:01:20Z",
+    "elements": 596,
+    "query": "way[building](35.6025,51.1,35.675,51.23);"
+  },
+  {
+    "file": "extension-west-roads-1.json.gz",
+    "sha256": "321ab7d7594af151e2b90a4ed2b66ddd0ca169ea2e874290320a223c4e9783dd",
+    "snapshot": "2026-09-25T22:07:21Z",
+    "elements": 2995,
+    "query": "(way[highway](35.6025,51.1,35.675,51.23);way[railway=rail](35.6025,51.1,35.675,51.23);way[waterway](35.6025,51.1,35.675,51.23););"
+  },
+  {
+    "file": "extension-west-buildings-2.json.gz",
+    "sha256": "283b25976762534cf56608cc7da8b0dd2d148fcf50d169348d745c91ac975875",
+    "snapshot": "2026-09-25T22:02:21Z",
+    "elements": 6182,
+    "query": "way[building](35.675,51.1,35.7475,51.23);"
+  },
+  {
+    "file": "extension-west-roads-2.json.gz",
+    "sha256": "8703c680cb2fc3cf0e48c592ed9399f66da25b9f0c63ba02721fe24e1164d942",
+    "snapshot": "2026-09-25T22:02:21Z",
+    "elements": 7183,
+    "query": "(way[highway](35.675,51.1,35.7475,51.23);way[railway=rail](35.675,51.1,35.7475,51.23);way[waterway](35.675,51.1,35.7475,51.23););"
+  },
+  {
+    "file": "extension-west-buildings-3.json.gz",
+    "sha256": "3a6d611157955398efdcb4ff4082a8b145e902c30e0469669fb456812352e925",
+    "snapshot": "2026-09-25T22:08:26Z",
+    "elements": 1173,
+    "query": "way[building](35.7475,51.1,35.82,51.23);"
+  },
+  {
+    "file": "extension-west-roads-3.json.gz",
+    "sha256": "14f675e906d3438aa0ad3d2f82ca53d5407ddbf0df82d19ca84917c544ef6a28",
+    "snapshot": "2026-09-25T22:03:20Z",
+    "elements": 2010,
+    "query": "(way[highway](35.7475,51.1,35.82,51.23);way[railway=rail](35.7475,51.1,35.82,51.23);way[waterway](35.7475,51.1,35.82,51.23););"
+  },
+  {
+    "file": "extension-east-airfield-places.json.gz",
+    "sha256": "f1534f26f9871fe424bee10830d13484bc98fb0c2464c1b41d01f46c0c55a11e",
+    "snapshot": "2026-09-25T22:03:20Z",
+    "elements": 33,
+    "query": "(way[aeroway](35.53,51.58,35.82,51.66);node[place](35.53,51.58,35.82,51.66););"
+  },
+  {
+    "file": "extension-east-land.json.gz",
+    "sha256": "3868290ed3dc5a932f94b42bfc1ea838b6198acf50f1f22a650d3a74850ed1a4",
+    "snapshot": "2026-09-25T22:04:19Z",
+    "elements": 367,
+    "query": "(way[landuse](35.53,51.58,35.82,51.66);way[natural~\"^(water|wood|sand|bare_rock|scree|scrub|heath)$\"](35.53,51.58,35.82,51.66);way[leisure~\"^(park|garden)$\"](35.53,51.58,35.82,51.66););"
+  },
+  {
+    "file": "extension-east-relations.json.gz",
+    "sha256": "be97bab1cff0dc143cfadf72574e93a1bb25453b68ea837cbf28ff7badedfd4b",
+    "snapshot": "2026-09-25T22:04:19Z",
+    "elements": 4,
+    "query": "(relation[building](35.53,51.58,35.82,51.66);relation[landuse=forest](35.53,51.58,35.82,51.66);relation[natural~\"^(water|wood|sand|bare_rock|scree|scrub|heath)$\"](35.53,51.58,35.82,51.66);relation[aeroway](35.53,51.58,35.82,51.66););"
+  },
+  {
+    "file": "extension-east-buildings-0.json.gz",
+    "sha256": "d9616b770be4ef1462ca7fc13466dd0e6eb2e42cf7060995a090a75f4179e198",
+    "snapshot": "2026-09-25T22:08:26Z",
+    "elements": 79,
+    "query": "way[building](35.53,51.58,35.6025,51.66);"
+  },
+  {
+    "file": "extension-east-roads-0.json.gz",
+    "sha256": "c7930dcd699f98996896fbffb0a97a05adfd3e87d22ddea8a7e87ea1e082628c",
+    "snapshot": "2026-09-25T22:05:21Z",
+    "elements": 576,
+    "query": "(way[highway](35.53,51.58,35.6025,51.66);way[railway=rail](35.53,51.58,35.6025,51.66);way[waterway](35.53,51.58,35.6025,51.66););"
+  },
+  {
+    "file": "extension-east-buildings-1.json.gz",
+    "sha256": "405cbf3c15a8d07b4c4c7d9bbdb020111ca26c95ab38b96bfec7cc8712cde05b",
+    "snapshot": "2026-09-25T22:05:21Z",
+    "elements": 23,
+    "query": "way[building](35.6025,51.58,35.675,51.66);"
+  },
+  {
+    "file": "extension-east-roads-1.json.gz",
+    "sha256": "2d88d06589ecbf707b15b0927acac4170cd14e9714bedc23809ae403a4091bda",
+    "snapshot": "2026-09-25T22:08:26Z",
+    "elements": 108,
+    "query": "(way[highway](35.6025,51.58,35.675,51.66);way[railway=rail](35.6025,51.58,35.675,51.66);way[waterway](35.6025,51.58,35.675,51.66););"
+  },
+  {
+    "file": "extension-east-buildings-2.json.gz",
+    "sha256": "43ff05da16b3cf12095055b2fce7a7ec1b54c05e72ff65f5be559102d68b81d1",
+    "snapshot": "2026-09-25T22:09:27Z",
+    "elements": 537,
+    "query": "way[building](35.675,51.58,35.7475,51.66);"
+  },
+  {
+    "file": "extension-east-roads-2.json.gz",
+    "sha256": "4e38aa468b101f44c7d358257aec161fdb29bd4752afd1ce1287862af5f90f3d",
+    "snapshot": "2026-09-25T22:07:21Z",
+    "elements": 1728,
+    "query": "(way[highway](35.675,51.58,35.7475,51.66);way[railway=rail](35.675,51.58,35.7475,51.66);way[waterway](35.675,51.58,35.7475,51.66););"
+  },
+  {
+    "file": "extension-east-buildings-3.json.gz",
+    "sha256": "77204f9f6460b34090b5ae18d2408c84c1ea120e32368dca1371a376939e1621",
+    "snapshot": "2026-09-25T22:07:21Z",
+    "elements": 516,
+    "query": "way[building](35.7475,51.58,35.82,51.66);"
+  },
+  {
+    "file": "extension-east-roads-3.json.gz",
+    "sha256": "e9aaefc2a6f7584ed8de8de4a5f06323d27a20a0db478a9db69550cae9cd2740",
+    "snapshot": "2026-09-25T22:07:21Z",
+    "elements": 775,
+    "query": "(way[highway](35.7475,51.58,35.82,51.66);way[railway=rail](35.7475,51.58,35.82,51.66);way[waterway](35.7475,51.58,35.82,51.66););"
+  },
+  {
+    "file": "extension-north-places.json.gz",
+    "sha256": "7ff3d2a522fbe80a6bc2da55296b4f8879e19f46ceaac6b6876f40b084a68095",
+    "snapshot": "2026-09-26T12:19:06Z",
+    "elements": 23,
+    "query": "(node[place](35.82,51.1,35.85,51.66);way[aeroway](35.82,51.1,35.85,51.66););"
+  },
+  {
+    "file": "extension-north-official.json.gz",
+    "sha256": "3e0e18f542958da447344aa32dcc6ddfe702127b5a5c56af475989fbe8530df2",
+    "snapshot": "2026-09-26T12:26:11.230616+00:00",
+    "elements": 2996,
+    "query": "Official OSM API northern strip; see preserved provenance.sources URLs.",
+    "provenance": {
+      "source": "OpenStreetMap API 0.6",
+      "license": "ODbL-1.0",
+      "note": "Normalized from preserved official API XML; timestamp is assembly time, not a single Overpass snapshot.",
+      "sources": [
+        {
+          "file": "north-api-00.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/map?bbox=51.1,35.82,51.146667,35.85",
+          "sha256": "0fdd0813a6370eed796881f4f1c0a76854e2947ac8f83cca19a9a5a50554642c"
+        },
+        {
+          "file": "north-api-01.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/map?bbox=51.146667,35.82,51.193333,35.85",
+          "sha256": "ad85cfe9ad2cec29c7456593b2acf0697d3bc521236eedc2928f6f143f131612"
+        },
+        {
+          "file": "north-api-02.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/map?bbox=51.193333,35.82,51.24,35.85",
+          "sha256": "72d5504fb41ec661713b33afa1c432a698536531a8d54e586e59d09316b05573"
+        },
+        {
+          "file": "north-api-03.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/map?bbox=51.24,35.82,51.286667,35.85",
+          "sha256": "41b542f77be563dcd7dded2a27fab9a07598a1223953348edb04167235fd67a1"
+        },
+        {
+          "file": "north-api-04.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/map?bbox=51.286667,35.82,51.333333,35.85",
+          "sha256": "fb8e27fd46f7bda698bafb4ba3de7e9fd15fe69efc8442cea22492f964689529"
+        },
+        {
+          "file": "north-api-05.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/map?bbox=51.333333,35.82,51.38,35.85",
+          "sha256": "9cc473fbc6bf4747370f3ad24be7d84be2b9190460a6d17a0f22d10f18fab4f4"
+        },
+        {
+          "file": "north-api-06.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/map?bbox=51.38,35.82,51.426667,35.85",
+          "sha256": "43a5d958ae0a00878e8c021517e6e15b6bc9b06af5741e9ecb6641ec35875c99"
+        },
+        {
+          "file": "north-api-07.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/map?bbox=51.426667,35.82,51.473333,35.85",
+          "sha256": "ad18ffa9acf930c9a2260a65e0accc15d0d03d3e1e2cb1b8e673c5dbe7cd39e1"
+        },
+        {
+          "file": "north-api-08.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/map?bbox=51.473333,35.82,51.52,35.85",
+          "sha256": "6a2b4713b21fe1d0b3859ee7e653a1da6a1dc4689cd248b8a1f0517bbc576a50"
+        },
+        {
+          "file": "north-api-09.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/map?bbox=51.52,35.82,51.566667,35.85",
+          "sha256": "34347e57fc82272f418798d119cbd1f2ec9187c7055afae300a58ec3daafd387"
+        },
+        {
+          "file": "north-api-10.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/map?bbox=51.566667,35.82,51.613333,35.85",
+          "sha256": "9324671ef8ced1e3278a17e36c1831484312384ac73300163e761e34077e9de7"
+        },
+        {
+          "file": "north-api-11.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/map?bbox=51.613333,35.82,51.66,35.85",
+          "sha256": "bfc594bbb855b55f9b551a6b884f470f4f42151ad8e7b931e091711ce98d6280"
+        },
+        {
+          "file": "north-api-relation-6525676.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/relation/6525676/full",
+          "sha256": "e4597628b7b85600ffcbdf7f23ffc0e0fd8e23bebc68a129ec5628d3bca29d2e"
+        },
+        {
+          "file": "north-api-relation-9399894.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/relation/9399894/full",
+          "sha256": "a5693d1156a2b36b77fe5b042d7ce1a8c10501840ac5a8741efa078856d2a4f5"
+        },
+        {
+          "file": "north-api-relation-9399914.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/relation/9399914/full",
+          "sha256": "47ce619f833095c64295e23c3083beca5607a7f896de27bda6be702ee80e1f6c"
+        },
+        {
+          "file": "north-api-relation-9399915.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/relation/9399915/full",
+          "sha256": "e4728e1ffb170498d6a25398d605518a75f57c5f0062cb3a68ee099fde7eb18a"
+        },
+        {
+          "file": "north-api-relation-9399916.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/relation/9399916/full",
+          "sha256": "287b850e1aa269ed5af2afef5f709959e949f61a885c3a968520ac0757e6e3ee"
+        },
+        {
+          "file": "north-api-relation-9399917.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/relation/9399917/full",
+          "sha256": "bf9d3b2efc943e6d033ff6f3660ed145bdd8af22c3edc43c73477c0bd6ff2b71"
+        },
+        {
+          "file": "north-api-relation-9499258.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/relation/9499258/full",
+          "sha256": "94c7afc01c5064bab186ef7b36bf33176d41697418a6ea273a1fbc28092098e8"
+        },
+        {
+          "file": "north-api-relation-11497874.osm.gz",
+          "url": "https://api.openstreetmap.org/api/0.6/relation/11497874/full",
+          "sha256": "4b1e15adc2664614981c7d3a4225498546304626fa41b871ef82fcd15b3425a1"
+        }
+      ]
+    }
+  }
+]

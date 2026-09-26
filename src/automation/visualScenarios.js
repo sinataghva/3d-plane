@@ -1,3 +1,8 @@
+import { isJet } from '../aircraft/capabilities.js';
+import {
+    tehranLandmarks,
+    TEHRAN_LANDMARKS
+} from '../scenery/tehranLandmarks.js';
 import { buildingLightSeed } from '../scenery/buildingLights.js';
 import { airfieldBuilding } from '../scenery/airfieldScenery.js';
 import { getGeography, inFeature } from '../scenery/geography.js';
@@ -175,10 +180,23 @@ const VISUAL_SCENARIOS = {
 export function getVisualScenario() {
     const params = new URLSearchParams(window.location.search);
     const scenarioName = params.get('visual');
+    if (TEHRAN_LANDMARKS.some((l) => scenarioName === `landmark-${l.id}`))
+        return {
+            name: scenarioName || '',
+            cameraMode: 'chase',
+            plane: { isAirborne: true }
+        };
 
     if (
         [
             'traffic-detail',
+            'tehran-city',
+            'tehran-desert',
+            'tehran-north',
+            'tehran-south',
+            'azadi-detail',
+            'milad-detail',
+            'tehran-horizon',
             'town-detail',
             'airfield-detail',
             'shelter-detail',
@@ -235,12 +253,57 @@ export function applyVisualScenario({
         );
         planeState.yawAngle += world.spawn.yaw + Math.PI / 2;
     }
+    if (
+        world &&
+        planeState.aircraft === 'phantom' &&
+        [
+            'tehran-city',
+            'tehran-desert',
+            'tehran-north',
+            'tehran-south'
+        ].includes(visualScenario.name)
+    ) {
+        const desert = visualScenario.name === 'tehran-desert';
+        const north = visualScenario.name === 'tehran-north';
+        const south = visualScenario.name === 'tehran-south';
+        const x = south
+            ? world.spawn.x
+            : north
+              ? (51.427 - world.data.origin[1]) *
+                111320 *
+                Math.cos((world.data.origin[0] * Math.PI) / 180)
+              : world.width * (desert ? 0.32 : 0.06);
+        const z = south
+            ? world.spawn.z + 4000
+            : north
+              ? (world.data.origin[0] - 35.829) * 111320
+              : world.depth * (desert ? 0.3 : -0.2);
+        Object.assign(planeState, {
+            position: { x, y: world.height(x, z) + (south ? 300 : 700), z },
+            yawAngle: south
+                ? -Math.PI / 2
+                : north
+                  ? Math.PI / 2
+                  : desert
+                    ? -0.8
+                    : 0.3,
+            pitchAngle: 0,
+            rollAngle: 0,
+            speed: 2,
+            thrust: 0.7,
+            gearDown: false,
+            gearExtension: 0,
+            isAirborne: true
+        });
+    }
     if (world && visualScenario.name === 'card') {
         const palace = world.data.features.find((f) => f.palace);
         const p =
-            planeState.aircraft === 'mirage'
-                ? [900, -1250]
-                : palace?.points[0] || [world.spawn.x, world.spawn.z];
+            planeState.aircraft === 'phantom'
+                ? [world.spawn.x + 1000, world.spawn.z + 500]
+                : isJet(planeState.aircraft)
+                  ? [900, -1250]
+                  : palace?.points[0] || [world.spawn.x, world.spawn.z];
         planeState.position = {
             x: p[0] - 80,
             y: world.height(p[0], p[1]) + 110,
@@ -370,6 +433,32 @@ export function applyVisualScenario({
             };
             planeState.yawAngle = 0;
         }
+    }
+    if (
+        world &&
+        planeState.aircraft === 'phantom' &&
+        ['card', 'azadi-detail', 'milad-detail', 'tehran-horizon'].includes(
+            visualScenario.name
+        )
+    ) {
+        const l = tehranLandmarks(world.data)[
+            visualScenario.name === 'milad-detail' ? 1 : 0
+        ];
+        planeState.position = {
+            x: l.x + (visualScenario.name === 'card' ? -112 : 12),
+            y:
+                world.height(l.x, l.z) +
+                (visualScenario.name === 'tehran-horizon'
+                    ? 900
+                    : visualScenario.name === 'card'
+                      ? 54
+                      : 62),
+            z: l.z + (visualScenario.name === 'card' ? 33 : 20)
+        };
+        planeState.yawAngle = visualScenario.name === 'card' ? -1.1 : -0.3;
+        planeState.gearDown = false;
+        planeState.gearExtension = 0;
+        planeState.isAirborne = true;
     }
     cameraMode.setMode(visualScenario.cameraMode);
 }

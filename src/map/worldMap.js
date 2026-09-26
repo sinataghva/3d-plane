@@ -8,6 +8,7 @@ import {
 import { getGeography } from '../scenery/geography.js';
 import { drawOverview } from './geographicMap.js';
 import { formatHeading } from '../ui/hud.js';
+import { createDetailMap, detailLevel, hasDetailMap } from './detailMap.js';
 
 const WORLD_WIDTH = 4200;
 const WORLD_LENGTH = 5200;
@@ -40,7 +41,7 @@ export function createWorldMap(planeState) {
     if (geography)
         canvas.setAttribute(
             'aria-label',
-            `North-up ${geography.data.airfield?.includes('LFSX') ? 'Luxeuil · LFSX' : 'Saint-Cyr–Versailles · Château de Versailles · Saint-Cyr airfield'} map with your aircraft position and heading. Towns: ` +
+            `North-up ${geography.data.airfield?.includes('OIII') ? 'Tehran · Mehrabad · OIII' : geography.data.airfield?.includes('LFSX') ? 'Luxeuil · LFSX' : 'Saint-Cyr–Versailles · Château de Versailles · Saint-Cyr airfield'} map with your aircraft position and heading. Towns: ` +
                 geography.data.places
                     .filter((p) => ['city', 'town', 'village'].includes(p.kind))
                     .map((p) => p.name)
@@ -76,7 +77,11 @@ export function createWorldMap(planeState) {
         width: WORLD_WIDTH,
         depth: WORLD_LENGTH
     };
-    const viewport = createMapViewport(800, 600, bounds);
+    const tehran = geography ? hasDetailMap(geography) : false;
+    const viewport = createMapViewport(800, 600, bounds, tehran ? 12 : 4);
+    /** @type {ReturnType<typeof createDetailMap>|undefined} */
+    let detail;
+    let detailFrame = 0;
     const navigation = document.createElement('div');
     navigation.id = 'map-navigation';
     navigation.innerHTML =
@@ -249,6 +254,9 @@ export function createWorldMap(planeState) {
         pointers.clear();
         moved = true;
         dialog.close();
+        cancelAnimationFrame(detailFrame);
+        detailFrame = 0;
+        detail?.release();
         if (previousFocus) previousFocus.focus({ preventScroll: true });
         else if (document.activeElement instanceof HTMLElement)
             document.activeElement.blur();
@@ -381,14 +389,30 @@ export function createWorldMap(planeState) {
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         const world = getGeography();
         if (world) {
+            const level = tehran ? detailLevel(viewport.view.zoom) : 0;
+            const detailed = level > 0;
+            if (detailed && !detail) detail = createDetailMap(world);
+            if (!detailed && detail) detail.release();
             readout.textContent = drawOverview(
                 ctx,
                 width,
                 height,
                 planeState,
                 world,
-                viewport.view
+                viewport.view,
+                detailed ? detail : undefined
             );
+            canvas.dataset.detailLevel = String(level);
+            canvas.dataset.detailMetrics = JSON.stringify(
+                detail?.metrics ?? {}
+            );
+            if (detailed && detail?.metrics.pending)
+                hint.textContent += ' · Preparing local detail…';
+            if (detailed && detail?.metrics.pending && !detailFrame)
+                detailFrame = requestAnimationFrame(() => {
+                    detailFrame = 0;
+                    draw();
+                });
             return;
         }
         ctx.fillStyle = '#10242d';
@@ -513,6 +537,7 @@ export function createWorldMap(planeState) {
     return {
         update: draw,
         resetView() {
+            detail?.release();
             viewport.reset();
             draw();
         }

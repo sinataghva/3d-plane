@@ -1,3 +1,4 @@
+import { aircraftCapabilities, isJet } from '../aircraft/capabilities.js';
 import { synthesizeSonicBoom } from './sonicBoom.js';
 /** Audio mix derived from flight state; speed is metres per 60 Hz tick.
  * @param {import('../flight/physics.js').PlaneState} state */
@@ -6,14 +7,14 @@ export function flightMix(state, cockpit = false) {
         0,
         Math.min(
             1,
-            state.aircraft === 'mirage'
+            isJet(state.aircraft)
                 ? (state.enginePower ?? state.thrust)
                 : state.thrust
         )
     );
     return {
         engine: 0.12 + power * 0.28,
-        rate: (state.aircraft === 'mirage' ? 0.8 : 0.65) + power * 0.55,
+        rate: (isJet(state.aircraft) ? 0.8 : 0.65) + power * 0.55,
         wind: Math.min(0.22, Math.max(0, state.speed * 60) / 1600),
         boost: state.afterburner ? 0.23 : 0,
         cutoff: cockpit ? 1400 : 14000,
@@ -257,18 +258,21 @@ export function createFlightAudio() {
             if (Math.abs((state.gearExtension ?? 1) - gear) > 0.00001)
                 gearSoundUntil = context.currentTime + 0.12;
             const gearMoving = context.currentTime < gearSoundUntil;
+            const firing =
+                keyboard.space &&
+                aircraftCapabilities(state.aircraft).weapon === 'gun';
             // Leave room for foreground effects without changing the volume setting.
             const background =
                 context.currentTime < boomUntil
                     ? 0.3
-                    : keyboard.space
+                    : firing
                       ? 0.4
                       : gearMoving
                         ? 0.6
                         : 1;
             ramp(master.gain, active && !muted ? volume * mix.cabin : 0, 0.025);
             ramp(filter.frequency, mix.cutoff);
-            const engine = state.aircraft === 'mirage' ? 'jet' : 'propeller';
+            const engine = isJet(state.aircraft) ? 'jet' : 'propeller';
             for (const [name, layer] of loops) {
                 const level =
                     name === engine
@@ -287,17 +291,17 @@ export function createFlightAudio() {
                     ramp(layer.source.playbackRate, mix.rate, 0.25);
             }
             gear = state.gearExtension ?? 1;
-            if (active && keyboard.space && context.currentTime >= nextShot) {
+            if (active && firing && context.currentTime >= nextShot) {
                 burst(
                     shot || impact,
-                    state.aircraft === 'mirage' ? 0.85 : 0.75,
+                    isJet(state.aircraft) ? 0.85 : 0.75,
                     0.13,
-                    state.aircraft === 'mirage' ? 0.85 : 1.1,
+                    isJet(state.aircraft) ? 0.85 : 1.1,
                     0.025
                 );
                 nextShot =
                     context.currentTime +
-                    (state.aircraft === 'mirage' ? 0.055 : 0.15);
+                    (isJet(state.aircraft) ? 0.055 : 0.15);
             }
         },
         sonicBoom() {

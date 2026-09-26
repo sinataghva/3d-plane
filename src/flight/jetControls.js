@@ -1,9 +1,10 @@
+import { isJet } from '../aircraft/capabilities.js';
 import { MACH_REFERENCE_SPEED } from './jetAerodynamics.js';
 import { clearAfterburner } from './jetPhysics.js';
 import { isEditableTarget } from './input.js';
 /** @param {import('./physics.js').PlaneState} state @param {() => void} takeover */
 export function createJetControls(state, takeover) {
-    if (state.aircraft !== 'mirage') return { update() {} };
+    if (!isJet(state.aircraft)) return { update() {} };
     document.body.classList.add('jet-flight');
     const panel = document.createElement('div');
     panel.id = 'jet-controls';

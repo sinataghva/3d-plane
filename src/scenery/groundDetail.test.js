@@ -4,6 +4,46 @@ import {
     detailOpacity,
     GROUND_DETAIL_PRESETS
 } from './groundDetail.js';
+import { roadJunctionPatches } from './groundDetail.js';
+
+test('separate source road ways receive joined caps without bridging tunnels or layers', () => {
+    /** @param {number[][]} points @param {Partial<import('./geography.js').GeoFeature>} [extra] */
+    const road = (points, extra = {}) => ({
+        id: 'r',
+        name: '',
+        kind: 'road',
+        line: true,
+        points,
+        holes: [],
+        width: 10,
+        ...extra
+    });
+    const bend = [
+        road([
+            [-30, 0],
+            [0, 0]
+        ]),
+        road([
+            [0, 0],
+            [0, 30]
+        ])
+    ];
+    const caps = roadJunctionPatches(bend);
+    expect(caps).toHaveLength(1);
+    expect(caps[0]).toHaveLength(16);
+    // The unfilled outer quadrant of the two butt-ended strips is now covered.
+    expect(caps[0].some(([x, z]) => x > 3 && z < -3)).toBe(true);
+    expect(
+        roadJunctionPatches([bend[0], { ...bend[1], layer: '1' }])
+    ).toHaveLength(0);
+    expect(
+        roadJunctionPatches([bend[0], { ...bend[1], tunnel: 'yes' }])
+    ).toHaveLength(0);
+    expect(
+        roadJunctionPatches([bend[0], { ...bend[1], bridge: 'yes' }])
+    ).toHaveLength(0);
+    expect(roadJunctionPatches([bend[0]])).toHaveLength(0);
+});
 test('detail fade includes a fully detailed inner area and a smooth outer transition', () => {
     expect(detailOpacity(0, 0)).toBe(0);
     expect(detailOpacity(300, 1000)).toBe(1);

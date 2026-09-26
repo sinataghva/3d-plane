@@ -1,9 +1,14 @@
+/** @param {{airfield?:string}} data */
+export function pavedAirfieldDefault(data) {
+    return /LFSX|OIII/.test(data.airfield || '');
+}
+
 /** Preserve explicit surface tags; use mission defaults only when unmapped.
- * @param {import('./geography.js').GeoFeature} f @param {boolean} military */
-export function pavedAirfieldSurface(f, military) {
+ * @param {import('./geography.js').GeoFeature} f @param {boolean} defaultPaved */
+export function pavedAirfieldSurface(f, defaultPaved) {
     if (f.surface)
         return /asphalt|concrete|paved|paving_stones/.test(f.surface);
-    return military || f.aeroway === 'apron';
+    return defaultPaved || f.aeroway === 'apron';
 }
 
 /** @param {import('./geography.js').GeoFeature} feature */

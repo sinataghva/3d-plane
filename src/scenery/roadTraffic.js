@@ -6,8 +6,9 @@ import { inFeature } from './geography.js';
 
 /** @type {Record<string,number>} */
 export const TRAFFIC_LIMITS = { low: 0, balanced: 20, high: 40 };
+export const TEHRAN_TRAFFIC_LIMITS = { low: 0, balanced: 120, high: 240 };
 /** @param {import('./geography.js').GeoFeature} road */
-export function suitableTrafficRoad(road) {
+export function suitableTrafficRoad(road, highways = false) {
     return (
         road.kind === 'road' &&
         road.line &&
@@ -18,7 +19,17 @@ export function suitableTrafficRoad(road) {
             'unclassified',
             'tertiary',
             'secondary',
-            'primary'
+            'primary',
+            ...(highways
+                ? [
+                      'motorway',
+                      'motorway_link',
+                      'trunk',
+                      'trunk_link',
+                      'primary_link',
+                      'secondary_link'
+                  ]
+                : [])
         ].includes(road.class || '') &&
         (!road.tunnel || road.tunnel === 'no') &&
         (!road.bridge || road.bridge === 'no') &&
@@ -91,7 +102,7 @@ function carGeometry() {
 /** Shared mapped vertices form junctions; geometric crossings alone do not. Each
  * directed edge is shortened slightly to leave room for a continuous lane turn.
  * @param {import('./geography.js').GeoFeature[]} roads */
-export function buildTrafficNetwork(roads) {
+export function buildTrafficNetwork(roads, respectOneWay = false) {
     /** @param {number[]} p */
     const key = (p) => `${Math.round(p[0] * 10)},${Math.round(p[1] * 10)}`;
     /** @type {Map<string,number>} */
@@ -115,7 +126,22 @@ export function buildTrafficNetwork(roads) {
             from = i;
             if (trafficPath(points).length < 2) continue;
             const base = edges.length;
-            for (const direction of [1, -1]) {
+            const metadata =
+                /** @type {import('./geography.js').GeoFeature & {oneway?:string,junction?:string}} */ (
+                    road
+                );
+            const directions =
+                !respectOneWay || metadata.oneway === 'no'
+                    ? [1, -1]
+                    : metadata.oneway === '-1'
+                      ? [-1]
+                      : metadata.oneway === 'yes' ||
+                          metadata.oneway === '1' ||
+                          metadata.junction === 'roundabout' ||
+                          road.class === 'motorway'
+                        ? [1]
+                        : [1, -1];
+            for (const direction of directions) {
                 const source = direction === 1 ? points : [...points].reverse();
                 const lane = trafficPath(
                     offsetLine(source, Math.min(1.5, (road.width || 5) * 0.23))
@@ -140,10 +166,23 @@ export function buildTrafficNetwork(roads) {
                     path,
                     start,
                     end,
-                    reverse: base + (direction === 1 ? 1 : 0),
-                    spacing: ['primary', 'secondary'].includes(road.class || '')
-                        ? 180
-                        : 300
+                    reverse:
+                        directions.length === 1
+                            ? -1
+                            : base + (direction === 1 ? 1 : 0),
+                    spacing:
+                        respectOneWay && road.name === 'انقلاب اسلامی'
+                            ? 18
+                            : respectOneWay &&
+                                ['motorway', 'trunk', 'primary'].includes(
+                                    road.class || ''
+                                )
+                              ? 45
+                              : ['primary', 'secondary'].includes(
+                                      road.class || ''
+                                  )
+                                ? 180
+                                : 300
                 });
             }
         }
@@ -211,6 +250,11 @@ export function advanceTrafficCar(car, network, delta) {
                       )
                   ]
                 : edge.reverse;
+            // End of a one-way extract: retire, never drive the wrong way back.
+            if (next < 0) {
+                car.distance = Infinity;
+                return;
+            }
             car.path = junctionPath(edge.path, network.edges[next].path);
             car.edge = next;
             car.joining = true;
@@ -223,15 +267,17 @@ export function advanceTrafficCar(car, network, delta) {
 export function createRoadTraffic(world) {
     const height = createRenderedHeight(world);
     const rural = Boolean(world.data.airfield?.includes('LFSX'));
+    const tehran = Boolean(world.data.airfield?.includes('OIII'));
+    const capacity = tehran ? 320 : 80;
     const boundaries = world.data.features.filter((f) => f.kind === 'airfield');
     const roads = world.data.features.filter(
         (f) =>
-            suitableTrafficRoad(f) &&
+            suitableTrafficRoad(f, tehran) &&
             !boundaries.some((b) =>
                 inFeature(f.points[0][0], f.points[0][1], b)
             )
     );
-    const network = buildTrafficNetwork(roads);
+    const network = buildTrafficNetwork(roads, tehran);
     const paths = network.edges.map((e) => e.path);
     /** @type {Map<string, {edge:number,distance:number,x:number,z:number,seed:number}[]>} */
     const cells = new Map();
@@ -255,13 +301,21 @@ export function createRoadTraffic(world) {
         }
     });
     for (const bucket of cells.values())
-        bucket.sort((a, b) => random(a.seed) - random(b.seed));
+        bucket.sort(
+            (a, b) =>
+                Number(network.edges[b.edge].spacing === 18) -
+                    Number(network.edges[a.edge].spacing === 18) ||
+                random(a.seed) - random(b.seed)
+        );
     const geometry = carGeometry(),
         material = new THREE.MeshLambertMaterial({
             vertexColors: true,
             alphaHash: true
         });
-    const fades = new THREE.InstancedBufferAttribute(new Float32Array(80), 1);
+    const fades = new THREE.InstancedBufferAttribute(
+        new Float32Array(capacity),
+        1
+    );
     geometry.setAttribute('trafficFade', fades);
     material.onBeforeCompile = (shader) => {
         shader.vertexShader =
@@ -277,7 +331,7 @@ export function createRoadTraffic(world) {
                 'diffuseColor.a *= vTrafficFade;\n#include <alphahash_fragment>'
             );
     };
-    const mesh = new THREE.InstancedMesh(geometry, material, 80);
+    const mesh = new THREE.InstancedMesh(geometry, material, capacity);
     mesh.name = 'Moving civilian road traffic';
     mesh.frustumCulled = false;
     mesh.count = 0;
@@ -297,6 +351,9 @@ export function createRoadTraffic(world) {
     let scanElapsed = 0;
     /** @type {number|null} */
     let override = null;
+    const frustum = new THREE.Frustum(),
+        viewProjection = new THREE.Matrix4(),
+        sphere = new THREE.Sphere(new THREE.Vector3(), 4);
     return {
         mesh,
         paths,
@@ -313,7 +370,8 @@ export function createRoadTraffic(world) {
         },
         /** Dev benchmark only. @param {number|null} value */
         setLimit(value) {
-            override = value === null ? null : Math.max(0, Math.min(80, value));
+            override =
+                value === null ? null : Math.max(0, Math.min(capacity, value));
         },
         /** Read-only identities and positions for continuity regression checks. */
         snapshot() {
@@ -322,11 +380,26 @@ export function createRoadTraffic(world) {
                 ...sampleTrafficPath(car.path, car.distance)
             }));
         },
-        /** @param {import('three').Vector3|{x:number,y:number,z:number}} position @param {string} quality @param {number} delta */
-        update(position, quality, delta) {
+        /** @param {import('three').Vector3|{x:number,y:number,z:number}} position @param {string} quality @param {number} delta @param {THREE.Camera} [camera] */
+        update(position, quality, delta, camera) {
+            if (tehran && camera) {
+                camera.updateMatrixWorld();
+                frustum.setFromProjectionMatrix(
+                    viewProjection.multiplyMatrices(
+                        camera.projectionMatrix,
+                        camera.matrixWorldInverse
+                    )
+                );
+            }
             const limit =
                 override ??
-                Math.round((TRAFFIC_LIMITS[quality] || 0) * (rural ? 0.5 : 1));
+                Math.round(
+                    ((tehran
+                        ? /** @type {Record<string,number>} */ (
+                              TEHRAN_TRAFFIC_LIMITS
+                          )
+                        : TRAFFIC_LIMITS)[quality] || 0) * (rural ? 0.5 : 1)
+                );
             mesh.visible = limit > 0;
             if (!limit) {
                 cars = [];
@@ -336,11 +409,13 @@ export function createRoadTraffic(world) {
                 return;
             }
             for (const car of cars)
-                advanceTrafficCar(car, network, Math.max(0, delta));
+                if (Number.isFinite(car.distance))
+                    advanceTrafficCar(car, network, Math.max(0, delta));
             const distanceTo = (/** @type {{x:number,z:number}} */ p) =>
                 Math.hypot(p.x - position.x, p.z - position.z);
             cars = cars.filter(
                 (car) =>
+                    Number.isFinite(car.distance) &&
                     distanceTo(sampleTrafficPath(car.path, car.distance)) < 1800
             );
             if (cars.length > limit) {
@@ -379,36 +454,44 @@ export function createRoadTraffic(world) {
                 const occupied = cars.map((car) =>
                     sampleTrafficPath(car.path, car.distance)
                 );
-                for (
-                    let pass = 0;
-                    cars.length < limit && buckets.some((b) => b.length > pass);
-                    pass++
-                )
-                    for (const bucket of buckets) {
-                        if (cars.length >= limit) break;
-                        const p = bucket[pass];
-                        if (!p) continue;
-                        if (
-                            occupied.some(
-                                (q) =>
-                                    Math.hypot(p.x - q.x, p.z - q.z) <
-                                    (rural ? 100 : 65)
-                            )
+                const preferred = tehran
+                    ? buckets
+                          .flat()
+                          .filter((p) => network.edges[p.edge].spacing === 18)
+                          .sort((a, b) => distanceTo(a) - distanceTo(b))
+                          .slice(0, Math.floor(limit * 0.4))
+                    : [];
+                // Reserve a bounded share for the busy avenue, then retain the
+                // normal interleaved coverage. Occupancy rejects duplicate seeds.
+                const order = [...preferred];
+                for (let pass = 0; buckets.some((b) => b.length > pass); pass++)
+                    for (const bucket of buckets)
+                        if (bucket[pass]) order.push(bucket[pass]);
+                for (const p of order) {
+                    if (cars.length >= limit) break;
+                    if (
+                        occupied.some(
+                            (q) =>
+                                Math.hypot(p.x - q.x, p.z - q.z) <
+                                (tehran ? 14 : rural ? 100 : 65)
                         )
-                            continue;
-                        const edge = network.edges[p.edge];
-                        cars.push({
-                            id: nextId++,
-                            edge: p.edge,
-                            path: edge.path,
-                            distance: p.distance,
-                            speed: 7 + random(p.seed) * 5,
-                            color: p.seed % 6,
-                            turn: 0,
-                            joining: false
-                        });
-                        occupied.push(p);
-                    }
+                    )
+                        continue;
+                    const edge = network.edges[p.edge];
+                    cars.push({
+                        id: nextId++,
+                        edge: p.edge,
+                        path: edge.path,
+                        distance: p.distance,
+                        speed: 7 + random(p.seed) * 5,
+                        color: tehran
+                            ? Math.floor(random(p.seed + 29) * 6)
+                            : p.seed % 6,
+                        turn: 0,
+                        joining: false
+                    });
+                    occupied.push(p);
+                }
                 initialized = true;
                 lastX = position.x;
                 lastZ = position.z;
@@ -429,6 +512,10 @@ export function createRoadTraffic(world) {
                         : p;
                 const y = height(p.x, p.z) + 0.08,
                     y2 = height(q.x, q.z) + 0.08;
+                if (tehran && camera) {
+                    sphere.center.set(p.x, y + 1, p.z);
+                    if (!frustum.intersectsSphere(sphere)) continue;
+                }
                 dummy.position.set(p.x, y, p.z);
                 dummy.rotation.set(
                     0,

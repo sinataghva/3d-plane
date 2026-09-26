@@ -3,6 +3,8 @@ def surface_metadata(tags, kind):
     if kind not in ('rail', 'water', 'waterway', 'road'):
         return {}
     out = {key: tags[key] for key in ('bridge', 'tunnel', 'covered', 'layer', 'intermittent') if key in tags}
+    if kind == 'road':
+        out.update({key: tags[key] for key in ('oneway', 'junction', 'lanes') if key in tags})
     for source, target in [('railway', 'railwayType'), ('waterway', 'waterwayType'), ('water', 'waterType')]:
         if source in tags:
             out[target] = tags[source]

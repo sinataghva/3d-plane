@@ -1,3 +1,4 @@
+import { isJet } from '../aircraft/capabilities.js';
 /**
  * @typedef {'w'|'s'|'a'|'d'|'arrowLeft'|'arrowRight'|'arrowUp'|'arrowDown'|'space'|'boost'|'brake'} ButtonKey
  * @typedef {object} KeyboardState
@@ -105,11 +106,11 @@ export function createInputController(aircraft = 'cessna') {
             if (id !== stickPointer) return false;
             state.stickRoll = applyStickCurve(
                 x,
-                aircraft === 'mirage' ? 1 : STICK_ROLL_AUTHORITY
+                isJet(aircraft) ? 1 : STICK_ROLL_AUTHORITY
             );
             state.stickPitch = applyStickCurve(
                 y,
-                aircraft === 'mirage' ? 1 : STICK_PITCH_AUTHORITY
+                isJet(aircraft) ? 1 : STICK_PITCH_AUTHORITY
             );
             return true;
         },

@@ -1,3 +1,4 @@
+import { isJet } from '../aircraft/capabilities.js';
 import { getAltitude, INTERNAL_SPEED_TO_KMH } from '../flight/flightMetrics.js';
 /**
  * @typedef {import('../flight/physics.js').PlaneState} PlaneState
@@ -60,7 +61,7 @@ export function createCockpitOverlay() {
                 0,
                 planeState.speed *
                     INTERNAL_SPEED_TO_KMH *
-                    (planeState.aircraft === 'mirage' ? 2.4 : 1)
+                    (isJet(planeState.aircraft) ? 2.4 : 1)
             );
             const pitchDegrees = planeState.pitchAngle * RADIANS_TO_DEGREES;
             const rollDegrees = planeState.rollAngle * RADIANS_TO_DEGREES;
@@ -69,12 +70,12 @@ export function createCockpitOverlay() {
             updateNeedle(
                 speedNeedle,
                 speedKmh,
-                planeState.aircraft === 'mirage' ? 1400 : MAX_AIRSPEED_KMH
+                isJet(planeState.aircraft) ? 1400 : MAX_AIRSPEED_KMH
             );
             updateNeedle(
                 altitudeNeedle,
                 altitude,
-                planeState.aircraft === 'mirage' ? 5000 : MAX_ALTITUDE_METERS
+                isJet(planeState.aircraft) ? 5000 : MAX_ALTITUDE_METERS
             );
             horizon.style.transform = `translateY(${pitchOffset}px) rotate(${-rollDegrees}deg)`;
         }

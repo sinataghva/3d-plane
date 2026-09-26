@@ -3,9 +3,10 @@ import { waterCharacter } from '../effects/waterEffects.js';
 import {
     isSurfaceFeature,
     bridgeProfile,
-    pavedAirfieldSurface
+    pavedAirfieldSurface,
+    pavedAirfieldDefault
 } from './surfaceFeatures.js';
-/** @typedef {{points:number[][],kind:'ballast'|'rail'|'water'|'bank'|'asphalt'|'grass',origin?:number[],direction?:number[],offset?:number,bridge?:number[],waterCharacter?:number}} SurfacePatch */
+/** @typedef {{points:number[][],kind:'road'|'ballast'|'rail'|'water'|'bank'|'asphalt'|'grass',origin?:number[],direction?:number[],offset?:number,bridge?:number[],waterCharacter?:number}} SurfacePatch */
 /** Clip a convex polygon to a rectangle, retaining triangle/quad winding.
  * @param {number[][]} polygon @param {number} minX @param {number} minZ @param {number} maxX @param {number} maxZ */
 export function clipRectangle(polygon, minX, minZ, maxX, maxZ) {
@@ -192,9 +193,7 @@ export function indexScenerySurfaces(world, tileSize, emit) {
                             ? 'water'
                             : pavedAirfieldSurface(
                                     f,
-                                    Boolean(
-                                        world.data.airfield?.includes('LFSX')
-                                    )
+                                    pavedAirfieldDefault(world.data)
                                 )
                               ? 'asphalt'
                               : 'grass',

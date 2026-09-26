@@ -1,0 +1,30 @@
+import { expect, it } from 'vitest';
+import * as THREE from 'three';
+import { addRegionDistanceFade, updateRegionDetail } from './regionDetail.js';
+import { addBuildingWindowShader } from './buildingLights.js';
+
+it('bounds Tehran building visibility and shadows without changing other regions', () => {
+    const group = new THREE.Group();
+    const material = new THREE.MeshLambertMaterial();
+    addBuildingWindowShader(material);
+    addRegionDistanceFade(material);
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), material);
+    mesh.geometry.translate(5000, 0, 0);
+    mesh.geometry.computeBoundingSphere();
+    mesh.name = 'Buildings · spatial batch';
+    group.add(mesh);
+    const camera = new THREE.Vector3();
+    updateRegionDetail(group, camera, 'low');
+    expect(mesh.visible).toBe(false);
+    updateRegionDetail(group, camera, 'balanced');
+    expect(mesh.visible).toBe(true);
+    expect(mesh.castShadow).toBe(false);
+    expect(material.userData.regionDetailRange.value).toBe(6000);
+    camera.x = 4500;
+    updateRegionDetail(group, camera, 'high');
+    expect(mesh.castShadow).toBe(true);
+    mesh.material = new THREE.MeshLambertMaterial();
+    camera.x = 50000;
+    updateRegionDetail(group, camera, 'low');
+    expect(mesh.visible).toBe(true);
+});

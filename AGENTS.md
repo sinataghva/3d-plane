@@ -14,8 +14,9 @@ This file contains shared project guidance and is intended to be tracked.
 
 ## Project structure
 
-Open Skies is a Three.js/Vite browser flight simulator with two experiences:
-Saint-Cyr/Versailles with a light aircraft and Luxeuil with a Mirage 2000.
+Open Skies is a Three.js/Vite browser flight simulator with three experiences:
+Saint-Cyr/Versailles with a light aircraft, Luxeuil with a Mirage 2000, and
+Tehran/Mehrabad with an IIAF-liveried F-4 Phantom.
 Read `README.md` for current controls, setup, map sources, and automation APIs.
 
 - `src/main.js`: application setup and simulation/render loop.
@@ -23,6 +24,8 @@ Read `README.md` for current controls, setup, map sources, and automation APIs.
 - `src/flight/physics.js`, `src/aircraft/airplane.js`: light aircraft and shared state.
 - `src/flight/jetPhysics.js`, `src/flight/jetAttitude.js`, `src/aircraft/mirage.js`: jet handling/model.
 - `src/scenery/geography.js`, `src/scenery/terrain.js`, `src/scenery/groundDetail.js`: scenery and surfaces.
+- `src/aircraft/phantom.js`, `src/scenery/mehrabad.js`, `src/scenery/tehranLandmarks.js`: Tehran aircraft, airfield and landmarks.
+- `src/map/detailMap.js`, `src/scenery/groundTextureDetail.js`: Tehran-only local map/ground texture refinement.
 - `src/flight/input.js`, `src/ui/experience.js`, `src/flight/jetControls.js`: flight controls/UI.
 - `src/map/worldMap.js`, `src/map/mapViewport.js`, `src/map/destination.js`: map/navigation.
 - `data/`: processed scenery and preserved source caches.

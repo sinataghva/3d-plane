@@ -1,6 +1,12 @@
-import { isSurfaceFeature } from '../scenery/surfaceFeatures.js';
+import {
+    isSurfaceFeature,
+    pavedAirfieldSurface,
+    pavedAirfieldDefault
+} from '../scenery/surfaceFeatures.js';
+import { tehranLandmarks } from '../scenery/tehranLandmarks.js';
 /** @typedef {import('../scenery/geography.js').Geography} Geography */
 export const LAND_COLORS = {
+    dry: '#b6a482',
     forest: '#345d3f',
     field: '#aaa773',
     grass: '#7d9b61',
@@ -11,9 +17,14 @@ export const LAND_COLORS = {
     building: '#ddd1b5'
 };
 /** Shared geographic surface for the 3D terrain and overview map.
- * @param {Geography} world @param {number} size @param {boolean} [map]
+ * @param {Geography} world @param {number} size @param {boolean} [map] @param {HTMLCanvasElement} [reliefCanvas]
  */
-export function createGeographicCanvas(world, size = 2048, map = false) {
+export function createGeographicCanvas(
+    world,
+    size = 2048,
+    map = false,
+    reliefCanvas
+) {
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = Math.round((size * world.depth) / world.width);
@@ -21,7 +32,7 @@ export function createGeographicCanvas(world, size = 2048, map = false) {
     if (!ctx) throw new Error('Map drawing unavailable');
     const sx = canvas.width / world.width,
         sy = canvas.height / world.depth;
-    ctx.fillStyle = '#859467';
+    ctx.fillStyle = world.data.landscape === 'arid' ? '#b6a482' : '#859467';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     /** @param {number[][]} points */
     const path = (points) => {
@@ -33,6 +44,7 @@ export function createGeographicCanvas(world, size = 2048, map = false) {
         });
     };
     const order = [
+        'dry',
         'grass',
         'field',
         'urban',
@@ -63,13 +75,22 @@ export function createGeographicCanvas(world, size = 2048, map = false) {
                 ctx.lineWidth = Math.max(map ? 1 : 0.6, (f.width || 4) * sx);
                 ctx.strokeStyle =
                     kind === 'runway'
-                        ? world.data.airfield?.includes('LFSX')
+                        ? pavedAirfieldSurface(
+                              f,
+                              pavedAirfieldDefault(world.data)
+                          )
                             ? '#647078'
                             : '#bfd098'
                         : kind === 'waterway'
                           ? '#4b8d9b'
                           : kind === 'taxiway'
-                            ? '#a2ac79'
+                            ? world.data.airfield?.includes('OIII') &&
+                              pavedAirfieldSurface(
+                                  f,
+                                  pavedAirfieldDefault(world.data)
+                              )
+                                ? '#647078'
+                                : '#a2ac79'
                             : kind === 'rail'
                               ? '#756e63'
                               : '#c3baa4';
@@ -92,12 +113,36 @@ export function createGeographicCanvas(world, size = 2048, map = false) {
             }
         }
     }
-    // Regional relief modulation also makes the 2D map show slopes.
+    const relief = reliefCanvas || createReliefCanvas(world);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(relief, 0, 0, canvas.width, canvas.height);
+    if (map)
+        for (const landmark of tehranLandmarks(world.data)) {
+            const x = (landmark.x - world.minX) * sx,
+                y = (landmark.z - world.minZ) * sy;
+            ctx.fillStyle = '#ffe3a0';
+            ctx.strokeStyle = '#65492a';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x, y - 4);
+            ctx.lineTo(x + 4, y);
+            ctx.lineTo(x, y + 4);
+            ctx.lineTo(x - 4, y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+    return canvas;
+}
+
+/** Shared relief shading, stretched identically on overview and ground tiles.
+ * @param {Geography} world */
+export function createReliefCanvas(world) {
     const n = world.dem.size;
     const relief = document.createElement('canvas');
     relief.width = relief.height = n - 1;
     const shading = relief.getContext('2d');
-    if (!shading) return canvas;
+    if (!shading) return relief;
     for (let j = 0; j < n - 1; j++)
         for (let i = 0; i < n - 1; i++) {
             const h = world.dem.values[j * n + i],
@@ -113,7 +158,5 @@ export function createGeographicCanvas(world, size = 2048, map = false) {
                     : `rgba(255,255,230,${-shade})`;
             shading.fillRect(i, j, 1, 1);
         }
-    ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(relief, 0, 0, canvas.width, canvas.height);
-    return canvas;
+    return relief;
 }

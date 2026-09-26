@@ -1394,9 +1394,12 @@ body:has(.automation-status) .warning-banner {
 }
 .mission-cards {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 24px;
     margin-top: 32px;
+}
+.bomb-aircraft .cockpit-reticle {
+    display: none;
 }
 .mission-card {
     overflow: hidden;
@@ -1858,7 +1861,7 @@ body:has(.automation-status) .warning-banner {
         margin: 0;
         gap: 10px;
         grid-template-columns: 1fr;
-        grid-template-rows: 1fr 1fr;
+        grid-template-rows: repeat(3, minmax(0, 1fr));
     }
     .mission-card {
         display: grid;
@@ -1897,7 +1900,7 @@ body:has(.automation-status) .warning-banner {
 }
 @media (orientation: landscape) and (max-height: 500px) {
     .mission-cards {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         grid-template-rows: 1fr;
     }
     .mission-copy {

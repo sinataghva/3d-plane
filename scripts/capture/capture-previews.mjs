@@ -9,7 +9,7 @@ try {
     });
     for (const mission of process.argv[2]
         ? [process.argv[2]]
-        : ['saint-cyr', 'luxeuil']) {
+        : ['saint-cyr', 'luxeuil', 'tehran']) {
         await page.goto(
             `${process.env.PREVIEW_ORIGIN || 'http://127.0.0.1:5174'}/3d-plane/?mission=${mission}&visual=card`
         );

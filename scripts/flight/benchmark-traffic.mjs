@@ -5,11 +5,18 @@ const output = 'note/traffic-benchmark';
 fs.mkdirSync(output, { recursive: true });
 const browser = await chromium.launch({ headless: process.env.HEADED !== '1' });
 const results = [];
+const mobile = process.env.MOBILE === '1';
 try {
-    for (const mission of ['saint-cyr', 'luxeuil']) {
+    for (const mission of process.argv[2]
+        ? [process.argv[2]]
+        : ['saint-cyr', 'luxeuil']) {
         const page = await browser.newPage({
-            viewport: { width: 1280, height: 720 },
-            deviceScaleFactor: 2
+            viewport: mobile
+                ? { width: 844, height: 390 }
+                : { width: 1280, height: 720 },
+            deviceScaleFactor: 2,
+            isMobile: mobile,
+            hasTouch: mobile
         });
         await page.goto(
             `http://127.0.0.1:5173/3d-plane/?mission=${mission}&automation=1&trafficBenchmark=1`
@@ -33,9 +40,11 @@ try {
                 .selectOption(quality, { force: true });
             // Warm terrain caches on the exact flyover before recording cases.
             await page.evaluate(() => window.trafficBenchmark.run(40, 20));
-            for (const count of process.env.QUICK
-                ? [0, 20, 40, 80]
-                : [0, 20, 40, 80, 0, 80, 40, 20, 0]) {
+            for (const count of mission === 'tehran'
+                ? [0, 120, 240, 320, 0]
+                : process.env.QUICK
+                  ? [0, 20, 40, 80]
+                  : [0, 20, 40, 80, 0, 80, 40, 20, 0]) {
                 const samples = await page.evaluate(
                     (count) => window.trafficBenchmark.run(count, 180),
                     count
@@ -46,6 +55,7 @@ try {
                 };
                 const row = {
                     mission,
+                    mobile,
                     quality,
                     count,
                     gpu,
@@ -62,12 +72,12 @@ try {
                 results.push(row);
                 console.log(JSON.stringify(row));
                 fs.writeFileSync(
-                    output + '/results.json',
+                    `${output}/${process.argv[2] || 'france'}-${mobile ? 'mobile' : 'desktop'}-results.json`,
                     JSON.stringify(results, null, 2)
                 );
-                if (count === 40)
+                if (count === (mission === 'tehran' ? 240 : 40))
                     await page.screenshot({
-                        path: `${output}/${mission}-${quality}.png`
+                        path: `${output}/${mission}-${mobile ? 'mobile' : 'desktop'}-${quality}.png`
                     });
             }
         }

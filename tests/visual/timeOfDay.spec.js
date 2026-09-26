@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-for (const mission of ['saint-cyr', 'luxeuil']) {
+for (const mission of ['saint-cyr', 'luxeuil', 'tehran']) {
     test(`${mission} lighting presets render without errors`, async ({
         page
     }, info) => {

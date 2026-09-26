@@ -8,6 +8,62 @@ import {
     advanceTrafficCar
 } from './roadTraffic.js';
 
+test('Enghelab traffic is denser only in the Tehran one-way network', () => {
+    const road = {
+        id: 'enghelab',
+        name: 'انقلاب اسلامی',
+        kind: 'road',
+        line: true,
+        class: 'primary',
+        oneway: 'yes',
+        width: 10,
+        points: [
+            [0, 0],
+            [500, 0]
+        ],
+        holes: []
+    };
+    expect(buildTrafficNetwork([road], true).edges[0].spacing).toBe(18);
+    expect(buildTrafficNetwork([road], false).edges[0].spacing).toBe(180);
+});
+
+test('Tehran highway network preserves one-way travel and retires at an extract end', () => {
+    const road = {
+        id: 'highway',
+        name: '',
+        kind: 'road',
+        line: true,
+        class: 'motorway',
+        oneway: 'yes',
+        points: [
+            [0, 0],
+            [100, 0]
+        ],
+        holes: [],
+        width: 16
+    };
+    expect(suitableTrafficRoad(road)).toBe(false);
+    expect(suitableTrafficRoad(road, true)).toBe(true);
+    const network = buildTrafficNetwork([road], true);
+    expect(network.edges).toHaveLength(1);
+    expect(network.edges[0].reverse).toBe(-1);
+    const car = {
+        id: 1,
+        edge: 0,
+        path: network.edges[0].path,
+        distance: 90,
+        speed: 20,
+        color: 0,
+        turn: 0,
+        joining: false
+    };
+    advanceTrafficCar(car, network, 1);
+    expect(car.distance).toBe(Infinity);
+    expect(buildTrafficNetwork([road]).edges).toHaveLength(2);
+    const reverse = buildTrafficNetwork([{ ...road, oneway: '-1' }], true);
+    expect(reverse.edges[0].path.points[0][0]).toBeGreaterThan(90);
+});
+
 test('paths remove duplicates and interpolate bends by travel distance', () => {
     const path = trafficPath([
         [0, 0],

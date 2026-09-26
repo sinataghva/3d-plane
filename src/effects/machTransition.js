@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isJet } from '../aircraft/capabilities.js';
 
 // Match the existing HUD's fixed arcade speed-of-sound reference.
 export { MACH_REFERENCE_SPEED as SOUND_SPEED } from '../flight/jetAerodynamics.js';
@@ -26,7 +27,7 @@ export function createMachTransition() {
             cooldown = Math.max(0, cooldown - Math.max(0, delta));
             const mach = (state.speed * 60) / SOUND_SPEED;
             if (
-                state.aircraft !== 'mirage' ||
+                !isJet(state.aircraft) ||
                 !state.isAirborne ||
                 state.isCrashed
             ) {

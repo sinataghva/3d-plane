@@ -104,7 +104,9 @@ export function updateCamera({
                 lookTarget.x
             );
         const heading = camera.userData.chaseHeading ?? 0;
-        const distance = airplane.userData.jet ? 23 : 10;
+        const distance =
+            airplane.userData.chaseDistance ??
+            (airplane.userData.jet ? 23 : 10);
         offset.set(
             -Math.cos(heading) * distance,
             airplane.userData.jet ? 8 : 4,
@@ -128,8 +130,10 @@ export function updateCamera({
 
         offset
             .set(
-                airplane.userData.jet ? 3.5 : 2.14,
-                airplane.userData.jet ? 2.1 : 1.03,
+                airplane.userData.cockpitPosition?.[0] ??
+                    (airplane.userData.jet ? 3.5 : 2.14),
+                airplane.userData.cockpitPosition?.[1] ??
+                    (airplane.userData.jet ? 2.1 : 1.03),
                 0
             )
             .applyQuaternion(airplane.quaternion);
@@ -138,7 +142,8 @@ export function updateCamera({
         lookTarget
             .set(
                 airplane.userData.jet ? 20 : 12,
-                airplane.userData.jet ? 2.1 : 0.92,
+                airplane.userData.cockpitPosition?.[1] ??
+                    (airplane.userData.jet ? 2.1 : 0.92),
                 0
             )
             .applyQuaternion(airplane.quaternion)

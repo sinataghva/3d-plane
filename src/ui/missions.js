@@ -12,6 +12,19 @@ export const MISSIONS = {
         description: 'A quiet departure, royal gardens, and room to wander.',
         traits: ['Relaxed pace', 'Gentle handling', 'Sightseeing']
     },
+    tehran: {
+        id: 'tehran',
+        aircraft: 'phantom',
+        title: 'Tehran · Mehrabad',
+        airfield: 'Mehrabad · OIII',
+        map: 'tehran/map.json',
+        elevation: 'tehran/elevation.json',
+        image: 'tehran.png',
+        name: 'F-4 Phantom · IIAF',
+        description:
+            'Depart Mehrabad, explore Tehran and head out over the desert.',
+        traits: ['Twin-engine jet', 'Imperial Iranian livery', 'Free flight']
+    },
     luxeuil: {
         id: 'luxeuil',
         aircraft: 'mirage',
@@ -28,7 +41,11 @@ export const MISSIONS = {
 };
 /** @param {string|null} id */
 export function missionFor(id) {
-    return id === 'luxeuil' ? MISSIONS.luxeuil : MISSIONS['saint-cyr'];
+    return id === 'tehran'
+        ? MISSIONS.tehran
+        : id === 'luxeuil'
+          ? MISSIONS.luxeuil
+          : MISSIONS['saint-cyr'];
 }
 /** A navigation boundary releases WebGL, listeners, textures and pending flight tasks. */
 export function selectFlight() {
@@ -42,10 +59,14 @@ export function selectFlight() {
     document.body.classList.add('choosing-flight');
     const screen = document.createElement('main');
     screen.id = 'mission-select';
-    screen.innerHTML = `<div class="mission-heading"><span class="eyebrow">OPEN SKIES / FLIGHT EXPERIENCES</span><h1>Where will you fly?</h1><p>Two aircraft. Two corners of France. Explore at your own pace.</p></div><div class="mission-cards" role="group" aria-label="Choose a flight experience"></div><div class="mission-footer"><p id="mission-selection" aria-live="polite">Saint-Cyr · Versailles selected</p><button id="fly-button">Fly Saint-Cyr →</button><small>Free flight comes first. Guides are always optional.</small><small>© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a> · <a href="data/terrain-attribution.md" target="_blank" rel="noreferrer">Elevation credits</a></small></div>`;
+    screen.innerHTML = `<div class="mission-heading"><span class="eyebrow">OPEN SKIES / FLIGHT EXPERIENCES</span><h1>Where will you fly?</h1><p>Three aircraft. From France to Tehran. Explore at your own pace.</p></div><div class="mission-cards" role="group" aria-label="Choose a flight experience"></div><div class="mission-footer"><p id="mission-selection" aria-live="polite">Saint-Cyr · Versailles selected</p><button id="fly-button">Fly Saint-Cyr →</button><small>Free flight comes first. Guides are always optional.</small><small>© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a> · <a href="data/terrain-attribution.md" target="_blank" rel="noreferrer">Elevation credits</a></small></div>`;
     document.body.append(screen);
     let selected = MISSIONS['saint-cyr'];
-    for (const mission of Object.values(MISSIONS)) {
+    for (const mission of [
+        MISSIONS['saint-cyr'],
+        MISSIONS.luxeuil,
+        MISSIONS.tehran
+    ]) {
         const button = document.createElement('button');
         button.className = 'mission-card';
         button.dataset.mission = mission.id;
@@ -61,8 +82,7 @@ export function selectFlight() {
             const label = document.getElementById('mission-selection');
             if (label) label.textContent = `${mission.title} selected`;
             const fly = document.getElementById('fly-button');
-            if (fly)
-                fly.textContent = `Fly ${mission.id === 'luxeuil' ? 'Luxeuil' : 'Saint-Cyr'} →`;
+            if (fly) fly.textContent = `Fly ${mission.title.split(' · ')[0]} →`;
         };
         screen.querySelector('.mission-cards')?.append(button);
     }

@@ -1,3 +1,4 @@
+import { isJet } from '../aircraft/capabilities.js';
 import { clearAfterburner } from '../flight/jetPhysics.js';
 import {
     getAltitude,
@@ -78,7 +79,7 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
         speedKmh:
             planeState.speed *
             INTERNAL_SPEED_TO_KMH *
-            (planeState.aircraft === 'mirage' ? 2.4 : 1),
+            (isJet(planeState.aircraft) ? 2.4 : 1),
         verticalSpeedMs:
             getVerticalSpeed(planeState) * INTERNAL_VERTICAL_SPEED_TO_MS
     });
@@ -121,7 +122,7 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
             controls = { ...controls, ...values };
             planeState.thrust = controls.throttle;
             if (!controls.boost) clearAfterburner(planeState);
-            if (planeState.aircraft === 'mirage') {
+            if (isJet(planeState.aircraft)) {
                 if (planeState.isAirborne || controls.gearDown)
                     planeState.gearDown = controls.gearDown;
                 planeState.airbrake = controls.airbrake;

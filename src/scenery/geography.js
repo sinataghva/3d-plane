@@ -3,8 +3,14 @@ import {
     isFlowingWater,
     distanceToLine
 } from './surfaceFeatures.js';
-/** @typedef {{id:string,kind:string,name:string,points:number[][],holes:number[][][],line:boolean,width?:number,height?:number,aeroway?:string,surface?:string,lit?:string,buildingType?:string,roofShape?:string,palace?:boolean,ref?:string,class?:string,bridge?:string,tunnel?:string,covered?:string,layer?:string,intermittent?:string,railwayType?:string,waterwayType?:string,waterType?:string,gauge?:number,widthEstimated?:boolean}} GeoFeature */
-/** @typedef {{airfield?:string,origin:number[],bounds:number[],features:GeoFeature[],places:{id:number,name:string,kind:string,point:number[]}[],timestamp:string}} GeoData */
+import { joinAirportRunways } from './runwayLayout.js';
+import {
+    tehranLandmarks,
+    landmarkContains,
+    tabiatApproachHeight
+} from './tehranLandmarks.js';
+/** @typedef {{id:string,kind:string,name:string,points:number[][],holes:number[][][],line:boolean,width?:number,height?:number,aeroway?:string,icao?:string,surface?:string,lit?:string,buildingType?:string,roofShape?:string,palace?:boolean,ref?:string,class?:string,bridge?:string,tunnel?:string,covered?:string,layer?:string,intermittent?:string,railwayType?:string,waterwayType?:string,waterType?:string,gauge?:number,widthEstimated?:boolean,oneway?:string,junction?:string,lanes?:string}} GeoFeature */
+/** @typedef {{airfield?:string,landscape?:'arid',origin:number[],bounds:number[],features:GeoFeature[],places:{id:number,name:string,kind:string,point:number[]}[],timestamp:string}} GeoData */
 /** @typedef {{size:number,values:number[]}} ElevationData */
 /** @typedef {ReturnType<typeof createGeography>} Geography */
 /** @type {Geography|null} */
@@ -46,8 +52,10 @@ export function segmentDistance(x, z, a, b) {
         : 0;
     return Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t);
 }
-/** @param {GeoData} data @param {ElevationData} dem */
-export function createGeography(data, dem) {
+/** @param {GeoData} data @param {ElevationData} dem
+ * @param {{icao:string,runwayRef:string}} [departure] */
+export function createGeography(data, dem, departure) {
+    if (departure) data = joinAirportRunways(data, departure.icao);
     const [south, west, north, east] = data.bounds;
     const mx = 111320 * Math.cos((data.origin[0] * Math.PI) / 180);
     const minX = (west - data.origin[1]) * mx,
@@ -80,7 +88,22 @@ export function createGeography(data, dem) {
     };
     const runways = data.features.filter((f) => f.kind === 'runway' && f.line);
     if (!runways.length) throw new Error('World data has no mapped runway');
-    const runway = runways.reduce((a, b) => {
+    const airport = departure
+        ? data.features.find(
+              (f) => f.icao === departure.icao && f.kind === 'airfield'
+          )
+        : undefined;
+    const candidates = departure
+        ? runways.filter(
+              (f) =>
+                  f.ref === departure.runwayRef &&
+                  airport &&
+                  f.points.some((p) => inFeature(p[0], p[1], airport))
+          )
+        : runways;
+    if (!candidates.length)
+        throw new Error(`Missing departure runway: ${departure?.runwayRef}`);
+    const runway = candidates.reduce((a, b) => {
         const length = (/** @type {GeoFeature} */ f) =>
             Math.hypot(
                 f.points[f.points.length - 1][0] - f.points[0][0],
@@ -96,6 +119,23 @@ export function createGeography(data, dem) {
         b = ends[1],
         length = Math.hypot(b[0] - a[0], b[1] - a[1]);
     const baseElevation = sample((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+    // Other Tehran-region airports retain their own elevation instead of being
+    // pulled to Mehrabad's altitude. French worlds retain their existing profile.
+    const runwayLevels = new Map(
+        runways.map((r) => {
+            const p = r.points[0],
+                q = r.points[r.points.length - 1];
+            return [
+                r,
+                !departure ||
+                (airport &&
+                    r.points.some((p) => inFeature(p[0], p[1], airport)))
+                    ? 0
+                    : sample((p[0] + q[0]) / 2, (p[1] + q[1]) / 2) -
+                      baseElevation
+            ];
+        })
+    );
     const spawn = {
         x: a[0] + ((b[0] - a[0]) * 60) / length,
         z: a[1] + ((b[1] - a[1]) * 60) / length,
@@ -104,9 +144,12 @@ export function createGeography(data, dem) {
     };
     /** @type {Map<string,GeoFeature[]>} */
     const cells = new Map();
+    const landmarks = tehranLandmarks(data);
+    const replacedLandmarks = new Set(landmarks.map((l) => l.source));
     for (const f of data.features.filter(
         (f) =>
             ['building', 'water', 'waterway'].includes(f.kind) &&
+            !replacedLandmarks.has(f.id) &&
             isSurfaceFeature(f)
     )) {
         const xs = f.points.map((p) => p[0]),
@@ -142,6 +185,12 @@ export function createGeography(data, dem) {
                 return [f, samples[Math.floor(samples.length / 2)]];
             })
     );
+    // A runway must flatten every terrain-grid vertex whose triangle can touch
+    // its paved footprint, not just the exact collision centerline. Otherwise
+    // the coarse rendered mesh bridges over the flat physics surface.
+    const runwayShoulder = departure
+        ? Math.hypot(width / 256, depth / 256) + 2
+        : 20;
     /** @param {number} x @param {number} z */
     const height = (x, z) => {
         let h = sample(x, z) - baseElevation;
@@ -150,6 +199,7 @@ export function createGeography(data, dem) {
             const blend = Math.min(1, beyond / 3000);
             return h + (-35 - h) * blend * blend * (3 - 2 * blend);
         }
+        let nearest = { distance: Infinity, level: 0, blend: 1 };
         for (const r of runways) {
             const d = segmentDistance(
                 x,
@@ -159,10 +209,27 @@ export function createGeography(data, dem) {
             );
             const blend = Math.max(
                 0,
-                Math.min(1, (d - (r.width || 50) / 2 - 20) / 100)
+                Math.min(
+                    1,
+                    (d - (r.width || 50) / 2 - runwayShoulder) /
+                        (departure ? 200 : 100)
+                )
             );
-            h *= blend * blend * (3 - 2 * blend);
+            const level = runwayLevels.get(r) ?? 0;
+            if (departure) {
+                const distance = d - (r.width || 50) / 2;
+                if (distance < nearest.distance)
+                    nearest = { distance, level, blend };
+                continue;
+            }
+            h = level + (h - level) * blend * blend * (3 - 2 * blend);
         }
+        if (departure)
+            h =
+                nearest.level +
+                (h - nearest.level) *
+                    nearest.blend ** 2 *
+                    (3 - 2 * nearest.blend);
         for (const f of cells.get(
             `${Math.floor(x / 250)},${Math.floor(z / 250)}`
         ) || []) {
@@ -186,6 +253,28 @@ export function createGeography(data, dem) {
         );
     /** @param {number} x @param {number} z @param {number} y */
     const obstacle = (x, z, y) => {
+        for (const l of landmarks) {
+            if (
+                l.id === 'tabiat' &&
+                Math.abs(x - l.x) < 300 &&
+                Math.abs(z - l.z) < 77
+            ) {
+                const ground = height(x, z);
+                const bank = tabiatApproachHeight(
+                    x - l.x,
+                    z - l.z,
+                    height(l.x, l.z) + 0.1,
+                    ground
+                );
+                if (bank > ground + 0.2 && y <= bank + 0.12) return 'building';
+            }
+            if (
+                Math.abs(x - l.x) < 160 &&
+                Math.abs(z - l.z) < 160 &&
+                landmarkContains(l.id, x - l.x, y - height(l.x, l.z), z - l.z)
+            )
+                return 'building';
+        }
         if (x < minX || x > maxX || z < minZ || z > maxZ) return '';
         for (const f of cells.get(
             `${Math.floor(x / 250)},${Math.floor(z / 250)}`
