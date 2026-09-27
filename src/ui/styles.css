@@ -1044,6 +1044,7 @@ kbd {
     color: #d2e0e6;
 }
 #instructions-panel[open] {
+    z-index: 40;
     max-height: 65vh;
     overflow-y: auto;
 }
@@ -2282,7 +2283,8 @@ body:has(.automation-status) .warning-banner {
     }
 }
 
-#photo-button {
+#photo-button,
+#camera-shortcut {
     position: fixed;
     top: 16px;
     right: 68px;
@@ -2296,6 +2298,9 @@ body:has(.automation-status) .warning-banner {
     background: #142d3be8;
     color: white;
     cursor: pointer;
+}
+#camera-shortcut {
+    display: none;
 }
 #photo-controls {
     display: none;
@@ -2349,6 +2354,11 @@ body.photo-controls-hidden #photo-controls {
     display: none;
 }
 @media (pointer: coarse), (max-width: 900px) and (max-height: 500px) {
+    #camera-shortcut {
+        display: grid;
+        top: calc(8px + var(--safe-top));
+        right: calc(226px + var(--safe-right));
+    }
     #photo-button {
         top: calc(8px + var(--safe-top));
         right: calc(174px + var(--safe-right));

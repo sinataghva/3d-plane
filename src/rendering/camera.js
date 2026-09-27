@@ -6,6 +6,7 @@ import { isEditableTarget } from '../flight/input.js';
  * @property {() => boolean} isOrbitMode
  * @property {() => string} getMode
  * @property {(mode: string) => void} setMode
+ * @property {() => void} [cycle]
  */
 
 const CAMERA_MODES = ['chase', 'cockpit', 'orbit'];
@@ -26,6 +27,9 @@ function setCameraFov(camera, fov) {
  */
 export function createCameraModeToggle(initialMode = 'chase') {
     let cameraModeIndex = Math.max(0, CAMERA_MODES.indexOf(initialMode));
+    const cycle = () => {
+        cameraModeIndex = (cameraModeIndex + 1) % CAMERA_MODES.length;
+    };
 
     window.addEventListener('keydown', (event) => {
         if (
@@ -36,11 +40,12 @@ export function createCameraModeToggle(initialMode = 'chase') {
             !event.altKey &&
             event.key.toLowerCase() === 'c'
         ) {
-            cameraModeIndex = (cameraModeIndex + 1) % CAMERA_MODES.length;
+            cycle();
         }
     });
 
     return {
+        cycle,
         isOrbitMode() {
             return this.getMode() === 'orbit';
         },

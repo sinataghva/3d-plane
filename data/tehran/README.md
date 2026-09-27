@@ -65,7 +65,8 @@ on the ground; the HUD shows remaining stores and the countdown. A predicted
 terrain-draped crosshair scales with distance for screen readability and tracks impacts on terrain and static building
 collision envelopes, is hidden below the release limit, remains dimmed while
 reloading, and disappears if the impact is off-screen or no intersection is found. Solid
-impacts create enlarged arcade explosions, water impacts create splashes, and
+impacts create large arcade fire-to-smoke effects lasting six simulation seconds;
+water impacts create splashes and lingering ripples, and
 neither causes damage or destruction. All motion, prediction and effects are
 local, with bounded work and resources. See [bomb controls and limits](../../README.md#f-4-phantom--iiaf).
 

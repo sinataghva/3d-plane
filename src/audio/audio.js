@@ -1,5 +1,6 @@
 import { aircraftCapabilities, isJet } from '../aircraft/capabilities.js';
 import { synthesizeSonicBoom } from './sonicBoom.js';
+import { bombImpactGain } from './bombImpact.js';
 /** Audio mix derived from flight state; speed is metres per 60 Hz tick.
  * @param {import('../flight/physics.js').PlaneState} state */
 export function flightMix(state, cockpit = false) {
@@ -39,6 +40,7 @@ export function createFlightAudio() {
     let gearSoundUntil = 0;
     let nextShot = 0;
     let boomUntil = 0;
+    let bombImpactUntil = 0;
     /** @type {AudioBuffer} */
     let boom;
     /** @type {AudioBuffer} */
@@ -47,6 +49,7 @@ export function createFlightAudio() {
     let impact;
     const loops = new Map();
     const voices = new Set();
+    const bombVoices = new Set();
     const abort = new AbortController();
     try {
         const saved = JSON.parse(localStorage.getItem('flight-audio') || '{}');
@@ -179,7 +182,9 @@ export function createFlightAudio() {
     const stopVoices = () => {
         for (const voice of voices) voice.stop();
         voices.clear();
+        bombVoices.clear();
         boomUntil = 0;
+        bombImpactUntil = 0;
     };
     const silence = () => {
         stopVoices();
@@ -219,6 +224,7 @@ export function createFlightAudio() {
         };
         source.start();
         source.stop(context.currentTime + duration);
+        return source;
     }
     return {
         mount() {
@@ -263,13 +269,15 @@ export function createFlightAudio() {
                 aircraftCapabilities(state.aircraft).weapon === 'gun';
             // Leave room for foreground effects without changing the volume setting.
             const background =
-                context.currentTime < boomUntil
-                    ? 0.3
-                    : firing
-                      ? 0.4
-                      : gearMoving
-                        ? 0.6
-                        : 1;
+                context.currentTime < bombImpactUntil
+                    ? 0.18
+                    : context.currentTime < boomUntil
+                      ? 0.3
+                      : firing
+                        ? 0.4
+                        : gearMoving
+                          ? 0.6
+                          : 1;
             ramp(master.gain, active && !muted ? volume * mix.cabin : 0, 0.025);
             ramp(filter.frequency, mix.cutoff);
             const engine = isJet(state.aircraft) ? 'jet' : 'propeller';
@@ -317,15 +325,29 @@ export function createFlightAudio() {
                 !active ||
                 muted ||
                 document.hidden ||
-                distance > 2500
+                distance >= 6000 ||
+                bombVoices.size >= 4
             )
                 return;
-            burst(
-                impact,
-                0.45 / (1 + distance / 250),
-                kind === 'water' ? 0.3 : 0.6,
-                kind === 'water' ? 1.5 : 0.65
+            const source = burst(
+                kind === 'water' ? impact : boom,
+                bombImpactGain(distance),
+                kind === 'water' ? 0.8 : 1.6,
+                kind === 'water' ? 0.6 : 0.7,
+                0.12
             );
+            if (source) {
+                // Give audible impacts their own foreground window; releasing
+                // a bomb does not affect engine volume.
+                bombImpactUntil =
+                    context.currentTime + (kind === 'water' ? 0.8 : 1.6);
+                bombVoices.add(source);
+                source.addEventListener(
+                    'ended',
+                    () => bombVoices.delete(source),
+                    { once: true }
+                );
+            }
         },
         reset() {
             stopVoices();

@@ -3,6 +3,8 @@ import { aircraftCapabilities } from './aircraft/capabilities.js';
 import { createPhantom } from './aircraft/phantom.js';
 import { createRoadTraffic } from './scenery/roadTraffic.js';
 import { createPhotoMode } from './ui/photoMode.js';
+import { createCameraShortcut } from './ui/cameraShortcut.js';
+import { updateFlightGuide } from './ui/flightGuide.js';
 import { createRunwayLights } from './rendering/timeOfDay.js';
 import { createFpsCounter } from './ui/fps.js';
 import { createServiceVehicles } from './scenery/serviceVehicles.js';
@@ -219,15 +221,7 @@ async function startApp() {
         }
     }
     document.title = `${mission.title} · Open Skies`;
-    if (isJet(mission.aircraft)) {
-        const list = document.querySelector('#instructions-panel ul');
-        list?.querySelectorAll('li').forEach((item) => {
-            if (item.textContent?.includes('Fire tracers')) item.hidden = true;
-        });
-        const help = document.createElement('li');
-        help.textContent = `${mission.name}: hold W at full thrust for 110% afterburner; release to return to 100%. G: landing gear. Hold S at zero thrust: airbrakes. ${capabilities.weapon === 'gun' ? 'Space: cannon.' : `Space / Drop bomb: one bomb per press, minimum height ${BOMB_CONFIG.minimumReleaseHeight} m. Six bombs; ${BOMB_CONFIG.reloadSeconds} s reload when empty.`} P: settings. Mobile: full slider + hold Boost.`;
-        list?.append(help);
-    }
+    updateFlightGuide(mission.aircraft);
     const loading = document.getElementById('scenery-loading');
     if (loading) loading.textContent = `Loading ${mission.title}…`;
     const mapCaption = document.querySelector('#world-map p');
@@ -338,6 +332,7 @@ async function startApp() {
     const keyboard = createKeyboardState(mission.aircraft);
     const planePhysics = createPlanePhysics();
     const cameraMode = createCameraModeToggle();
+    const cameraShortcut = createCameraShortcut(cameraMode);
     const hud = createHud();
     const cockpitOverlay = createCockpitOverlay();
     const destinationBeacon = createDestinationBeacon(scene);
@@ -352,6 +347,7 @@ async function startApp() {
     timer.connect(document);
     disposeFlight = () => {
         photoMode.dispose();
+        cameraShortcut.dispose();
         flightAudio.dispose();
         machEffect?.dispose();
         roadTraffic.dispose();
@@ -733,6 +729,8 @@ async function startApp() {
                 planeState.position.y += feature?.height || 0;
             const impact = [
                 'bombs-impact',
+                'bombs-smoke',
+                'bombs-expired',
                 'bombs-water',
                 'bombs-building'
             ].includes(name);
@@ -740,13 +738,19 @@ async function startApp() {
                 bombing.step(planeState, true, 1 / 60);
                 for (let i = 0; i < 1200 && bombing.sim.active.length; i++)
                     bombing.step(planeState, false, 1 / 60);
-                for (let i = 0; i < 12; i++)
+                const effectTicks =
+                    name === 'bombs-smoke'
+                        ? 240
+                        : name === 'bombs-expired'
+                          ? 370
+                          : 12;
+                for (let i = 0; i < effectTicks; i++)
                     bombing.step(planeState, false, 1 / 60);
                 airplane.visible = false;
                 const surface =
                     world.height(x, z) +
                     (name === 'bombs-building' ? feature?.height || 0 : 0);
-                camera.position.set(x + 18, surface + 14, z + 18);
+                camera.position.set(x + 45, surface + 35, z + 45);
                 camera.lookAt(x - 2.4, surface + 1, z - 2);
             } else {
                 syncPlaneMesh({ airplane, propeller, planeState });

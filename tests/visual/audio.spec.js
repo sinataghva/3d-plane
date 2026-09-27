@@ -1,6 +1,90 @@
 import { test, expect } from '@playwright/test';
 test.setTimeout(90000);
 
+test('distant bomb audio uses bounded voices and respects pause/reset', async ({
+    page
+}) => {
+    await page.route('**/bomb-audio-harness', (route) =>
+        route.fulfill({
+            contentType: 'text/html',
+            body: '<button>Start audio</button>'
+        })
+    );
+    await page.goto('/bomb-audio-harness');
+    await page.evaluate(async () => {
+        window.sources = [];
+        window.mixTargets = [];
+        const target = AudioParam.prototype.setTargetAtTime;
+        AudioParam.prototype.setTargetAtTime = function (...args) {
+            window.mixTargets.push(args[0]);
+            return target.apply(this, args);
+        };
+        const original = AudioContext.prototype.createBufferSource;
+        AudioContext.prototype.createBufferSource = function () {
+            const source = original.call(this);
+            window.sources.push(source);
+            return source;
+        };
+        const { createFlightAudio } =
+            await import('/3d-plane/src/audio/audio.js');
+        const { createPlaneState } =
+            await import('/3d-plane/src/flight/physics.js');
+        window.sound = createFlightAudio();
+        window.state = createPlaneState('phantom');
+        window.state.enginePower = 1;
+    });
+    await page.getByRole('button').click();
+    const result = await page.evaluate(async () => {
+        const count = () => window.sources.filter((s) => !s.loop).length;
+        const sound = window.sound;
+        sound.update(window.state, { space: false }, false, false);
+        const normalEngine = window.mixTargets.includes(0.4);
+        sound.bombImpact('ground', 6000);
+        const outside = count();
+        sound.bombImpact('ground', 3000);
+        const distant = count();
+        window.mixTargets.length = 0;
+        sound.update(window.state, { space: false }, false, false);
+        const duckedEngine = window.mixTargets.some(
+            (value) => Math.abs(value - 0.072) < 1e-6
+        );
+        for (let i = 0; i < 10; i++) sound.bombImpact('ground', 100);
+        const limited = count();
+        sound.update(window.state, { space: false }, true, false);
+        sound.bombImpact('ground', 100);
+        const paused = count();
+        sound.reset();
+        sound.update(window.state, { space: false }, false, false);
+        sound.bombImpact('water', 3000);
+        const resumed = count();
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        window.mixTargets.length = 0;
+        sound.update(window.state, { space: false }, false, false);
+        const restoredEngine = window.mixTargets.includes(0.4);
+        sound.dispose();
+        return {
+            outside,
+            distant,
+            limited,
+            paused,
+            resumed,
+            normalEngine,
+            duckedEngine,
+            restoredEngine
+        };
+    });
+    expect(result).toEqual({
+        outside: 0,
+        distant: 1,
+        limited: 4,
+        paused: 4,
+        resumed: 5,
+        normalEngine: true,
+        duckedEngine: true,
+        restoredEngine: true
+    });
+});
+
 for (const mission of ['luxeuil', 'tehran'])
     for (const mobile of [false, true]) {
         test(`${mission} audio playback and settings ${mobile ? 'mobile' : 'desktop'}`, async ({

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import {
     BOMB_CONFIG,
     BOMB_MOUNTS,
@@ -45,13 +46,26 @@ export function createBombing(scene, airplane, world, sound) {
         return mesh;
     });
     const marker = createBombMarker(scene, surfaces);
-    const effectLifetime = 2.4;
+    const effectLifetime = 6;
+    const smokeColor = new THREE.Color(0x42464b);
     const sphere = new THREE.SphereGeometry(1, 10, 6),
         wave = new THREE.RingGeometry(0.8, 1, 24);
     wave.rotateX(-Math.PI / 2);
+    const smokeParts = [
+        [0, 0.35, 0],
+        [-0.4, -0.2, 0.1],
+        [0.4, -0.2, -0.1]
+    ].map(([x, y, z]) => {
+        const part = sphere.clone();
+        part.scale(0.7, 0.7, 0.7);
+        part.translate(x, y, z);
+        return part;
+    });
+    const smokeGeometry = mergeGeometries(smokeParts);
+    smokeParts.forEach((part) => part.dispose());
     const effects = Array.from({ length: 16 }, () => {
         const cloud = new THREE.Mesh(
-            sphere,
+            /** @type {THREE.BufferGeometry} */ (sphere),
             new THREE.MeshBasicMaterial({
                 color: 0xffa637,
                 transparent: true,
@@ -69,7 +83,13 @@ export function createBombing(scene, airplane, world, sound) {
         );
         cloud.visible = ripple.visible = false;
         group.add(cloud, ripple);
-        return { cloud, ripple, age: 3, water: false };
+        return {
+            cloud,
+            ripple,
+            age: effectLifetime,
+            water: false,
+            surfaceY: 0
+        };
     });
     const hud = document.createElement('div');
     hud.id = 'bomb-readout';
@@ -121,7 +141,7 @@ export function createBombing(scene, airplane, world, sound) {
         marker.hide();
         for (const mesh of falling) mesh.visible = false;
         for (const e of effects) {
-            e.age = 3;
+            e.age = effectLifetime;
             e.cloud.visible = e.ripple.visible = false;
         }
         stores.forEach((mesh) => (mesh.visible = true));
@@ -147,7 +167,8 @@ export function createBombing(scene, airplane, world, sound) {
                 e.age = 0;
                 e.water = hit.kind === 'water';
                 e.cloud.position.copy(hit.position);
-                e.cloud.position.y += e.water ? 2 : 4;
+                e.surfaceY = hit.position.y;
+                e.cloud.position.y += e.water ? 4 : 8;
                 e.ripple.position.copy(hit.position);
                 e.ripple.position.y += 0.15;
                 e.cloud.material.color.setHex(e.water ? 0xc1e7ef : 0xff6d19);
@@ -166,7 +187,7 @@ export function createBombing(scene, airplane, world, sound) {
             for (const e of effects) e.age += dt;
             if (state.isCrashed) {
                 prediction = preview = null;
-                for (const e of effects) e.age = 3;
+                for (const e of effects) e.age = effectLifetime;
             }
             publish(state);
         },
@@ -192,13 +213,25 @@ export function createBombing(scene, airplane, world, sound) {
                     visible = t < 1 && !state.isCrashed;
                 e.cloud.visible = e.ripple.visible = visible;
                 if (!visible) continue;
+                const expansion = Math.min(1, e.age / 2.4);
+                const smoke = THREE.MathUtils.smoothstep(e.age, 0.5, 1.8);
+                e.cloud.geometry =
+                    !e.water && smoke > 0.5 ? smokeGeometry : sphere;
                 e.cloud.scale.set(
-                    4 + t * 10,
-                    e.water ? 3 + t * 14 : 4 + t * 8,
-                    4 + t * 10
+                    8 + expansion * 20,
+                    e.water ? 6 + expansion * 28 : 8 + expansion * 16,
+                    8 + expansion * 20
                 );
-                e.cloud.material.opacity = (1 - t) * 0.95;
-                e.ripple.scale.setScalar(4 + t * 22);
+                e.cloud.position.y =
+                    e.surfaceY + (e.water ? 4 : 8 + smoke * e.age * 3);
+                e.cloud.material.color.setHex(e.water ? 0xc1e7ef : 0xff8b26);
+                if (!e.water) e.cloud.material.color.lerp(smokeColor, smoke);
+                e.cloud.material.opacity = e.water
+                    ? Math.max(0, 1 - e.age / 2.4) * 0.9
+                    : (0.95 - smoke * 0.35) *
+                      (1 -
+                          THREE.MathUtils.smoothstep(e.age, 4, effectLifetime));
+                e.ripple.scale.setScalar(8 + t * 44);
                 e.ripple.material.opacity = (1 - t) * 0.65;
             }
             if (state.isCrashed) {
@@ -269,6 +302,9 @@ export function createBombing(scene, airplane, world, sound) {
                 ).length,
                 bombEffects: effects.filter((e) => e.age < effectLifetime)
                     .length,
+                bombSmokeCount: effects.filter(
+                    (e) => !e.water && e.age >= 1.8 && e.age < effectLifetime
+                ).length,
                 bombPredictionMs: workMs,
                 bombPredictionPeakMs: peakWorkMs
             };
@@ -284,6 +320,7 @@ export function createBombing(scene, airplane, world, sound) {
             material.dispose();
             marker.dispose();
             sphere.dispose();
+            smokeGeometry.dispose();
             wave.dispose();
             effects.forEach((e) => {
                 e.cloud.material.dispose();

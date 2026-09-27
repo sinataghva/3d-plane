@@ -164,8 +164,12 @@ seconds**, including while landed. The HUD shows remaining bombs and the reload
 countdown. Pausing or backgrounding freezes the simulation; reset restores the
 loadout and clears falling bombs/effects.
 
-Solid impacts produce enlarged stylized explosions; water produces splashes, with
-quiet distance-attenuated impact audio. There is **no damage or destruction**.
+Solid impacts produce a large stylized flash/fire followed by rising smoke over
+six simulation seconds. Water produces a splash with lingering ripples, not fire.
+Impact audio fades gradually with distance to silence at 6 km; at most four bomb
+impact voices overlap. Audible impacts briefly lower engine, wind and afterburner
+volume so the boom stands out; bomb release itself does not alter the mix.
+Mute and pause still apply. There is **no damage or destruction**.
 Prediction and flight share one trajectory model. Nearby ground uses the rendered
 terrain triangles; building hits use the game's simplified static collision
 envelopes, not architectural detail. Prediction work and effect pools are bounded.
@@ -322,6 +326,7 @@ http://127.0.0.1:4173/3d-plane/
 - **G**: Toggle jet landing gear in flight
 - **P**: Open/close settings and pause/resume
 - **C**: Cycle camera mode between chase, cockpit, and orbit
+- **Mobile video-camera button**: Cycle the same views directly beside the photo button
 - **Hold M**: Show the full regional map; release to close
 - **Click/tap radar**: Keep the map open; close with **×** or **Escape**
 
