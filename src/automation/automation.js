@@ -24,6 +24,7 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
     let routeStatus = 'idle';
     let routeError = '';
     let bombPresses = 0;
+    let smokeOn = false;
     /** @type {FlightControls} */
     let controls = {
         throttle: 0,
@@ -138,6 +139,14 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
                 !controls.fire
             )
                 bombPresses = Math.min(6, bombPresses + 1);
+            if (
+                planeState.aircraft === 'cessna' &&
+                values.fire &&
+                !controls.fire
+            ) {
+                smokeOn = !smokeOn;
+                planeState.smokeOn = smokeOn;
+            }
             controls = { ...controls, ...values };
             planeState.thrust = controls.throttle;
             if (!controls.boost) clearAfterburner(planeState);
@@ -174,7 +183,8 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
                 stickPitch: controls.pitch,
                 stickRoll: controls.roll,
                 stickRudder: controls.rudder,
-                space: controls.fire
+                space: controls.fire,
+                smokeOn
             };
             for (let i = 0; i < count && !planeState.isCrashed; i++) {
                 input.bombPresses = bombPresses > 0 ? 1 : 0;
@@ -303,6 +313,7 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
                     'Wait for the animated flight before resetting.'
                 );
             bombPresses = 0;
+            smokeOn = false;
             controls = {
                 throttle: 0,
                 pitch: 0,
@@ -324,6 +335,8 @@ export function createFlightAutomation({ planeState, advance, reset, render }) {
         },
         release() {
             bombPresses = 0;
+            smokeOn = false;
+            planeState.smokeOn = false;
             clearAfterburner(planeState);
             active = false;
             continuous = false;

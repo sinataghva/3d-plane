@@ -33,6 +33,22 @@ it('keeps keyboard and multiple touch presses independent', () => {
     input.releasePointer(2);
     expect(input.state.w).toBe(false);
 });
+it('toggles Saint-Cyr smoke once per Space press or touch tap', () => {
+    const input = createInputController('cessna');
+    input.key(' ', true);
+    expect(input.state.smokeOn).toBe(true);
+    input.key(' ', true);
+    input.pressPointer(1, 'space');
+    expect(input.state.smokeOn).toBe(true);
+    input.key(' ', false);
+    input.releasePointer(1);
+    expect(input.state.smokeOn).toBe(true);
+    input.pressPointer(2, 'space');
+    expect(input.state.smokeOn).toBe(false);
+    input.releasePointer(2);
+    input.reset();
+    expect(input.state.smokeOn).toBe(false);
+});
 it('clears all input channels when focus is lost and ignores stale stick movement', () => {
     const input = createInputController();
     input.key('ArrowRight', true);

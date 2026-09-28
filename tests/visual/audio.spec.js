@@ -250,9 +250,9 @@ for (const aircraft of ['mirage', 'phantom', 'cessna'])
         });
         expect(result).toEqual({
             touchdown: 1,
-            cannon: aircraft === 'phantom' ? 1 : 2,
-            paused: aircraft === 'phantom' ? 1 : 2,
-            crashed: aircraft === 'phantom' ? 1 : 2,
+            cannon: aircraft === 'mirage' ? 2 : 1,
+            paused: aircraft === 'mirage' ? 2 : 1,
+            crashed: aircraft === 'mirage' ? 2 : 1,
             context: 'closed'
         });
     });

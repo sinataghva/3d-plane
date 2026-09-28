@@ -38,6 +38,7 @@ import {
  * @property {boolean} [afterburner]
  * @property {boolean} [gearDown]
  * @property {boolean} [airbrake]
+ * @property {boolean} [smokeOn]
  * @property {number} [enginePower]
  * @property {number} [gForce]
  * @property {PlanePosition} position
@@ -129,6 +130,7 @@ export function createPlaneState(aircraft = 'cessna') {
         airbrakeExtension: 0,
         elevatorManeuver: false,
         airbrake: false,
+        smokeOn: false,
         enginePower: 0,
         gForce: 1,
         position: spawn
@@ -160,6 +162,7 @@ export function resetPlaneState(planeState) {
     planeState.gearExtension = 1;
     planeState.airbrakeExtension = 0;
     Object.assign(planeState, {
+        smokeOn: false,
         afterburner: false,
         gearDown: true,
         airbrake: false,

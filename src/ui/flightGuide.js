@@ -15,9 +15,11 @@ export function updateFlightGuide(aircraft) {
             'Space',
             weapon === 'bomb'
                 ? 'Drop one bomb'
-                : jet
-                  ? 'Fire cannon'
-                  : 'Fire tracers'
+                : weapon === 'smoke'
+                  ? 'Toggle blue smoke'
+                  : jet
+                    ? 'Fire cannon'
+                    : 'Fire tracers'
         ],
         ...(jet
             ? [
@@ -55,5 +57,5 @@ export function updateFlightGuide(aircraft) {
     }
     const mobile = document.getElementById('mobile-guide');
     if (mobile)
-        mobile.textContent = `Mobile: stick to steer · slider for thrust · video-camera button to switch view${jet ? ' · Boost for afterburner' : ''}${weapon === 'bomb' ? ' · Drop bomb to release' : ''}.`;
+        mobile.textContent = `Mobile: stick to steer · slider for thrust · video-camera button to switch view${jet ? ' · Boost for afterburner' : ''}${weapon === 'bomb' ? ' · Drop bomb to release' : ''}${weapon === 'smoke' ? ' · Smoke to toggle blue trail' : ''}.`;
 }

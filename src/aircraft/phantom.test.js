@@ -17,7 +17,7 @@ test('Phantom is a bomb-equipped jet, never a gun-equipped aircraft', () => {
         gun = createMachineGun(scene),
         keyboard = createInputController('phantom').state;
     keyboard.space = true;
-    for (const aircraft of ['cessna', 'mirage']) {
+    for (const aircraft of ['mirage']) {
         gun.update({
             planeState: createPlaneState(aircraft),
             keyboard,
@@ -26,6 +26,12 @@ test('Phantom is a bomb-equipped jet, never a gun-equipped aircraft', () => {
         expect(gun.tracers.length).toBeGreaterThan(0);
         gun.clear();
     }
+    gun.update({
+        planeState: createPlaneState('cessna'),
+        keyboard,
+        delta: 1 / 60
+    });
+    expect(gun.tracers).toHaveLength(0);
     for (let i = 0; i < 120; i++)
         gun.update({
             planeState: createPlaneState('phantom'),

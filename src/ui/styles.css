@@ -892,6 +892,18 @@ kbd {
     color: #ffe0d8;
 }
 
+.touch-smoke {
+    border-color: rgba(78, 159, 255, 0.8);
+    background: rgba(16, 56, 120, 0.8);
+    color: #deeeff;
+}
+
+.touch-smoke[data-active='true'] {
+    border-color: #9bd5ff;
+    background: rgba(27, 111, 211, 0.95);
+    color: #fff;
+}
+
 @media (orientation: landscape) and (pointer: coarse),
     (orientation: landscape) and (max-width: 900px) and (max-height: 500px) {
     #touch-controls {

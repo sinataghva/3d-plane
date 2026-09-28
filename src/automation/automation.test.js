@@ -22,6 +22,19 @@ function setup() {
 }
 
 describe('flight automation', () => {
+    it('toggles Saint-Cyr smoke on fire press edges, including presses between ticks', () => {
+        const { api } = setup();
+        api.setControls({ fire: true });
+        expect(api.getState().plane.smokeOn).toBe(true);
+        api.setControls({ fire: true });
+        api.setControls({ fire: false });
+        api.step({ seconds: 1 / 60 });
+        expect(api.getState().plane.smokeOn).toBe(true);
+        api.setControls({ fire: true });
+        expect(api.getState().plane.smokeOn).toBe(false);
+        api.reset();
+        expect(api.getState().plane.smokeOn).toBe(false);
+    });
     it('retains short Phantom fire edges between ticks and returns detached bomb telemetry', () => {
         const planeState = createPlaneState('phantom');
         /** @type {(number|undefined)[]} */ const pulses = [];

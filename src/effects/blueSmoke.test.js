@@ -1,0 +1,32 @@
+import * as THREE from 'three';
+import { expect, test } from 'vitest';
+import { createPlaneState } from '../flight/physics.js';
+import { createBlueSmoke, SMOKE_LIFETIME } from './blueSmoke.js';
+
+test('blue smoke trails the aircraft, stops emitting when switched off, and expires', () => {
+    const scene = new THREE.Scene();
+    const effect = createBlueSmoke(scene);
+    const state = createPlaneState();
+    state.smokeOn = true;
+    effect.update(state, 1 / 60);
+    expect(effect.puffs).toHaveLength(1);
+    const first = effect.puffs[0].position.clone();
+    state.position.z += 30;
+    effect.update(state, 1 / 60);
+    expect(effect.puffs).toHaveLength(2);
+    expect(effect.puffs[0].position).toEqual(first);
+    expect(effect.puffs[1].position.z).toBeGreaterThan(first.z);
+    state.smokeOn = false;
+    const points = /** @type {THREE.Points} */ (scene.children[0]);
+    const color = points.geometry.getAttribute('color');
+    const freshAlpha = color.getW(0);
+    effect.update(state, 1);
+    expect(effect.puffs).toHaveLength(2);
+    expect(color.getW(0)).toBe(freshAlpha);
+    effect.update(state, 3);
+    expect(color.getW(0)).toBeLessThan(freshAlpha);
+    effect.update(state, SMOKE_LIFETIME);
+    expect(effect.puffs).toHaveLength(0);
+    effect.dispose();
+    expect(scene.children).toHaveLength(0);
+});

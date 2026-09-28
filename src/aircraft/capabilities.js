@@ -1,6 +1,6 @@
 /** Shared behavior, independent of a mission's display name. */
 export const AIRCRAFT_CAPABILITIES = Object.freeze({
-    cessna: Object.freeze({ jet: false, weapon: 'gun', weaponReady: true }),
+    cessna: Object.freeze({ jet: false, weapon: 'smoke', weaponReady: true }),
     mirage: Object.freeze({ jet: true, weapon: 'gun', weaponReady: true }),
     phantom: Object.freeze({ jet: true, weapon: 'bomb', weaponReady: true })
 });

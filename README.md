@@ -176,7 +176,8 @@ envelopes, not architectural detail. Prediction work and effect pools are bounde
 Bombs outside the mapped region or older than 120 seconds are discarded. At the
 30-active-bomb limit, new releases are refused without consuming a store.
 This gameplay choice is not a claim that all real Phantom variants were gunless.
-The light aircraft and Mirage retain their existing gunfire.
+The Mirage retains its cannon; the Saint-Cyr light aircraft uses blue aerobatic
+smoke.
 
 - Procedural Cessna-style light aircraft, Mirage 2000 and F-4 Phantom models
 - Arcade flight physics with thrust, lift, gravity, stalls, banking, rudder, and landing behavior
@@ -187,7 +188,8 @@ The light aircraft and Mirage retain their existing gunfire.
 - Heading-up radar/minimap centered on the plane
 - Warning banners for low altitude, stall risk, and crash states
 - Crash handling with visual feedback and restart flow
-- Machine-gun tracer fire with Space for gun-equipped aircraft
+- Blue aerobatic smoke on the Saint-Cyr light aircraft, toggled with Space;
+  Mirage cannon fire while Space is held
 - Saint-Cyr–Versailles, Luxeuil and Tehran scenery from cached OpenStreetMap geometry and regional elevation
 - Zoomable full map with a selectable destination and a red world-space beacon
 - Distance-based road/runway surface detail and three graphics presets
@@ -319,9 +321,10 @@ http://127.0.0.1:4173/3d-plane/
 - **Arrow Left / Arrow Right**: Bank and turn left/right
 - **Arrow Down**: Pitch nose up
 - **Arrow Up**: Pitch nose down
-- **Space**: Fire tracer rounds on the light aircraft/Mirage, or release one bomb
-  per press on the F-4 (minimum 10 m above ground). Clicking game buttons does not
-  keep keyboard focus; Space remains the aircraft weapon input during flight.
+- **Space**: Toggle blue smoke on the Saint-Cyr light aircraft (each puff lasts
+  eight seconds, fading after two), hold for Mirage cannon fire, or release one
+  bomb per press on the F-4 (minimum 10 m above ground). Clicking game buttons
+  does not keep keyboard focus; Space remains the aircraft action input during flight.
   Use Enter to activate a keyboard-focused minimap.
 - **G**: Toggle jet landing gear in flight
 - **P**: Open/close settings and pause/resume
@@ -545,6 +548,8 @@ bank right, and yaw right respectively. `fire` is a boolean. Partial commands
 preserve unspecified controls; inputs persist until changed. Invalid values
 are rejected before any changes are applied.
 
+For Saint-Cyr, each `fire: false` → `fire: true` transition toggles smoke;
+holding `fire: true` does not toggle repeatedly. Telemetry includes `plane.smokeOn`.
 For the Phantom, each `fire: false` → `fire: true` transition requests one bomb;
 holding `fire: true` does not repeat. Telemetry includes `plane.bombs` with
 remaining count, reload seconds, active falling bombs and the latest predicted
@@ -755,9 +760,10 @@ Flight Data displays the full instrument panel; neither radar layout has heading
 
 All three aircraft use locally bundled CC0 engine sounds: the light aircraft
 uses the propeller sample, while the Mirage and Phantom share the jet sample.
-Only the light aircraft and Mirage have firing effects; the Phantom produces
-no gunfire or gun audio. Wind and touchdown audio are generated, as are jet
-afterburner and gear-motion sounds. Engine pitch and volume follow power;
+Only the Mirage has gunfire effects and audio. The Saint-Cyr aircraft emits
+blue smoke instead, while the Phantom drops bombs. Wind, touchdown,
+afterburner, and gear-motion sounds are also generated. Engine pitch and volume
+follow power;
 cockpit view muffles exterior sound. Settings → Sound provides saved mute and
 volume controls. Audio starts after a user gesture and stops while paused or
 in the background.

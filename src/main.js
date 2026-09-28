@@ -52,6 +52,7 @@ import { createCockpitOverlay } from './ui/cockpitOverlay.js';
 import { createHud } from './ui/hud.js';
 import { createKeyboardState } from './flight/input.js';
 import { createMachineGun } from './effects/machineGun.js';
+import { createBlueSmoke } from './effects/blueSmoke.js';
 import { createBombing } from './effects/bombing.js';
 import { BOMB_CONFIG } from './flight/bombs.js';
 import { createMiniMap } from './map/minimap.js';
@@ -220,6 +221,15 @@ async function startApp() {
             );
         }
     }
+    if (capabilities.weapon === 'smoke') {
+        const smokeButton = document.querySelector('.touch-fire');
+        if (smokeButton instanceof HTMLButtonElement) {
+            smokeButton.textContent = 'Smoke';
+            smokeButton.setAttribute('aria-label', 'Toggle blue smoke');
+            smokeButton.setAttribute('aria-pressed', 'false');
+            smokeButton.classList.add('touch-smoke');
+        }
+    }
     document.title = `${mission.title} · Open Skies`;
     updateFlightGuide(mission.aircraft);
     const loading = document.getElementById('scenery-loading');
@@ -316,7 +326,10 @@ async function startApp() {
         restoreRandom();
     }
     const crashEffect = createCrashEffect(scene);
-    const machineGun = createMachineGun(scene);
+    const machineGun =
+        capabilities.weapon === 'gun' ? createMachineGun(scene) : null;
+    const blueSmoke =
+        capabilities.weapon === 'smoke' ? createBlueSmoke(scene) : null;
     const bombing =
         capabilities.weapon === 'bomb'
             ? createBombing(scene, airplane, world, (kind, distance) =>
@@ -354,7 +367,8 @@ async function startApp() {
         groundDetail.dispose();
         groundTexture.dispose();
         destinationBeacon.dispose();
-        machineGun.dispose();
+        machineGun?.dispose();
+        blueSmoke?.dispose();
         bombing?.dispose();
         controls.dispose();
         timer.dispose();
@@ -407,7 +421,8 @@ async function startApp() {
         wasCrashed = false;
         crashOverlayElement.hidden = true;
         crashEffect.hide();
-        machineGun.clear();
+        machineGun?.clear();
+        blueSmoke?.reset();
         bombing?.reset(planeState);
         simulationClock.reset();
     };
@@ -866,6 +881,7 @@ async function startApp() {
      * @param {import('./flight/input.js').KeyboardState} keyboard
      */
     function simulate(delta, keyboard) {
+        if (blueSmoke) planeState.smokeOn = Boolean(keyboard.smokeOn);
         const before = planeState.isAirborne
             ? { ...planeState, position: { ...planeState.position } }
             : null;
@@ -905,7 +921,8 @@ async function startApp() {
             planeState,
             delta
         });
-        machineGun.update({ planeState, keyboard, delta });
+        machineGun?.update({ planeState, keyboard, delta });
+        blueSmoke?.update(planeState, delta);
         bombing?.step(
             planeState,
             keyboard.space,

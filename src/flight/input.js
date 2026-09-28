@@ -13,6 +13,7 @@ import { isJet } from '../aircraft/capabilities.js';
  * @property {boolean} arrowUp
  * @property {boolean} arrowDown
  * @property {boolean} space
+ * @property {boolean} [smokeOn]
  * @property {number} [bombPresses]
  * @property {number} stickRoll
  * @property {number} stickPitch
@@ -60,6 +61,7 @@ export function createInputController(aircraft = 'cessna') {
         arrowUp: false,
         arrowDown: false,
         space: false,
+        smokeOn: false,
         stickRoll: 0,
         stickPitch: 0
     };
@@ -75,6 +77,8 @@ export function createInputController(aircraft = 'cessna') {
             state[key] = keys.has(key) || [...pointers.values()].includes(key);
         if (aircraft === 'phantom' && state.space && !wasPressed)
             state.bombPresses = Math.min(6, (state.bombPresses || 0) + 1);
+        if (aircraft === 'cessna' && state.space && !wasPressed)
+            state.smokeOn = !state.smokeOn;
     };
     return {
         state,
@@ -128,6 +132,7 @@ export function createInputController(aircraft = 'cessna') {
         },
         reset() {
             state.bombPresses = 0;
+            state.smokeOn = false;
             keys.clear();
             pointers.clear();
             stickPointer = null;
@@ -164,7 +169,13 @@ export function createKeyboardState(aircraft = 'cessna') {
     const refreshButtons = () => {
         for (const button of buttons) {
             const key = /** @type {ButtonKey} */ (button.dataset.key);
-            button.dataset.active = input.state[key] ? 'true' : 'false';
+            const active =
+                aircraft === 'cessna' && key === 'space'
+                    ? input.state.smokeOn
+                    : input.state[key];
+            button.dataset.active = active ? 'true' : 'false';
+            if (aircraft === 'cessna' && key === 'space')
+                button.setAttribute('aria-pressed', String(active));
         }
     };
     const clear = () => {
@@ -240,6 +251,7 @@ export function createKeyboardState(aircraft = 'cessna') {
                     target.blur();
                 if (!(aircraft === 'phantom' && event.repeat))
                     input.key(' ', type === 'keydown');
+                refreshButtons();
             },
             { capture: true }
         );
@@ -256,6 +268,7 @@ export function createKeyboardState(aircraft = 'cessna') {
             return;
         if (input.key(event.code === 'Space' ? ' ' : event.key, true))
             event.preventDefault();
+        refreshButtons();
     });
     window.addEventListener('keyup', (event) => {
         if (
@@ -263,6 +276,7 @@ export function createKeyboardState(aircraft = 'cessna') {
             !isEditableTarget(event.target)
         )
             event.preventDefault();
+        refreshButtons();
     });
     for (const button of buttons) {
         const key = button.dataset.key;

@@ -1,11 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 
-import {
-    createMachineGun,
-    MACHINE_GUN_FIRE_INTERVAL,
-    MACHINE_GUN_RANGE
-} from './machineGun.js';
+import { createMachineGun, MACHINE_GUN_RANGE } from './machineGun.js';
 import { createPlaneState } from '../flight/physics.js';
 
 function createKeyboard(overrides = {}) {
@@ -28,7 +24,7 @@ function createKeyboard(overrides = {}) {
 describe('machine gun tracers', () => {
     it('fires paired tracers while space is held', () => {
         const scene = new THREE.Scene();
-        const planeState = createPlaneState();
+        const planeState = createPlaneState('mirage');
         const machineGun = createMachineGun(scene);
 
         machineGun.update({
@@ -38,12 +34,12 @@ describe('machine gun tracers', () => {
         });
 
         expect(machineGun.tracers).toHaveLength(2);
-        expect(scene.children).toHaveLength(2);
+        expect(scene.children).toHaveLength(4);
     });
 
     it('rate limits tracer bursts', () => {
         const scene = new THREE.Scene();
-        const planeState = createPlaneState();
+        const planeState = createPlaneState('mirage');
         const keyboard = createKeyboard({ space: true });
         const machineGun = createMachineGun(scene);
 
@@ -51,7 +47,7 @@ describe('machine gun tracers', () => {
         machineGun.update({
             planeState,
             keyboard,
-            delta: MACHINE_GUN_FIRE_INTERVAL * 0.5
+            delta: 0.01
         });
 
         expect(machineGun.tracers).toHaveLength(2);
@@ -59,7 +55,7 @@ describe('machine gun tracers', () => {
         machineGun.update({
             planeState,
             keyboard,
-            delta: MACHINE_GUN_FIRE_INTERVAL
+            delta: 0.025
         });
 
         expect(machineGun.tracers).toHaveLength(4);
@@ -67,7 +63,7 @@ describe('machine gun tracers', () => {
 
     it('removes tracers after several hundred meters', () => {
         const scene = new THREE.Scene();
-        const planeState = createPlaneState();
+        const planeState = createPlaneState('mirage');
         const machineGun = createMachineGun(scene);
 
         machineGun.update({
@@ -82,13 +78,13 @@ describe('machine gun tracers', () => {
         });
 
         expect(machineGun.tracers).toHaveLength(0);
-        expect(scene.children).toHaveLength(0);
+        expect(scene.children.filter((child) => child.visible)).toHaveLength(0);
     });
 });
 
 it('jet cannon fires faster, follows quaternion attitude, and caps sustained tracers', () => {
     const jet = createPlaneState('mirage'),
-        prop = createPlaneState();
+        prop = createPlaneState('cessna');
     jet.attitude = { x: 0, y: 0, z: 0, w: 1 };
     const a = createMachineGun(new THREE.Scene()),
         b = createMachineGun(new THREE.Scene());
@@ -97,7 +93,8 @@ it('jet cannon fires faster, follows quaternion attitude, and caps sustained tra
         a.update({ planeState: jet, keyboard, delta: 1 / 60 });
         b.update({ planeState: prop, keyboard, delta: 1 / 60 });
     }
-    expect(a.tracers.length).toBeGreaterThan(b.tracers.length);
+    expect(a.tracers.length).toBeGreaterThan(0);
+    expect(b.tracers).toHaveLength(0);
     expect(a.tracers[0].velocity.x).toBeGreaterThan(600);
     expect(a.tracers[0].velocity.z).toBe(0);
     for (let i = 0; i < 600; i++)
