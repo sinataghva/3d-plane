@@ -700,6 +700,35 @@ existing presets. The 50.6 × 35.6 km perimeter includes the complete mapped
 Saadabad complex and Darband with a foothill margin. All geographic assets are
 cached locally. Native-phone memory use and frame-rate performance remain unverified.
 
+### Close Tehran building detail
+
+Nearby generic buildings gain thin roof-boundary lines, subtle wall-colour
+variation and decorative window patterns. These reuse the existing geometry and
+night-window attributes; they add no building triangles, draw calls or attribute
+buffers. Footprints, heights, courtyard holes and night-light occupancy are
+unchanged. Custom landmarks and specialised airfield models keep their own treatment.
+
+| Preset | Full close building detail | Smooth fade | Beyond fade |
+| --- | --- | --- | --- |
+| Low | Disabled | — | Existing building appearance |
+| Balanced | Up to 400 m | 400–800 m | Existing building appearance |
+| High | Up to 600 m | 600–1,200 m | Existing building appearance |
+
+Distances use the existing camera-to-vertex distance, interpolated across each
+triangle. This includes vertical distance and is independent of the ground
+texture's altitude gate, so a nearby tall building can retain detail. Small
+window patterns also fade when they become too small to resolve.
+
+Windows and colour variation are illustrative, not surveyed architecture.
+Previously unlit industrial/utility buildings and footprints of at least
+1,500 m² do not acquire new window patterns. Roof shapes are not reconstructed:
+cached roof metadata is sparse. No additional source downloads are required.
+The local prototype measurements found unchanged building geometry storage
+(about 171 MiB of attribute arrays) and roughly 60–200 ms extra scene preparation.
+Three-run desktop and mobile-viewport comparisons passed the declared frame-time
+limits after longer rechecks of noisy static cases; these are host-browser
+measurements, not physical-phone results.
+
 To regenerate the selection artwork, run the dev server on port 5174 and then
 `node scripts/capture/capture-previews.mjs`. It captures the actual local scene with the
 HUD hidden at 2× pixel density. Pass `luxeuil`, `saint-cyr` or `tehran` to capture only

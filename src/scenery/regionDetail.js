@@ -1,3 +1,4 @@
+import { CLOSE_BUILDING_RANGES } from './closeBuildingDetail.js';
 /** Tehran's dense city uses bounded building detail; other regions are unchanged. */
 export const TEHRAN_BUILDING_RANGES = Object.freeze({
     low: 3000,
@@ -50,6 +51,14 @@ export function updateRegionDetail(terrain, position, quality) {
         const uniform = mesh.material.userData.regionDetailRange;
         if (!uniform) continue;
         uniform.value = range;
+        const close = mesh.material.userData.closeBuildingRange;
+        if (close)
+            close.value =
+                quality === 'low'
+                    ? CLOSE_BUILDING_RANGES.low
+                    : CLOSE_BUILDING_RANGES[
+                          quality === 'balanced' ? 'balanced' : 'high'
+                      ];
         const sphere = mesh.geometry.boundingSphere;
         if (!sphere) continue;
         const distance = sphere.center.distanceTo(position) - sphere.radius;

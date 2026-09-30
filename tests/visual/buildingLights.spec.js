@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-for (const mission of ['luxeuil', 'saint-cyr']) {
+for (const mission of ['luxeuil', 'saint-cyr', 'tehran']) {
     test(`${mission} civilian windows render in night and sunset`, async ({
         page
     }, info) => {

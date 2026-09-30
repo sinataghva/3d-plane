@@ -1,4 +1,10 @@
 import {
+    addCloseBuildingDetail,
+    roofBoundaryEdges,
+    roofBoundaryData,
+    unlitFacadeSeed
+} from './closeBuildingDetail.js';
+import {
     addBuildingWindowShader,
     buildingLightSeed
 } from './buildingLights.js';
@@ -103,6 +109,7 @@ export function createTerrain(world) {
               MEHRABAD_MILITARY_APRONS.includes(f.id)
           )
         : [];
+    const closeBuildings = isMehrabad(world.data);
     let detailedBuildings = 0;
     const landmarkSources = new Set(
         tehranLandmarks(world.data).map((l) => l.source)
@@ -141,6 +148,35 @@ export function createTerrain(world) {
         );
         const triangles = THREE.ShapeUtils.triangulateShape(contour, holes);
         const all = [...ring, ...f.holes.flatMap((h) => h.slice(0, -1))];
+        const roofEdges =
+            closeBuildings && !f.palace
+                ? roofBoundaryEdges([
+                      ring,
+                      ...f.holes.map((h) => h.slice(0, -1))
+                  ])
+                : null;
+        const area =
+            Math.abs(
+                ring.reduce((sum, p, i) => {
+                    const q = ring[(i + 1) % ring.length];
+                    return sum + p[0] * q[1] - q[0] * p[1];
+                }, 0)
+            ) / 2;
+        const facadeSeed =
+            lightSeed ||
+            (closeBuildings &&
+            !f.palace &&
+            area < 1500 &&
+            ![
+                'industrial',
+                'warehouse',
+                'hangar',
+                'shed',
+                'garage',
+                'garages'
+            ].includes(f.buildingType || '')
+                ? unlitFacadeSeed(f.id)
+                : 0);
         const base = world.height(ring[0][0], ring[0][1]),
             top = base + (f.height || 8);
         const wall = new THREE.Color(f.palace ? 0xe8d1a1 : 0xc6bc9f);
@@ -160,7 +196,13 @@ export function createTerrain(world) {
         };
         for (const t of triangles) {
             const pts = t.map((i) => [all[i][0], top, all[i][1]]);
-            tri(pts[2], pts[1], pts[0], roof);
+            tri(
+                pts[2],
+                pts[1],
+                pts[0],
+                roof,
+                roofEdges ? roofBoundaryData(all, t, roofEdges) : undefined
+            );
         }
         for (const r of [ring, ...f.holes.map((h) => h.slice(0, -1))])
             for (let i = 0; i < r.length; i++) {
@@ -174,7 +216,7 @@ export function createTerrain(world) {
                     ) - 1;
                 const lengthForWindows = Math.hypot(b[0] - a[0], b[1] - a[1]);
                 const seed =
-                    lengthForWindows >= 4 && top - base >= 3 ? lightSeed : 0;
+                    lengthForWindows >= 4 && top - base >= 3 ? facadeSeed : 0;
                 const uvBottom = bottom - base,
                     uvTop = Math.max(1, Math.floor((top - base) / 3.2)) * 3.2;
                 tri(
@@ -250,7 +292,10 @@ export function createTerrain(world) {
         side: THREE.DoubleSide
     });
     addBuildingWindowShader(material);
-    if (isMehrabad(world.data)) addRegionDistanceFade(material);
+    if (isMehrabad(world.data)) {
+        addRegionDistanceFade(material);
+        addCloseBuildingDetail(material);
+    }
     group.add(createTehranLandmarks(world));
     for (const c of chunks.values()) {
         const geometry = new THREE.BufferGeometry();
