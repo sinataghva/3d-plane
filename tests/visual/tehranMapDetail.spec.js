@@ -88,13 +88,15 @@ test('third-level public labels stay readable across city, parks, foothills and 
             dx -= sx;
             dy -= sy;
         }
-        for (const value of [8, 8.01, 10, 12]) {
+        for (const value of [8, 8.01, 10, 12, 12.01, 16]) {
             await zoom(page, value);
             await ready(page);
             const metrics = JSON.parse(
                 await canvas.getAttribute('data-detail-metrics')
             );
-            expect(metrics.resolution).toBe(value > 8 ? 8192 : 4096);
+            expect(metrics.resolution).toBe(
+                value > 12 ? 16384 : value > 8 ? 8192 : 4096
+            );
             expect(metrics.backingBytes).toBeLessThanOrEqual(
                 24 * 516 * 516 * 4
             );
@@ -161,12 +163,12 @@ test('Tehran detail transition, POIs, panning, cap and cache lifecycle', async (
         '0'
     );
     await page.screenshot({ path: info.outputPath('tehran-400.png') });
-    for (const value of [4.2, 6, 8, 8.01, 10, 12]) {
+    for (const value of [4.2, 6, 8, 8.01, 10, 12, 12.01, 16]) {
         await zoom(page, value);
         await ready(page);
         await expect(page.locator('#world-map-canvas')).toHaveAttribute(
             'data-detail-level',
-            value > 8 ? '2' : '1'
+            value > 12 ? '3' : value > 8 ? '2' : '1'
         );
         await page.screenshot({
             path: info.outputPath(`tehran-${value * 100}.png`)
@@ -201,19 +203,19 @@ test('Tehran detail transition, POIs, panning, cap and cache lifecycle', async (
     await page.locator('#close-world-map').click();
     await page.getByRole('button', { name: 'Open full map' }).click();
     await ready(page);
-    await expect(canvas).toHaveAttribute('data-zoom', '12');
+    await expect(canvas).toHaveAttribute('data-zoom', '16');
     for (let i = 0; i < 2; i++) {
         await zoom(page, 4);
         await zoom(page, 4.2);
         await ready(page);
         await zoom(page, 8);
         await zoom(page, 8.01);
-        await zoom(page, 12);
+        await zoom(page, 16);
         await ready(page);
         expect(
             JSON.parse(await canvas.getAttribute('data-detail-metrics'))
                 .resolution
-        ).toBe(8192);
+        ).toBe(16384);
     }
     await page.locator('#map-fit').click();
     await expect(canvas).toHaveAttribute('data-zoom', '1');
@@ -231,7 +233,7 @@ test.describe('phone detail', () => {
         viewport: { width: 844, height: 390 },
         deviceScaleFactor: 2
     });
-    test('touch pinch crosses both boundaries, remains readable at 1200%, and fit resets', async ({
+    test('touch pinch crosses three boundaries, remains readable at 1600%, and fit resets', async ({
         page
     }, info) => {
         await open(page);
@@ -271,14 +273,35 @@ test.describe('phone detail', () => {
             'data-detail-level',
             '2'
         );
-        await zoom(page, 12);
+        await touch.send('Input.dispatchTouchEvent', {
+            type: 'touchStart',
+            touchPoints: [
+                { x: x - 30, y, id: 1 },
+                { x: x + 30, y, id: 2 }
+            ]
+        });
+        await touch.send('Input.dispatchTouchEvent', {
+            type: 'touchMove',
+            touchPoints: [
+                { x: x - 65, y, id: 1 },
+                { x: x + 65, y, id: 2 }
+            ]
+        });
+        await touch.send('Input.dispatchTouchEvent', {
+            type: 'touchEnd',
+            touchPoints: []
+        });
+        await expect(page.locator('#world-map-canvas')).toHaveAttribute(
+            'data-zoom',
+            '16'
+        );
         await ready(page);
         await expect(page.locator('#world-map-canvas')).toHaveAttribute(
             'data-destination',
             ''
         );
         await page.screenshot({
-            path: info.outputPath('tehran-mobile-1200.png')
+            path: info.outputPath('tehran-mobile-1600.png')
         });
         await page.locator('#map-fit').tap();
         await expect(page.locator('#world-map-canvas')).toHaveAttribute(
@@ -301,3 +324,71 @@ for (const mission of ['saint-cyr', 'luxeuil']) {
         );
     });
 }
+
+test('default hybrid fourth level is isolated from lower map levels and fits the shared cache', async ({
+    page
+}, info) => {
+    await page.goto('/3d-plane/?mission=tehran&automation=1');
+    await page.waitForFunction(() => Boolean(window.planeAutomation));
+    await page.locator('#mini-map').click();
+    await zoom(page, 12);
+    await ready(page);
+    const canvas = page.locator('#world-map-canvas');
+    expect(
+        JSON.parse(await canvas.getAttribute('data-detail-metrics')).style
+    ).toBe('classic');
+    await page.locator('#map-zoom-in').click();
+    await ready(page);
+    let metrics = JSON.parse(await canvas.getAttribute('data-detail-metrics'));
+    expect(metrics.resolution).toBe(16384);
+    expect(metrics.style).toBe('rich');
+    await page.mouse.move(500, 300);
+    await page.mouse.wheel(1000, 1000);
+    await expect(canvas).toHaveAttribute('data-zoom', '16');
+    await ready(page);
+    metrics = JSON.parse(await canvas.getAttribute('data-detail-metrics'));
+    expect(metrics.backingBytes).toBeLessThanOrEqual(24 * 516 * 516 * 4);
+    await page.screenshot({ path: info.outputPath('rich-1600.png') });
+    const same = await page.evaluate(async () => {
+        const { getGeography } =
+            await import('/3d-plane/src/scenery/geography.js');
+        const { createDetailMap } =
+            await import('/3d-plane/src/map/detailMap.js');
+        const world = getGeography();
+        const surfaces = [];
+        // CPU canvases make exact raster comparison independent of GPU batch flushes.
+        const createElement = document.createElement.bind(document);
+        document.createElement = function (tag, options) {
+            const element = createElement(tag, options);
+            if (tag === 'canvas')
+                element.getContext('2d', { willReadFrequently: true });
+            return element;
+        };
+        for (const style of ['classic', 'rich']) {
+            const c = document.createElement('canvas');
+            c.width = 640;
+            c.height = 400;
+            const ctx = c.getContext('2d'),
+                d = createDetailMap(world, style);
+            for (let i = 0; i < 500; i++) {
+                ctx.clearRect(0, 0, 640, 400);
+                d.draw(
+                    ctx,
+                    640,
+                    400,
+                    { left: -1400, top: -600, scale: 0.08 },
+                    12
+                );
+                if (d.metrics.ready && d.metrics.pending === 0) break;
+                await new Promise(requestAnimationFrame);
+            }
+            if (!d.metrics.ready || d.metrics.pending)
+                throw new Error('lower level did not settle');
+            surfaces.push(ctx.getImageData(0, 0, 640, 400).data);
+            d.release();
+        }
+        document.createElement = createElement;
+        return surfaces[0].every((v, i) => v === surfaces[1][i]);
+    });
+    expect(same).toBe(true);
+});

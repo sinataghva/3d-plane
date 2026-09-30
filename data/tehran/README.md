@@ -91,14 +91,15 @@ detailed reconstruction of every building in the estate. An approximate distant
 Alborz skyline includes Damavand. The menu image is an actual F-4/Azadi scene
 capture. See [landmark references and modeling limits](LANDMARKS.md).
 
-The full map has three display levels: a 2,048-pixel-wide overview through **400%**,
-4,096-pixel-equivalent detail above **400–800%**, and 8,192-pixel-equivalent detail
-above **800–1,200%**, with a hard **1,200%** cap. Detail tiles show building
+The full map has four display levels: a 2,048-pixel-wide overview through **400%**,
+4,096-pixel-equivalent detail above **400–800%**, 8,192-pixel-equivalent detail
+above **800–1,200%**, and 16,384-pixel-equivalent detail above **1,200–1,600%**,
+with a hard **1,600%** cap. Detail tiles show building
 footprints, roads and available street names. Forty curated civic/public POIs,
 including Sarband Square, appear progressively
 as zoom and label space permit. They exclude businesses and the eight modeled
 landmarks. Detail generation is incremental, with a shared 24-tile limit across
-both detail levels, including an in-progress tile; there
+all three detail levels, including an in-progress tile; there
 are no live map-service requests. See [map rendering and data notes](MAP-DETAIL.md).
 The 3D ground retains its 4,096-pixel-wide regional texture (about 12.4 m/pixel),
 with locally generated, label-free 8,192-pixel-equivalent detail (about 6.2 m/pixel)

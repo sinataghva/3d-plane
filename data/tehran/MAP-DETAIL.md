@@ -1,25 +1,41 @@
 # Tehran detailed flight map
 
-The full Tehran map has three fixed surface resolutions:
+The full Tehran map has four fixed surface resolutions:
 
 | Zoom | Equivalent whole-region width | Approximate ground resolution |
 | --- | --- | --- |
 | 100–400% | 2,048 pixels | 24.7 m/pixel |
 | Above 400–800% | 4,096 pixels | 12.4 m/pixel |
 | Above 800–1,200% | 8,192 pixels | 6.2 m/pixel |
+| Above 1,200–1,600% | 16,384 pixels | 3.1 m/pixel |
 
-The hard zoom cap is 1,200%. Both detail levels use locally generated 512-pixel
+The hard zoom cap is 1,600%. All three detail levels use locally generated 512-pixel
 tiles, not whole-region high-resolution canvases. Labels are drawn separately
 at screen resolution. This is vector cartography, not satellite imagery.
 French maps retain their 400% cap. The radar is unchanged. Tehran's 3D ground
 uses an independent, label-free local detail level described below.
 
+## Closest map level style
+
+The new 16,384 level uses the same locally cached geometry. Above 1,200%,
+the selected hybrid style adds outlined buildings and courtyards, outlined roads
+with separate casing/fill passes, defined water edges, sparse mapped one-way
+arrows and additional named residential streets. Reverse one-way tags are
+respected; `oneway=no` does not draw arrows. Green spaces retain the original
+colors and pedestrian routes retain solid lines for contrast. Lower levels and
+the 3D ground painter retain the existing style. There are no new downloads or
+invented street features. This style is the default; no review query is needed.
+
+The shared 24-canvas budget is unchanged. Only the index for the requested
+resolution is built; cached coarser tiles remain the loading fallback. Text
+is drawn separately at screen resolution. The map and terrain have independent
+resolution choices; this change adds no third 3D ground level.
+
 ## Geographic data and POIs
 
 The local map contains 231,215 features, including 144,660 road segments and
 71,209 building features, plus 953 place labels. Counts describe source geometry,
-not unique streets or a surveyed building inventory. Existing geometry is
-sufficient for the current 6.2 m/pixel rendering: imported building boundaries
+not unique streets or a surveyed building inventory. The new level reuses this geometry: imported building boundaries
 are simplified to about 1 m and roads to about 3 m. Higher raster resolution
 sharpens existing shapes but cannot supply missing geography.
 
@@ -66,15 +82,15 @@ is preserved in `cache/manifest.json`; snapshots are not live operational data.
 
 ## Tile generation and memory
 
-Two lazily populated spatial grids reference the same existing feature objects,
-without copying geographic geometry. Each resolution has its own grid spacing
+Three spatial grids, each built lazily on first use, reference the same existing
+feature objects without copying geographic geometry. Each resolution has its own grid spacing
 and level-qualified cache keys. Only visible cells are generated, prioritized
 near the viewport center. The overview remains available while loading, with
 cached coarser detail underneath finer tiles when available. Returning to a lower
 zoom uses that level's own resolution, not finer tiles stretched into its place.
 
 One shared least-recently-used cache permits at most **24 backing canvases,
-including the in-progress tile**, across both detail levels. A padded tile is
+including the in-progress tile**, across all three detail levels. A padded tile is
 516 × 516 pixels, so the RGBA backing-store budget is approximately **24.4 MiB**,
 excluding the overview, visible canvas, indexes and browser/GPU overhead.
 Peripheral cells use fallback imagery if an extreme viewport exposes more tiles
@@ -134,7 +150,46 @@ Satellite imagery would require a separately licensed imagery source. Neither
 POI labels nor sharper textures supply higher-resolution elevation, extra
 buildings or trees. French scenery is not opted into this ground-detail system.
 
-## Validation and measurements
+## 1,600% validation
+
+Before the green-space/path revision, three runs per style and viewport compared the current and richer styles at
+16,384 resolution, plus an 8,192-resolution reference at the same 1,600% framing.
+Four fixed views covered central Tehran, an interchange, parks and the desert.
+Measurements used Chromium/Metal on Apple M4 Pro, High graphics, 1280 × 720
+at DPR 1 and 844 × 390 touch emulation at DPR 2. Existing ground detail was active.
+
+| Measurement | Desktop current / rich | Mobile-sized current / rich |
+| --- | --- | --- |
+| Median initial index and visible-tile preparation | 414 / 546 ms | 456 / 623 ms |
+| Settled median frame interval | 8.3 / 8.3 ms | 8.3 / 8.3 ms |
+| Scene p95, median across three runs | 9.2–9.3 / 9.1–9.3 ms | 9.1–9.3 / 9.2–9.3 ms |
+| Scene p99, median across three runs | 9.4–9.7 / 9.2–9.4 ms | 9.3–9.4 / 9.3 ms |
+| Maximum observed map work slice | 4.0 / 4.0 ms | 3.0 / 3.6 ms |
+
+Both candidates passed the comparison guardrail: scene p95 and p99 stayed within
+their baseline plus the larger of 1 ms or 10%. The required resolution increase
+also passed against the 8,192 reference. These results do not establish a speed
+improvement. Rich styling consistently took longer to prepare initially.
+The 3 ms work target can be exceeded by individual features or canvas work.
+
+Map backing canvases remained within 24 slots (24.4 MiB); together with the
+existing ground atlas and staging storage, the measured maximum was 43.9 MiB.
+This excludes indexes, visible canvases, overview, driver overhead and other
+scene memory. The coarse whole-page JavaScript heap estimate was 949–1,000 MB;
+it is not incremental map memory.
+
+Checks cover the new threshold and cap, wheel/buttons/touch events, panning,
+destination retention, Fit, reopen, restart, mission changes, shared-cache
+replacement and concurrent ground use. CPU-canvas comparison verifies that
+both variants paint identical lower-level surfaces. Browser GPU canvas batching
+can cause small raster differences even between two runs of the same style.
+French maps retain their 400% cap. No new source data was fetched.
+
+The review gallery, original screenshots, protocol and per-run measurements are
+in ignored `note/map-1600/`. The user selected hybrid C (building treatment B, green spaces and paths A). Physical
+phones and native iOS Safari remain unverified.
+
+## Earlier 1,200% validation and measurements
 
 Ground-texture checks cover runway starts, departure, low passes, fast travel
 and turns, altitude transitions, tile replacement, concurrent 1,200% map use,

@@ -162,10 +162,14 @@ export function drawOverview(ctx, width, height, state, world, view, detail) {
           ]
         : [];
     ctx.font = `${height < 400 ? 11 : 13}px system-ui`;
+    const rich = detail?.metrics.style === 'rich';
     let streetCount = 0;
     const streetLimit = Math.max(
         6,
-        Math.min(32, Math.floor((width * height) / 22000))
+        Math.min(
+            rich ? 44 : 32,
+            Math.floor((width * height) / (rich ? 16000 : 22000))
+        )
     );
     for (const label of labels) {
         const street = label.priority >= 6;
@@ -208,7 +212,12 @@ export function drawOverview(ctx, width, height, state, world, view, detail) {
             ctx.fill();
             boxes.push(
                 street
-                    ? [box[0] - 30, box[1] - 14, box[2] + 30, box[3] + 14]
+                    ? [
+                          box[0] - (rich ? 20 : 30),
+                          box[1] - (rich ? 10 : 14),
+                          box[2] + (rich ? 20 : 30),
+                          box[3] + (rich ? 10 : 14)
+                      ]
                     : box
             );
             if (street) streetCount++;

@@ -8,7 +8,12 @@ import {
 import { getGeography } from '../scenery/geography.js';
 import { drawOverview } from './geographicMap.js';
 import { formatHeading } from '../ui/hud.js';
-import { createDetailMap, detailLevel, hasDetailMap } from './detailMap.js';
+import {
+    createDetailMap,
+    detailLevel,
+    hasDetailMap,
+    TEHRAN_MAX_ZOOM
+} from './detailMap.js';
 
 const WORLD_WIDTH = 4200;
 const WORLD_LENGTH = 5200;
@@ -78,7 +83,12 @@ export function createWorldMap(planeState) {
         depth: WORLD_LENGTH
     };
     const tehran = geography ? hasDetailMap(geography) : false;
-    const viewport = createMapViewport(800, 600, bounds, tehran ? 12 : 4);
+    const viewport = createMapViewport(
+        800,
+        600,
+        bounds,
+        tehran ? TEHRAN_MAX_ZOOM : 4
+    );
     /** @type {ReturnType<typeof createDetailMap>|undefined} */
     let detail;
     let detailFrame = 0;
@@ -391,7 +401,7 @@ export function createWorldMap(planeState) {
         if (world) {
             const level = tehran ? detailLevel(viewport.view.zoom) : 0;
             const detailed = level > 0;
-            if (detailed && !detail) detail = createDetailMap(world);
+            if (detailed && !detail) detail = createDetailMap(world, 'rich');
             if (!detailed && detail) detail.release();
             readout.textContent = drawOverview(
                 ctx,

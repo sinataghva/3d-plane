@@ -1,3 +1,4 @@
+import { paintCloseFeature } from './closeMapStyle.js';
 import { LAND_COLORS } from './cartography.js';
 import {
     isSurfaceFeature,
@@ -10,6 +11,8 @@ import poiData from '../../data/tehran/map-pois.json';
 /** @typedef {{name:string,point:number[],priority:number,icon?:string}} DetailLabel */
 export const DETAIL_WIDTH = 4096;
 export const FINE_DETAIL_WIDTH = 8192;
+export const CLOSE_DETAIL_WIDTH = 16384;
+export const TEHRAN_MAX_ZOOM = 16;
 export const TILE_SIZE = 512;
 export const CACHE_LIMIT = 24;
 const ORDER = [
@@ -40,7 +43,7 @@ export const hasDetailMap = (world) =>
     Boolean(world.data?.airfield?.includes('OIII'));
 /** @param {number} zoom */
 export const detailLevel = (zoom) =>
-    zoom > 8 + 1e-8 ? 2 : zoom > 4 + 1e-8 ? 1 : 0;
+    zoom > 12 + 1e-8 ? 3 : zoom > 8 + 1e-8 ? 2 : zoom > 4 + 1e-8 ? 1 : 0;
 /** @param {number} zoom */
 export const visiblePois = (zoom) =>
     detailLevel(zoom)
@@ -48,8 +51,12 @@ export const visiblePois = (zoom) =>
         : [];
 
 /** Fixed spatial grid referencing existing features; no geometry clone.
- * @param {Bounds} world @param {number} [resolution] */
-export function createDetailIndex(world, resolution = DETAIL_WIDTH) {
+ * @param {Bounds} world @param {number} [resolution] @param {boolean} [localStreets] */
+export function createDetailIndex(
+    world,
+    resolution = DETAIL_WIDTH,
+    localStreets = false
+) {
     const span = world.width / (resolution / TILE_SIZE);
     const columns = resolution / TILE_SIZE,
         rows = Math.ceil(world.depth / span);
@@ -91,15 +98,37 @@ export function createDetailIndex(world, resolution = DETAIL_WIDTH) {
                 for (let x = Math.max(0, a); x <= Math.min(columns - 1, c); x++)
                     buckets[y * columns + x][order].push(f);
             const rank = ROAD_RANK.indexOf(f.class || '');
-            if (f.kind !== 'road' || !f.name || rank < 0 || rank > 4) return;
+            if (
+                f.kind !== 'road' ||
+                !f.name ||
+                rank < 0 ||
+                rank > (localStreets ? 5 : 4)
+            )
+                return;
             let length = 0;
             for (let i = 1; i < f.points.length; i++)
                 length += Math.hypot(
                     f.points[i][0] - f.points[i - 1][0],
                     f.points[i][1] - f.points[i - 1][1]
                 );
-            if (length < 160) return;
-            const point = f.points[Math.floor(f.points.length / 2)];
+            if (length < (localStreets ? 80 : 160)) return;
+            let point = f.points[Math.floor(f.points.length / 2)];
+            if (localStreets) {
+                let remaining = length / 2;
+                for (let i = 1; i < f.points.length; i++) {
+                    const a = f.points[i - 1],
+                        b = f.points[i];
+                    const segment = Math.hypot(b[0] - a[0], b[1] - a[1]);
+                    if (remaining <= segment && segment > 0) {
+                        point = [
+                            a[0] + ((b[0] - a[0]) * remaining) / segment,
+                            a[1] + ((b[1] - a[1]) * remaining) / segment
+                        ];
+                        break;
+                    }
+                    remaining -= segment;
+                }
+            }
             const [x, y] = cell(point[0], point[1]);
             if (x >= 0 && y >= 0 && x < columns && y < rows)
                 streets[y * columns + x].push({
@@ -187,17 +216,25 @@ export function paintFeature(ctx, f, scale, minX, minZ, ground = false) {
 
 /** Incremental, on-demand local tile generation. Work only advances while the
  * detailed map is visible; abandoned partial tiles are discarded on panning.
- * @param {Bounds & {data:{features:Feature[]}}} world */
-export function createDetailMap(world) {
-    // Both grids reference the same geometry; labels stay separate from surfaces.
-    const indexes = [
-        createDetailIndex(world),
-        createDetailIndex(world, FINE_DETAIL_WIDTH)
-    ];
+ * @param {Bounds & {data:{features:Feature[]}}} world @param {'classic'|'rich'} [style] */
+export function createDetailMap(world, style = 'classic') {
+    // Lazily build each level's index on first use; all share source geometry.
+    const resolutions = [DETAIL_WIDTH, FINE_DETAIL_WIDTH, CLOSE_DETAIL_WIDTH];
+    /** @type {(ReturnType<typeof createDetailIndex>|undefined)[]} */
+    const indexes = [];
+    const cursors = [0, 0, 0];
+    const richPasses = ORDER.flatMap((kind, layer) =>
+        kind === 'road'
+            ? [
+                  { layer, pass: 'casing' },
+                  { layer, pass: 'surface' },
+                  { layer, pass: 'symbols' }
+              ]
+            : [{ layer, pass: 'surface' }]
+    );
     const KEY_STRIDE = 10000;
     /** @type {Map<number,HTMLCanvasElement>} */ const cache = new Map();
-    let cursor = 0,
-        revision = 0,
+    let revision = 0,
         lastWork = -Infinity;
     /** @type {{id:number,canvas:HTMLCanvasElement,ctx:CanvasRenderingContext2D,layer:number,item:number}|null} */
     let pending = null;
@@ -213,7 +250,8 @@ export function createDetailMap(world) {
         labels: 0,
         level: 0,
         resolution: 0,
-        backingBytes: 0
+        backingBytes: 0,
+        style: 'classic'
     };
     function release() {
         for (const tile of cache.values()) tile.width = tile.height = 0;
@@ -233,9 +271,19 @@ export function createDetailMap(world) {
         /** @param {CanvasRenderingContext2D} ctx @param {number} width @param {number} height @param {{left:number,top:number,scale:number}} projection @param {number} zoom */
         draw(ctx, width, height, projection, zoom) {
             const level = Math.max(1, detailLevel(zoom));
-            const index = indexes[level - 1];
+            const rich = level === 3 && style === 'rich';
+            const resolution = resolutions[level - 1];
+            const index = (indexes[level - 1] ||= createDetailIndex(
+                world,
+                resolution,
+                rich
+            ));
             const base = (level - 1) * KEY_STRIDE;
-            const resolution = level === 2 ? FINE_DETAIL_WIDTH : DETAIL_WIDTH;
+            const passes = rich
+                ? richPasses
+                : ORDER.map((_, layer) => ({ layer, pass: 'surface' }));
+            metrics.ready = cursors[level - 1] === world.data.features.length;
+            metrics.style = rich ? 'rich' : 'classic';
             metrics.level = level;
             metrics.resolution = resolution;
             const { left, top, scale } = projection;
@@ -273,13 +321,13 @@ export function createDetailMap(world) {
             if (start - lastWork >= 12) {
                 lastWork = start;
                 while (
-                    cursor < world.data.features.length &&
+                    cursors[level - 1] < world.data.features.length &&
                     performance.now() - start < 3
                 ) {
-                    const feature = world.data.features[cursor++];
-                    for (const grid of indexes) grid.add(feature);
+                    const feature = world.data.features[cursors[level - 1]++];
+                    index.add(feature);
                 }
-                if (cursor === world.data.features.length) {
+                if (cursors[level - 1] === world.data.features.length) {
                     metrics.ready = true;
                     const missing = ids
                         .filter((id) => !cache.has(id) && id !== pending?.id)
@@ -317,23 +365,43 @@ export function createDetailMap(world) {
                         }
                         const localId = pending.id - base;
                         const layers = index.buckets[localId];
-                        const f = layers[pending.layer]?.[pending.item++];
-                        if (f)
-                            paintFeature(
-                                pending.ctx,
-                                f,
-                                resolution / world.width,
+                        const pass = passes[pending.layer];
+                        const f = layers[pass.layer]?.[pending.item++];
+                        if (f) {
+                            const minX =
                                 world.minX +
-                                    (localId % index.columns) * index.span,
+                                (localId % index.columns) * index.span;
+                            const minZ =
                                 world.minZ +
-                                    Math.floor(localId / index.columns) *
-                                        index.span
-                            );
-                        else {
+                                Math.floor(localId / index.columns) *
+                                    index.span;
+                            if (
+                                !rich ||
+                                (f.kind !== 'road' && pass.pass === 'surface')
+                            )
+                                paintFeature(
+                                    pending.ctx,
+                                    f,
+                                    resolution / world.width,
+                                    minX,
+                                    minZ
+                                );
+                            if (rich)
+                                paintCloseFeature(
+                                    pending.ctx,
+                                    f,
+                                    resolution / world.width,
+                                    minX,
+                                    minZ,
+                                    /** @type {'surface'|'casing'|'symbols'} */ (
+                                        pass.pass
+                                    )
+                                );
+                        } else {
                             pending.layer++;
                             pending.item = 0;
                         }
-                        if (pending.layer === ORDER.length) {
+                        if (pending.layer === passes.length) {
                             cache.set(pending.id, pending.canvas);
                             pending = null;
                             revision++;
@@ -360,21 +428,24 @@ export function createDetailMap(world) {
             ctx.rect(left, top, world.width * scale, world.depth * scale);
             ctx.clip();
             // Cached coarser tiles remain underneath while finer tiles are prepared.
-            const drawIds =
-                level === 2
-                    ? [
-                          ...indexes[0]
+            const drawIds = [
+                ...indexes.slice(0, level - 1).flatMap((grid, i) =>
+                    grid
+                        ? grid
                               .tiles(box)
-                              .filter((id) => cache.has(id)),
-                          ...ids
-                      ]
-                    : ids;
+                              .map((id) => id + i * KEY_STRIDE)
+                              .filter((id) => cache.has(id))
+                        : []
+                ),
+                ...ids
+            ];
             for (const id of drawIds) {
                 const tile = cache.get(id);
                 if (!tile) continue;
                 cache.delete(id);
                 cache.set(id, tile);
                 const grid = indexes[Math.floor(id / KEY_STRIDE)];
+                if (!grid) continue;
                 const local = id % KEY_STRIDE;
                 const x = left + (local % grid.columns) * grid.span * scale,
                     y =

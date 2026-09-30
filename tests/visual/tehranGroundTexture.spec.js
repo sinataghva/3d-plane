@@ -157,7 +157,7 @@ for (const mobile of [false, true])
             const r = canvas.getBoundingClientRect(),
                 e = new Event('gesturechange', { cancelable: true });
             Object.assign(e, {
-                scale: 12,
+                scale: 16,
                 clientX: r.x + r.width / 2,
                 clientY: r.y + r.height / 2
             });

@@ -94,9 +94,12 @@ snow-topped Damavand extend the horizon without expanding the playable map.
 See [landmark references and modeling limits](data/tehran/LANDMARKS.md).
 
 Tehran's full map uses a **2,048-pixel overview through 400%**, locally rendered
-**4,096-pixel-equivalent detail above 400–800%**, and **8,192-pixel-equivalent
-detail above 800–1,200%**. Visible tiles show sharper surface geometry with street
-names. A curated selection of 40 civic/public places appears progressively as you zoom in; cyan
+**4,096-pixel-equivalent detail above 400–800%**, **8,192-pixel-equivalent
+detail above 800–1,200%**, and **16,384-pixel-equivalent detail above 1,200–1,600%**.
+Visible tiles show sharper surface geometry with street
+names. Above 1,200%, building outlines, road casings and additional street
+labels use the selected hybrid style, retaining the original green-space colors
+and solid pedestrian paths. A curated selection of 40 civic/public places appears progressively as you zoom in; cyan
 POI labels are separate from the eight gold 3D-landmark markers. Overlapping
 labels are filtered, and businesses are not listed. Tiles are prepared locally
 on demand within one shared 24-tile limit, with lower-resolution imagery visible while loading; gameplay makes no external
@@ -703,7 +706,7 @@ The full map supports zoom and pan: scroll down to zoom in, up to zoom out;
 click and drag to pan. On touchscreens, pinch to zoom and drag with one finger.
 The +/− buttons change zoom by 20 percentage points, and **Fit map** resets zoom and pan. Zoom cannot go
 below the whole-region view or above **400% (4×)** in Saint-Cyr/Luxeuil or
-**1,200% (12×)** in Tehran. Tehran adds detail above 400% and 800%.
+**1,600% (16×)** in Tehran. Tehran adds detail above 400%, 800% and 1,200%.
 Zoom/pan persist when closing the map;
 restart or changing missions resets them. Dragging and pinching never place a
 destination. Short clicks/taps still select accurately at the current zoom.
