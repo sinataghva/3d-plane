@@ -1,3 +1,4 @@
+import { applyBridgeClearance } from './bridgeClearance.js';
 import portalJunctions from '../../data/tehran/portal-junctions.json';
 import { tehranLandmarks } from './tehranLandmarks.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -243,10 +244,10 @@ export function getRoadStructures(world) {
             Math.min(p.lift, (p.start + p.end + p.length * rampGrade) / 2)
         );
     }
-    /** @param {Feature} f @param {number} x @param {number} z */
-    function elevation(f, x, z) {
+    /** @param {Feature} f @param {number} x @param {number} z @param {boolean} [surfaceOnly] @returns {number} */
+    function elevation(f, x, z, surfaceOnly = false) {
         const base = height(x, z),
-            p = profiles.get(f.id);
+            p = surfaceOnly ? undefined : profiles.get(f.id);
         if (!p) {
             const rampPortals = approaches.get(f.id) || [];
             let depth = 0;
@@ -330,6 +331,23 @@ export function getRoadStructures(world) {
                     best = distance;
                     y = a[1] + (b[1] - a[1]) * t;
                 }
+            }
+            if (!active(f.bridge) && approaches.has(f.id)) {
+                // Keep the entire excavated entrance on its original floor.
+                // Fade bridge lift outside the cut, where no retaining wall
+                // would otherwise be left below the raised road edge.
+                const distance = Math.min(
+                    ...(approaches.get(f.id) || []).map((portal) =>
+                        portal.path
+                            ? distanceToLine(x, z, portal.path)
+                            : Infinity
+                    )
+                );
+                if (distance < 60)
+                    return (
+                        elevation(f, x, z, true) +
+                        (y - base) * smooth(distance / 60)
+                    );
             }
             return y;
         }
@@ -626,8 +644,19 @@ export function getRoadStructures(world) {
         portal.cuts = (portal.cuts || []).concat(
             ...portal.branches.map((/** @type {any} */ p) => p.cuts || [])
         );
+    const clearance = tehran
+        ? applyBridgeClearance(
+              roads,
+              profiles,
+              allNodes,
+              height,
+              structureWidth
+          )
+        : { crossings: 0, adjusted: 0 };
+    for (const profile of profiles.values()) elevated.add(profile.feature);
     const result = {
         profiles,
+        clearance,
         bridgeEnds: new Set(
             [...profiles.values()].flatMap((p) => [
                 nodeKey(p.feature.points[0]),
@@ -806,7 +835,8 @@ export function* prepareRoadStructureTile(world, cell, shared) {
         for (const profile of data.profiles.values()) {
             yield;
             const f = profile.feature;
-            if (f.id.startsWith('w327418796')) continue; // Existing Tabiat landmark.
+            if (f.id.startsWith('w327418796') || data.approaches.has(f.id))
+                continue; // Existing Tabiat landmark.
             bridges++;
             const width = structureWidth(f);
             const points = profile.samples.map((/** @type {number[]} */ p) => [
@@ -840,7 +870,13 @@ export function* prepareRoadStructureTile(world, cell, shared) {
                     const dx = q[0] - p[0],
                         dz = q[2] - p[2],
                         l = Math.hypot(dx, dz) || 1;
-                    for (const sign of [-1, 1]) {
+                    for (const sign of active(f.bridge) ||
+                    Math.min(
+                        p[1] - data.height(p[0], p[2]),
+                        q[1] - data.height(q[0], q[2])
+                    ) > 0.6
+                        ? [-1, 1]
+                        : []) {
                         const ox = (-dz / l) * (width / 2 - 0.15) * sign,
                             oz = (dx / l) * (width / 2 - 0.15) * sign;
                         beam(

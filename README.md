@@ -977,11 +977,17 @@ a slope-scaled depth bias, so they do not draw over low bridge decks.
 
 | Treatment | Geometry and assumptions | Traffic |
 | --- | --- | --- |
-| Vehicle bridge | Deck, parapets, ramps and simple pillars. Nominal lift up to 7 m per estimated layer band (1–3), reduced where the mapped length cannot accommodate gradual ramps. Added ramp grade is capped at 8% relative to the terrain profile; connected fragments share endpoint heights. `layer` establishes order, not surveyed metres. | Cars follow the deck; separate roads underneath remain available. Pillars are omitted where they would block another mapped carriageway. |
-| Pedestrian bridge | Nominal lift up to 6 m, reduced for short approaches by the same slope constraint; narrow deck and parapets; existing Tabiat landmark retained. | No cars on pedestrian-only routes. |
+| Vehicle bridge | Deck, parapets, ramps and simple pillars. Nominal lift of 7 m per estimated layer band (1–3). At mapped vehicle-road crossings, decks are raised as needed for an estimated 4.5 m underside clearance, including over lower bridge levels. Short bridges extend their ramps onto connected surface roads rather than sacrificing crossing clearance. Clearance adjustments taper at 6% relative to terrain; original ramps use up to 8%. Connected fragments share endpoint heights. `layer` establishes order, not surveyed metres. | Cars follow the deck; separate roads underneath remain available. Pillars are omitted where they would block another mapped carriageway. |
+| Pedestrian bridge | Nominal lift up to 6 m, with the same vehicle-crossing clearance adjustment; narrow deck and parapets; existing Tabiat landmark retained. | No cars on pedestrian-only routes. |
 | Tunnel entrance / short underpass | Generic concrete mouth, dark recessed end and retaining walls following the connected surface road, including bends. Approach length up to 40 m, shortened at the end of the connected source way. Estimated depth 5.2 m, opening 5.4 m high; entrance width follows the approach road (clamped to 2–28 m). One continuous road ribbon keeps the same width and material through the descent; roadside walls emerge gradually. Terrain cuts and car descent follow that path. | Cars remain visible on approaches, hide during underground travel, and emerge at the other end. Route progress and travel time continue while hidden. |
 | Tunnel branch merging into the middle of a surface road | Surface-height mouth avoids excavating the through road; hidden tunnel profile meets that road at grade. | Joining paths remain connected. This is a simplified merge, not surveyed portal architecture. |
 | Covered ways, building passages, construction/proposed roads | Not promoted to generic road bridges or tunnel mouths. Existing surface eligibility still applies. | Not enabled as tunnel traffic; pedestrian classes and explicit car restrictions remain excluded. |
+
+Decorative cars are about 1.7 m tall; with their placement offset, their roofs
+are about 1.8 m above the road. Clearance checks use intersecting cached road
+segments and their carriageway widths. They cannot establish clearance for
+unmapped roads or missing grade-separation tags. Raised approaches share the
+same deferred tile loading as the decks.
 
 These are flight-view scenery estimates, not engineering models. Complex ramp
 shapes, exact clearance, portal facades and underground geometry are not surveyed.
@@ -1022,7 +1028,15 @@ cached tiles, pending builds, build time and local terrain patches. Counts inclu
 cached inactive geometry but exclude terrain-patch buffers and shared source data.
 No new structure textures are allocated.
 
-Final-code comparisons on the development host (Chromium/Metal) used three
+A subsequent clearance-adjustment comparison (one before/after pair per viewport,
+Chromium/Metal on the development host) kept settled p99 frame times at 9.5–9.6 ms.
+Moving-view p99 increased from 10.6–10.7 to 11.4 ms; arrival p99 increased from
+12.3–12.7 to 13.6–14.2 ms. Startup increased by approximately 0.2 s. Extra raised
+approaches increased resident structure buffers on the replay from roughly
+1.1 MiB to 1.9–2.0 MiB, with the same 64-tile cache limit. This is a limited local
+comparison, not a native-device performance guarantee.
+
+Phase 3 comparisons before the subsequent clearance adjustment on the development host (Chromium/Metal) used three
 alternating runs against the pre-Phase-3 renderer for each desktop/mobile-sized
 High view. All twelve p95/p99 checks passed the gate of baseline + max(1 ms, 10%)
 for arrival, settled views and moving-camera replay. Earlier desktop arrival

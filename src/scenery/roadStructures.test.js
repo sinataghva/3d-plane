@@ -588,3 +588,135 @@ test('unfinished structure tiles stay hidden and cancel cleanly when detail is d
         clock.mockRestore();
     }
 });
+
+test('short bridges clear vehicle roads and extend gradual approaches through source joins', () => {
+    const before = road('before', [
+        [-160, 0],
+        [-20, 0]
+    ]);
+    const bridge = road(
+        'bridge',
+        [
+            [-20, 0],
+            [20, 0]
+        ],
+        { bridge: 'yes', layer: '1' }
+    );
+    const after = road('after', [
+        [20, 0],
+        [160, 0]
+    ]);
+    const lower = road('lower', [
+        [0, -100],
+        [0, 100]
+    ]);
+    const data = getRoadStructures(world([before, bridge, after, lower]));
+    for (const x of [-4, 0, 4]) {
+        // Deck top is profile + .12, slab thickness .65; lower road top + .12.
+        expect(data.elevation(bridge, x, 0) - 0.65).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(data.elevation(lower, 0, 0)).toBe(0);
+    expect(data.elevation(before, -20, 0)).toBeCloseTo(
+        data.elevation(bridge, -20, 0)
+    );
+    expect(data.elevation(after, 20, 0)).toBeCloseTo(
+        data.elevation(bridge, 20, 0)
+    );
+    expect(data.elevation(before, -160, 0)).toBe(0);
+    for (const f of [before, bridge, after]) {
+        const samples = data.profiles.get(f.id).samples;
+        for (let i = 1; i < samples.length; i++) {
+            const a = samples[i - 1],
+                b = samples[i];
+            expect(
+                Math.abs(b[1] - a[1]) / Math.hypot(b[0] - a[0], b[2] - a[2])
+            ).toBeLessThanOrEqual(0.081);
+        }
+    }
+});
+
+test('upper bridge clears a raised lower bridge and pedestrian bridges clear cars', () => {
+    const lower = road(
+        'lower',
+        [
+            [-20, 0],
+            [20, 0]
+        ],
+        { bridge: 'yes', layer: '1' }
+    );
+    const upper = road(
+        'upper',
+        [
+            [0, -20],
+            [0, 20]
+        ],
+        { bridge: 'yes', layer: '2', class: 'footway', width: 3 }
+    );
+    const ground = road('ground', [
+        [-100, -100],
+        [100, 100]
+    ]);
+    const data = getRoadStructures(world([lower, upper, ground]));
+    expect(data.elevation(lower, 0, 0) - 0.65).toBeGreaterThanOrEqual(4.5);
+    expect(
+        data.elevation(upper, 0, 0) - data.elevation(lower, 0, 0) - 0.65
+    ).toBeGreaterThanOrEqual(4.5);
+});
+
+test('shallow-angle clearance samples stay on the intersecting segment, not distant terrain', () => {
+    const bridge = road(
+        'bridge',
+        [
+            [-30, 0],
+            [30, 0]
+        ],
+        { bridge: 'yes', layer: '1' }
+    );
+    const lower = road('lower', [
+        [-20, -1],
+        [20, 1],
+        [1000, 1000]
+    ]);
+    const w = world([bridge, lower]);
+    w.height = (x, z) => Math.max(0, z - 10);
+    const data = getRoadStructures(w);
+    expect(data.elevation(bridge, 0, 0)).toBeGreaterThan(5);
+    expect(data.elevation(bridge, 0, 0)).toBeLessThan(10);
+});
+
+test('a raised bridge approach can also descend into a tunnel without covering its opening', () => {
+    const bridge = road(
+        'bridge',
+        [
+            [-20, 0],
+            [20, 0]
+        ],
+        { bridge: 'yes', layer: '1' }
+    );
+    const lower = road('lower', [
+        [0, -100],
+        [0, 100]
+    ]);
+    const approach = road('approach', [
+        [20, 0],
+        [200, 0]
+    ]);
+    const tunnel = road(
+        'tunnel',
+        [
+            [200, 0],
+            [400, 0]
+        ],
+        { tunnel: 'yes', layer: '-1' }
+    );
+    const data = getRoadStructures(world([bridge, lower, approach, tunnel]));
+    expect(data.profiles.has(approach.id)).toBe(true);
+    expect(data.approaches.has(approach.id)).toBe(true);
+    expect(data.elevation(approach, 20, 0)).toBeCloseTo(
+        data.elevation(bridge, 20, 0)
+    );
+    expect(data.elevation(approach, 200, 0)).toBeCloseTo(-5.2);
+    expect(data.elevation(approach, 200, 0)).toBeCloseTo(
+        data.elevation(tunnel, 200, 0)
+    );
+});

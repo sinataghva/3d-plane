@@ -114,6 +114,11 @@ and continue invisibly underground between tunnel entrances. Explicit cached
 car-access restrictions are respected. Balanced
 supports up to 120 nearby active cars and High up to 240; Low disables traffic.
 Camera-view filtering limits the cars submitted to the instanced drawing batch.
+Generic bridges use an estimated 4.5 m underside clearance at mapped vehicle-road
+crossings, including stacked levels. Short bridges can extend gradual raised
+approaches onto connected source roads. These are scenery estimates rather than
+surveyed bridge heights; missing crossings/tags cannot be inferred.
+
 Bridge decks and tunnel entrances are generated only nearby: 1.7 km / 24 active
 500 m tiles on Balanced, 2.4 km / 48 on High, disabled on Low, with at most 64
 resident completed tiles. Preparation resumes across frames with a 2 ms target;
