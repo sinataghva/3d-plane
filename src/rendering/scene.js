@@ -70,13 +70,12 @@ function createSunSprite() {
         map: texture,
         transparent: true,
         opacity: 0.92,
-        depthTest: false,
+        depthTest: true,
         depthWrite: false,
         fog: false
     });
     const sun = new THREE.Sprite(sunMaterial);
-    sun.position.set(1800, 940, -2300);
-    sun.scale.set(220, 220, 1);
+    sun.scale.set(720, 720, 1);
     sun.renderOrder = -10;
     return sun;
 }
@@ -135,9 +134,16 @@ export function createScene({ container }) {
     directionalLight.shadow.camera.bottom = -140;
     scene.add(directionalLight, directionalLight.target);
     const sunOffset = new THREE.Vector3(70, 110, -80);
-    scene.userData.followSun = (/** @type {THREE.Vector3} */ position) => {
+    const sunDirection = new THREE.Vector3();
+    scene.userData.followSun = (
+        /** @type {THREE.Vector3} */ position,
+        /** @type {THREE.Vector3} */ cameraPosition = camera.position
+    ) => {
         directionalLight.position.copy(position).add(sunOffset);
         directionalLight.target.position.copy(position);
+        // The sprite represents the distant sky, so translation cannot change
+        // its bearing or apparent size. Keep the light's shadow anchor separate.
+        sunSprite.position.copy(cameraPosition).add(sunDirection);
     };
 
     scene.userData.setTimeOfDay = (/** @type {unknown} */ value) => {
@@ -154,11 +160,15 @@ export function createScene({ container }) {
         directionalLight.intensity = preset.intensity;
         sunOffset.set(preset.offset[0], preset.offset[1], preset.offset[2]);
         sunSprite.visible = mode !== 'night';
-        sunSprite.position.set(
-            mode === 'day' ? 1800 : 2300,
-            mode === 'day' ? 940 : 270,
-            mode === 'day' ? -2300 : -2000
-        );
+        sunDirection
+            .set(
+                mode === 'day' ? 1800 : 2300,
+                mode === 'day' ? 940 : 270,
+                mode === 'day' ? -2300 : -2000
+            )
+            .normalize()
+            .multiplyScalar(10000);
+        sunSprite.position.copy(camera.position).add(sunDirection);
         sunSprite.material.color.setHex(mode === 'day' ? 0xffffff : preset.sun);
         renderer.toneMappingExposure = preset.exposure;
         scene.userData.timeOfDay = mode;
@@ -172,6 +182,18 @@ export function createScene({ container }) {
                     mode === 'day' ? 0 : mode === 'sunset' ? 0.65 : 1.4;
             if (object.name === 'Decorative runway night lights')
                 object.visible = mode !== 'day';
+            if (
+                object.name === 'Alborz with snow-capped Damavand' &&
+                object instanceof THREE.Mesh &&
+                object.material instanceof THREE.MeshBasicMaterial
+            )
+                object.material.color.setHex(
+                    mode === 'day'
+                        ? 0xffffff
+                        : mode === 'sunset'
+                          ? 0xe9b9aa
+                          : 0x314463
+                );
             if (
                 object instanceof THREE.Mesh &&
                 object.material instanceof THREE.ShaderMaterial &&

@@ -867,7 +867,7 @@ async function startApp() {
         destinationBeacon.update(camera, planeState.position);
         const beacon = scene.getObjectByName('destination-beacon');
         if (photoMode.active && beacon) beacon.visible = false;
-        scene.userData.followSun(airplane.position);
+        scene.userData.followSun(airplane.position, camera.position);
         parkedAircraft.update(camera.position, scene.userData.quality);
         updateRegionDetail(airbase, camera.position, scene.userData.quality);
         roadStructures.update(camera.position, scene.userData.quality);
@@ -1230,7 +1230,7 @@ async function startApp() {
         destinationBeacon.update(camera, planeState.position);
         const beacon = scene.getObjectByName('destination-beacon');
         if (photoMode.active && beacon) beacon.visible = false;
-        scene.userData.followSun(airplane.position);
+        scene.userData.followSun(airplane.position, camera.position);
         parkedAircraft.update(camera.position, scene.userData.quality);
         updateRegionDetail(airbase, camera.position, scene.userData.quality);
         roadStructures.update(camera.position, scene.userData.quality);
