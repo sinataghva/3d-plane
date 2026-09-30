@@ -61,7 +61,11 @@ function createGroundLayer(world, material, baseRelief, close = false) {
     /** @type {HTMLCanvasElement|null} */ let relief = null;
     /** @type {CanvasRenderingContext2D|null} */ let atlasCtx = null;
     /** @type {CanvasRenderingContext2D|null} */ let ctx = null;
-    const slots = Array.from({ length: 9 }, () => ({ id: -1, fade: 0 }));
+    const slots = Array.from({ length: 9 }, () => ({
+        id: -1,
+        fade: 0,
+        stale: false
+    }));
     let cursor = 0,
         disposed = false;
     /** @type {{id:number,layer:number,item:number}|null} */ let pending = null;
@@ -173,6 +177,11 @@ function createGroundLayer(world, material, baseRelief, close = false) {
     }
     return {
         reset,
+        invalidate() {
+            // Keep the visible atlas and fades while bounded redraws replace it.
+            pending = null;
+            for (const slot of slots) slot.stale = slot.id >= 0;
+        },
         dispose() {
             reset();
             if (baseRelief) baseRelief.width = baseRelief.height = 0;
@@ -260,7 +269,7 @@ function createGroundLayer(world, material, baseRelief, close = false) {
             }
             // Report demand even when the shared budget is exhausted by the other level.
             metrics.groundTexturePending = ids.filter(
-                (id) => !slots.some((s) => s.id === id)
+                (id) => !slots.some((s) => s.id === id && !s.stale)
             ).length;
             const start = performance.now();
             if (budget.uploaded || start >= budget.deadline) return;
@@ -283,7 +292,7 @@ function createGroundLayer(world, material, baseRelief, close = false) {
             while (performance.now() < budget.deadline) {
                 if (!pending) {
                     const id = ids.find(
-                        (id) => !slots.some((s) => s.id === id)
+                        (id) => !slots.some((s) => s.id === id && !s.stale)
                     );
                     if (id === undefined) break;
                     ctx.fillStyle = '#b6a482';
@@ -318,16 +327,21 @@ function createGroundLayer(world, material, baseRelief, close = false) {
                         world.width * scale,
                         world.depth * scale
                     );
-                    const slotId = slots.findIndex(
-                        (s) => s.id < 0 || !ids.includes(s.id)
-                    );
+                    const existing = slots.findIndex((s) => s.id === id);
+                    const slotId =
+                        existing >= 0
+                            ? existing
+                            : slots.findIndex(
+                                  (s) => s.id < 0 || !ids.includes(s.id)
+                              );
                     if (slotId < 0) break;
-                    slots[slotId] = { id, fade: 0 };
+                    const fade = existing >= 0 ? slots[slotId].fade : 0;
+                    slots[slotId] = { id, fade, stale: false };
                     uniforms.fineGroundTiles.value[slotId].set(
                         minX,
                         minZ,
                         index.span,
-                        0
+                        fade
                     );
                     atlasCtx.drawImage(
                         staging,
@@ -346,7 +360,7 @@ function createGroundLayer(world, material, baseRelief, close = false) {
             }
             metrics.groundTextureTiles = slots.filter((s) => s.id >= 0).length;
             metrics.groundTexturePending = ids.filter(
-                (id) => !slots.some((s) => s.id === id)
+                (id) => !slots.some((s) => s.id === id && !s.stale)
             ).length;
             metrics.groundTextureWorkMs = performance.now() - start;
             metrics.groundTextureMaxWorkMs = Math.max(
@@ -373,6 +387,10 @@ export function createGroundTextureDetail(world, material, baseRelief) {
     const close = createGroundLayer(world, material, baseRelief, true);
     let maxWork = 0;
     return {
+        invalidate() {
+            intermediate.invalidate();
+            close.invalidate();
+        },
         reset() {
             intermediate.reset();
             close.reset();

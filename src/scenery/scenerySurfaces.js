@@ -1,3 +1,4 @@
+import { isStructuredBridge } from './roadStructures.js';
 import * as THREE from 'three';
 import { waterCharacter } from '../effects/waterEffects.js';
 import {
@@ -176,7 +177,7 @@ export function indexScenerySurfaces(world, tileSize, emit) {
         ...features.filter((f) => f.kind === 'water'),
         ...features.filter((f) => f.kind !== 'water')
     ]) {
-        if (!isSurfaceFeature(f)) continue;
+        if (!isSurfaceFeature(f) || isStructuredBridge(f)) continue;
         if (['water', 'taxiway'].includes(f.kind) && !f.line) {
             const outer = f.points.slice(0, -1),
                 holes = f.holes.map((h) => h.slice(0, -1));

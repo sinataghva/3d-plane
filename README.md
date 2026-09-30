@@ -951,12 +951,111 @@ rural Luxeuil. Nearby limits are **20 on Balanced / 40 on High at Saint-Cyr** an
 guaranteed visible counts or totals across the whole map. Cars are visible up to
 1.5 km away, with a separate 1.8 km retention radius to prevent boundary popping.
 Cars use shared instanced geometry with no shadows and pause in Settings or Photo
-mode. They keep to the right, avoid paths, airfield service routes, tunnels and
-bridges. Population is spread across geographic cells and weighted by road length
+mode. They keep to the right and avoid paths and airfield service routes.
+French scenery excludes bridge/tunnel traffic; Tehran supports the structures
+described below. Population is spread across geographic cells and weighted by road length
 and class. Cars keep their identities, follow connected mapped road segments,
 and turn around at dead ends. New cars enter beyond visibility; distant cars
 fade without shrinking. This is decorative traffic, without traffic-light rules,
 collision simulation or engine audio.
+
+### Tehran bridges and tunnel entrances
+
+Cached OSM bridge/tunnel tags now drive scenery and decorative car routes.
+Vehicle decks, pedestrian decks and tunnel approaches share estimated road
+profiles with the cars. Navigation-map tunnels use muted dashes; underground
+routes are not painted onto the 3D ground. The existing custom Tabiat model is
+preserved. Water and bank overlays retain their terrain height offset without
+a slope-scaled depth bias, so they do not draw over low bridge decks.
+
+| Treatment | Geometry and assumptions | Traffic |
+| --- | --- | --- |
+| Vehicle bridge | Deck, parapets, ramps and simple pillars. Nominal lift up to 7 m per estimated layer band (1–3), reduced where the mapped length cannot accommodate gradual ramps. Added ramp grade is capped at 8% relative to the terrain profile; connected fragments share endpoint heights. `layer` establishes order, not surveyed metres. | Cars follow the deck; separate roads underneath remain available. Pillars are omitted where they would block another mapped carriageway. |
+| Pedestrian bridge | Nominal lift up to 6 m, reduced for short approaches by the same slope constraint; narrow deck and parapets; existing Tabiat landmark retained. | No cars on pedestrian-only routes. |
+| Tunnel entrance / short underpass | Generic concrete mouth, dark recessed end and retaining walls following the connected surface road, including bends. Approach length up to 40 m, shortened at the end of the connected source way. Estimated depth 5.2 m, opening 5.4 m high; entrance width follows the approach road (clamped to 2–28 m). One continuous road ribbon keeps the same width and material through the descent; roadside walls emerge gradually. Terrain cuts and car descent follow that path. | Cars remain visible on approaches, hide during underground travel, and emerge at the other end. Route progress and travel time continue while hidden. |
+| Tunnel branch merging into the middle of a surface road | Surface-height mouth avoids excavating the through road; hidden tunnel profile meets that road at grade. | Joining paths remain connected. This is a simplified merge, not surveyed portal architecture. |
+| Covered ways, building passages, construction/proposed roads | Not promoted to generic road bridges or tunnel mouths. Existing surface eligibility still applies. | Not enabled as tunnel traffic; pedestrian classes and explicit car restrictions remain excluded. |
+
+These are flight-view scenery estimates, not engineering models. Complex ramp
+shapes, exact clearance, portal facades and underground geometry are not surveyed.
+Aircraft and bomb ground collision are unchanged: the visual entrance recesses
+are not flyable bores, and decks do not add landing/collision surfaces.
+
+| Preset | Nearby structure radius | Maximum active 500 m tiles | Tehran active-car limit |
+| --- | --- | --- | --- |
+| Low | Disabled | 0 | 0 |
+| Balanced | 1.7 km | 24 | 120 |
+| High | 2.4 km | 48 | 240 |
+
+Distance is measured from the camera to each tile's bounds, including height.
+The nearest eligible tiles are selected every 15 frames. One tile is prepared
+at a time in resumable steps, targeting 2 ms of preparation per frame. Individual
+feature or mesh-finalization steps may exceed this cooperative budget. At most
+one completed tile is activated per frame, together with its terrain cuts;
+partial meshes stay hidden and obsolete preparation is cancelled. Up to 64
+completed tiles are retained for revisits, with older inactive geometry disposed. Nearby meshes cast shadows within 1.75 km of
+the tile centre. These ranges are separate from the three ground-texture levels.
+
+No generic bridge/tunnel meshes are created during scene construction. Local
+source metadata and shared traffic profiles are still prepared then. Distant
+bridges retain the original flat surface rendering; nearby decks replace those
+surface lines. Tunnel terrain cuts are applied only around active entrances and
+restored when unloaded. Ground atlases redraw incrementally without resetting
+their fade or allocation. The existing custom Tabiat landmark is unaffected.
+
+Cars retain the existing 1.5 km visible / 1.8 km retention ranges. Cars on raised
+roads are drawn only when their structure tile is active. Underground travel
+continues while hidden; far-away cars may be recycled. No city-wide persistent
+traffic or inter-car collision simulation is implied.
+
+The cache describes 2,505 generic bridge feature fragments and 534 portal
+endpoints, not that many distinct physical structures. Only nearby geometry is
+built; runtime diagnostics report resident triangles/buffer bytes, active and
+cached tiles, pending builds, build time and local terrain patches. Counts include
+cached inactive geometry but exclude terrain-patch buffers and shared source data.
+No new structure textures are allocated.
+
+Final-code comparisons on the development host (Chromium/Metal) used three
+alternating runs against the pre-Phase-3 renderer for each desktop/mobile-sized
+High view. All twelve p95/p99 checks passed the gate of baseline + max(1 ms, 10%)
+for arrival, settled views and moving-camera replay. Earlier desktop arrival
+failures were addressed by tile-local lookups and resumable preparation, including
+a checkpoint between mesh finalization and terrain-cut activation. Loading
+ranges, cache limits and visual geometry were retained. Native-phone performance
+remains unverified.
+
+| Final-code measurement | Desktop | Mobile-sized |
+| --- | --- | --- |
+| Median setup, baseline → Phase 3 | 3.685 → 4.240 s | 3.708 → 4.195 s |
+| Arrival p95 / p99, baseline → Phase 3 | 9.8 → 9.8 / 12.2 → 12.4 ms | 9.4 → 10.1 / 12.1 → 12.4 ms |
+| Settled p95 / p99, baseline → Phase 3 | 9.6 → 9.4 / 11.7 → 10.3 ms | 9.4 → 9.2 / 10.3 → 10.2 ms |
+| Moving p95 / p99, baseline → Phase 3 | 10.2 → 9.9 / 13.0 → 11.0 ms | 10.0 → 10.0 / 12.7 → 11.3 ms |
+| Settled draw calls, baseline → Phase 3 | 188 → 209 | 212 → 239 |
+
+The representative settled Sadr view retained 0.93 MiB of structure buffers
+(13,450 triangles, including inactive cached tiles), rising to 1.08 MiB after
+travel; no generic structure meshes exist at scene construction. These are
+measured locations/cache histories, not a universal byte limit. Maximum measured
+preparation slice and complete structure update were both 7.2 ms, versus 13.6 ms
+for the full update before scheduling changes. The 2 ms preparation target is
+cooperative: indivisible feature/finalization steps can exceed it. Coarse JS heap
+medians were 0.949 → 1.000 GB desktop and 1.000 → 1.070 GB mobile-sized; they
+include transient allocations and are not retained-memory measurements. Setup
+still costs about half a second more than the pre-Phase-3 renderer. Earlier
+performance figures predate the final geometry and scheduling corrections.
+
+Car access restrictions are recovered offline from the preserved OSM caches by
+`python3 scripts/scenery/structure-access.py`, producing
+`data/tehran/structure-access.json` (8,523 explicitly restricted ways). Specific
+motorcar/motor-vehicle tags take priority over general access tags; missing tags
+are not proof of public access. Source: [OpenStreetMap contributors, ODbL](https://www.openstreetmap.org/copyright).
+The small `data/tehran/portal-junctions.json` supplement restores Niayesh approach
+way 375989964's original junction vertices from the preserved `roads.json.gz`.
+These vertices were removed by simplification; restoring them keeps its joining
+road connected in both scenery and traffic. Multiple mapped approach branches
+share their entrance's depth, including junctions partway down a ramp. Retaining
+walls stop at the exact branch openings; branches do not create extra portals.
+No new geographic download or third-party runtime map request is required.
 
 The development benchmark is `HEADED=1 node scripts/flight/benchmark-traffic.mjs`.
 It compares identical scripted town flyovers at 0/20/40/80 cars, records frame

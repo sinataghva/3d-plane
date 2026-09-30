@@ -1,3 +1,5 @@
+import { isStructuredBridge } from '../scenery/roadStructures.js';
+import { structureSurfaceReady } from '../scenery/roadStructureStream.js';
 import { paintCloseFeature } from './closeMapStyle.js';
 import { LAND_COLORS } from './cartography.js';
 import {
@@ -80,7 +82,13 @@ export function createDetailIndex(
         /** @param {Feature} f */
         add(f) {
             const order = ORDER.indexOf(f.kind);
-            if (order < 0 || !f.points.length || !isSurfaceFeature(f)) return;
+            if (
+                order < 0 ||
+                !f.points.length ||
+                (!isSurfaceFeature(f) &&
+                    !(f.kind === 'road' && f.tunnel === 'yes'))
+            )
+                return;
             let minX = Infinity,
                 minZ = Infinity,
                 maxX = -Infinity,
@@ -153,9 +161,41 @@ export function createDetailIndex(
 /** Label-free surface painter. Ground style matches the existing terrain palette.
  * @param {CanvasRenderingContext2D} ctx @param {Feature} f @param {number} scale @param {number} minX @param {number} minZ @param {boolean} [ground] */
 export function paintFeature(ctx, f, scale, minX, minZ, ground = false) {
-    if (ground && f.kind === 'building') return;
+    if (ground && (f.kind === 'building' || !isSurfaceFeature(f))) return;
     ctx.beginPath();
     for (const ring of [f.points, ...f.holes]) {
+        if (ground && f.line && isStructuredBridge(f)) {
+            for (let i = 1; i < ring.length; i++) {
+                const a = ring[i - 1],
+                    b = ring[i],
+                    n = Math.max(
+                        1,
+                        Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 100)
+                    );
+                for (let j = 0; j < n; j++) {
+                    const t = (j + 0.5) / n;
+                    if (
+                        structureSurfaceReady(
+                            f,
+                            a[0] + (b[0] - a[0]) * t,
+                            a[1] + (b[1] - a[1]) * t
+                        )
+                    )
+                        continue;
+                    ctx.moveTo(
+                        (a[0] + ((b[0] - a[0]) * j) / n - minX) * scale + 2,
+                        (a[1] + ((b[1] - a[1]) * j) / n - minZ) * scale + 2
+                    );
+                    ctx.lineTo(
+                        (a[0] + ((b[0] - a[0]) * (j + 1)) / n - minX) * scale +
+                            2,
+                        (a[1] + ((b[1] - a[1]) * (j + 1)) / n - minZ) * scale +
+                            2
+                    );
+                }
+            }
+            continue;
+        }
         ring.forEach(([x, z], i) =>
             i
                 ? ctx.lineTo((x - minX) * scale + 2, (z - minZ) * scale + 2)
@@ -204,7 +244,12 @@ export function paintFeature(ctx, f, scale, minX, minZ, ground = false) {
                     ? '#756e63'
                     : '#c3baa4';
     }
+    if (f.tunnel === 'yes') {
+        ctx.setLineDash([4, 3]);
+        ctx.strokeStyle = '#8b8981';
+    }
     ctx.stroke();
+    ctx.setLineDash([]);
     if (f.kind === 'runway') {
         ctx.strokeStyle = '#f4f3d5';
         ctx.lineWidth = ground ? Math.max(0.8, scale * 1.5) : 0.6;

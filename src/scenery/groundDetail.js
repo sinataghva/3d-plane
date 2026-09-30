@@ -1,3 +1,4 @@
+import { isStructuredBridge } from './roadStructures.js';
 import {
     pavedAirfieldSurface,
     pavedAirfieldDefault
@@ -169,6 +170,7 @@ export function roadJunctionPatches(features) {
             !f.line ||
             f.points.length < 2 ||
             !isSurfaceFeature(f) ||
+            isStructuredBridge(f) ||
             (f.bridge && f.bridge !== 'no') ||
             ['footway', 'path', 'steps', 'cycleway'].includes(f.class || '')
         )
@@ -309,6 +311,7 @@ export function createGroundDetail(world) {
     for (const f of world.data.features) {
         if (
             !isSurfaceFeature(f) ||
+            isStructuredBridge(f) ||
             !f.line ||
             !['road', 'runway', 'taxiway'].includes(f.kind)
         )
@@ -631,7 +634,14 @@ export function createGroundDetail(world) {
                 depthWrite: false,
                 side: THREE.FrontSide,
                 polygonOffset: true,
-                polygonOffsetFactor: paint || wear ? -3 : -2,
+                // Water already follows the terrain triangles with a height offset.
+                // A slope-scaled depth bias can pull it in front of low bridge decks.
+                polygonOffsetFactor:
+                    kind === 'water' || kind === 'bank'
+                        ? 0
+                        : paint || wear
+                          ? -3
+                          : -2,
                 polygonOffsetUnits: -2
             });
             if (kind === 'water') waterEffects.attach(material);

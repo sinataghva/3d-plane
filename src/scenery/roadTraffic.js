@@ -1,3 +1,7 @@
+import structureAccess from '../../data/tehran/structure-access.json';
+const restrictedRoads = new Set(structureAccess.excludedWayIds);
+import { getRoadStructures, isStructuredBridge } from './roadStructures.js';
+import { structureSurfaceReady } from './roadStructureStream.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { offsetLine } from './scenerySurfaces.js';
@@ -8,7 +12,11 @@ import { inFeature } from './geography.js';
 export const TRAFFIC_LIMITS = { low: 0, balanced: 20, high: 40 };
 export const TEHRAN_TRAFFIC_LIMITS = { low: 0, balanced: 120, high: 240 };
 /** @param {import('./geography.js').GeoFeature} road */
-export function suitableTrafficRoad(road, highways = false) {
+export function suitableTrafficRoad(
+    road,
+    highways = false,
+    structures = false
+) {
     return (
         road.kind === 'road' &&
         road.line &&
@@ -31,8 +39,11 @@ export function suitableTrafficRoad(road, highways = false) {
                   ]
                 : [])
         ].includes(road.class || '') &&
-        (!road.tunnel || road.tunnel === 'no') &&
-        (!road.bridge || road.bridge === 'no') &&
+        (structures
+            ? (!road.covered || road.covered === 'no') &&
+              (!road.tunnel || road.tunnel === 'no' || road.tunnel === 'yes')
+            : (!road.tunnel || road.tunnel === 'no') &&
+              (!road.bridge || road.bridge === 'no')) &&
         (road.width || 5) >= 4
     );
 }
@@ -98,18 +109,25 @@ function carGeometry() {
     return merged;
 }
 /** @typedef {ReturnType<typeof trafficPath>} TrafficPath */
-/** @typedef {{path:TrafficPath,start:string,end:string,reverse:number,spacing:number}} TrafficEdge */
+/** @typedef {{path:TrafficPath,start:string,end:string,reverse:number,spacing:number,road:import('./geography.js').GeoFeature}} TrafficEdge */
 /** Shared mapped vertices form junctions; geometric crossings alone do not. Each
  * directed edge is shortened slightly to leave room for a continuous lane turn.
- * @param {import('./geography.js').GeoFeature[]} roads */
-export function buildTrafficNetwork(roads, respectOneWay = false) {
-    /** @param {number[]} p */
-    const key = (p) => `${Math.round(p[0] * 10)},${Math.round(p[1] * 10)}`;
+ * @param {import('./geography.js').GeoFeature[]} roads
+ * @param {boolean} [respectOneWay]
+ * @param {{elevation:(road:import('./geography.js').GeoFeature,x:number,z:number)=>number}|null} [structures] */
+export function buildTrafficNetwork(
+    roads,
+    respectOneWay = false,
+    structures = null
+) {
+    /** @param {number[]} p @param {import('./geography.js').GeoFeature} road */
+    const key = (p, road) =>
+        `${Math.round(p[0] * 10)},${Math.round(p[1] * 10)}${structures ? ',' + Math.round(structures.elevation(road, p[0], p[1]) * 2) : ''}`;
     /** @type {Map<string,number>} */
     const uses = new Map();
     for (const road of roads)
         for (const p of road.points)
-            uses.set(key(p), (uses.get(key(p)) || 0) + 1);
+            uses.set(key(p, road), (uses.get(key(p, road)) || 0) + 1);
     /** @type {TrafficEdge[]} */
     const edges = [];
     /** @type {Map<string,number[]>} */
@@ -119,7 +137,7 @@ export function buildTrafficNetwork(roads, respectOneWay = false) {
         for (let i = 1; i < road.points.length; i++) {
             if (
                 i < road.points.length - 1 &&
-                (uses.get(key(road.points[i])) || 0) < 2
+                (uses.get(key(road.points[i], road)) || 0) < 2
             )
                 continue;
             const points = road.points.slice(from, i + 1);
@@ -158,11 +176,12 @@ export function buildTrafficNetwork(roads, respectOneWay = false) {
                     ),
                     [b.x, b.z]
                 ]);
-                const start = key(source[0]),
-                    end = key(source[source.length - 1]);
+                const start = key(source[0], road),
+                    end = key(source[source.length - 1], road);
                 if (!outgoing.has(start)) outgoing.set(start, []);
                 outgoing.get(start)?.push(edges.length);
                 edges.push({
+                    road,
                     path,
                     start,
                     end,
@@ -229,7 +248,7 @@ function random(seed) {
     n = Math.imul(n ^ (n >>> 16), 0xc2b2ae35);
     return ((n ^ (n >>> 13)) >>> 0) / 4294967296;
 }
-/** @typedef {{id:number,edge:number,path:TrafficPath,distance:number,speed:number,color:number,turn:number,joining:boolean}} TrafficCar */
+/** @typedef {{id:number,edge:number,path:TrafficPath,distance:number,speed:number,color:number,turn:number,joining:boolean,previousEdge?:number}} TrafficCar */
 /** @param {TrafficCar} car @param {ReturnType<typeof buildTrafficNetwork>} network @param {number} delta */
 export function advanceTrafficCar(car, network, delta) {
     car.distance += car.speed * delta;
@@ -256,6 +275,7 @@ export function advanceTrafficCar(car, network, delta) {
                 return;
             }
             car.path = junctionPath(edge.path, network.edges[next].path);
+            car.previousEdge = car.edge;
             car.edge = next;
             car.joining = true;
         }
@@ -268,16 +288,18 @@ export function createRoadTraffic(world) {
     const height = createRenderedHeight(world);
     const rural = Boolean(world.data.airfield?.includes('LFSX'));
     const tehran = Boolean(world.data.airfield?.includes('OIII'));
+    const structures = tehran ? getRoadStructures(world) : null;
     const capacity = tehran ? 320 : 80;
     const boundaries = world.data.features.filter((f) => f.kind === 'airfield');
     const roads = world.data.features.filter(
         (f) =>
-            suitableTrafficRoad(f, tehran) &&
+            suitableTrafficRoad(f, tehran, tehran) &&
+            (!tehran || !restrictedRoads.has(f.id.split('-')[0])) &&
             !boundaries.some((b) =>
                 inFeature(f.points[0][0], f.points[0][1], b)
             )
     );
-    const network = buildTrafficNetwork(roads, tehran);
+    const network = buildTrafficNetwork(roads, tehran, structures);
     const paths = network.edges.map((e) => e.path);
     /** @type {Map<string, {edge:number,distance:number,x:number,z:number,seed:number}[]>} */
     const cells = new Map();
@@ -375,10 +397,26 @@ export function createRoadTraffic(world) {
         },
         /** Read-only identities and positions for continuity regression checks. */
         snapshot() {
-            return cars.map((car) => ({
-                id: car.id,
-                ...sampleTrafficPath(car.path, car.distance)
-            }));
+            return cars.map((car) => {
+                const p = sampleTrafficPath(car.path, car.distance),
+                    edge = network.edges[car.edge];
+                return {
+                    id: car.id,
+                    ...p,
+                    roadId: edge.road.id,
+                    joining: car.joining,
+                    underground: Boolean(
+                        structures &&
+                        edge.road.tunnel === 'yes' &&
+                        (!car.joining ||
+                            network.edges[car.previousEdge ?? car.edge].road
+                                .tunnel === 'yes')
+                    ),
+                    roadY: structures
+                        ? structures.elevation(edge.road, p.x, p.z)
+                        : height(p.x, p.z)
+                };
+            });
         },
         /** @param {import('three').Vector3|{x:number,y:number,z:number}} position @param {string} quality @param {number} delta @param {THREE.Camera} [camera] */
         update(position, quality, delta, camera) {
@@ -510,8 +548,47 @@ export function createRoadTraffic(world) {
                     Math.hypot(q.x - p.x, q.z - p.z) < 0.001
                         ? sampleTrafficPath(car.path, car.distance - 0.5)
                         : p;
-                const y = height(p.x, p.z) + 0.08,
-                    y2 = height(q.x, q.z) + 0.08;
+                const edge = network.edges[car.edge];
+                if (
+                    structures &&
+                    isStructuredBridge(edge.road) &&
+                    !structureSurfaceReady(edge.road, p.x, p.z)
+                )
+                    continue;
+                if (
+                    structures &&
+                    edge.road.tunnel === 'yes' &&
+                    (!car.joining ||
+                        network.edges[car.previousEdge ?? car.edge].road
+                            .tunnel === 'yes')
+                )
+                    continue;
+                const roadHeight = (
+                    /** @type {{x:number,z:number}} */ point
+                ) => {
+                    if (!structures) return height(point.x, point.z);
+                    if (!car.joining)
+                        return structures.elevation(
+                            edge.road,
+                            point.x,
+                            point.z
+                        );
+                    const previous =
+                        network.edges[car.previousEdge ?? car.edge];
+                    const a = sampleTrafficPath(
+                            previous.path,
+                            previous.path.length
+                        ),
+                        b = sampleTrafficPath(edge.path, 0);
+                    return THREE.MathUtils.lerp(
+                        structures.elevation(previous.road, a.x, a.z),
+                        structures.elevation(edge.road, b.x, b.z),
+                        Math.min(1, car.distance / car.path.length)
+                    );
+                };
+                const clearance = structures ? 0.14 : 0.08;
+                const y = roadHeight(p) + clearance,
+                    y2 = roadHeight(q) + clearance;
                 if (tehran && camera) {
                     sphere.center.set(p.x, y + 1, p.z);
                     if (!frustum.intersectsSphere(sphere)) continue;

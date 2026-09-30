@@ -108,9 +108,19 @@ See the [three-level distance table](../../README.md#tehran-ground-detail-levels
 independent of map zoom. Low uses only the regional texture. Roads, waterways and
 land-cover boundaries become sharper; terrain geometry and source coverage do not change.
 
-Decorative cars follow surface highways and preserved one-way routes. Balanced
+Decorative cars follow mapped roads, including supported bridges and tunnels,
+and preserved one-way routes. Cars share bridge/approach heights with scenery
+and continue invisibly underground between tunnel entrances. Explicit cached
+car-access restrictions are respected. Balanced
 supports up to 120 nearby active cars and High up to 240; Low disables traffic.
 Camera-view filtering limits the cars submitted to the instanced drawing batch.
+Bridge decks and tunnel entrances are generated only nearby: 1.7 km / 24 active
+500 m tiles on Balanced, 2.4 km / 48 on High, disabled on Low, with at most 64
+resident completed tiles. Preparation resumes across frames with a 2 ms target;
+individual steps can exceed it. Completed geometry and terrain cuts become
+visible together. Distant roads retain their original appearance. Geometry uses
+estimated heights and generic entrances; aircraft/bomb collision is unchanged.
+See [structure behavior and limits](../../README.md#tehran-bridges-and-tunnel-entrances).
 Birds are not enabled.
 
 ## Rendering and performance
@@ -144,7 +154,7 @@ and do not represent peak process memory. Outputs are kept in ignored `note/`.
 Deterministic views include `?mission=tehran&visual=tehran-city`,
 `visual=tehran-desert` and `visual=tehran-north`, alongside landmark, card,
 cockpit and exhaust views. Automated checks cover runway render/physics alignment,
-takeoff and landing, map controls, all three zoom levels, desktop/mobile-sized layouts,
+takeoff and landing, map controls, all four map display levels, desktop/mobile-sized layouts,
 quality settings, lighting and audio.
 
 ## Sources and reproduction
@@ -153,6 +163,12 @@ quality settings, lighting and audio.
   licensed under [ODbL 1.0](https://www.openstreetmap.org/copyright).
 - `map-pois.json`: a curated OSM-derived public-place database under the same
   license, with source IDs and approximate centers rather than surveyed entrances.
+- `structure-access.json`: OSM-derived explicit car-access exclusions, regenerated
+  offline with `python3 scripts/scenery/structure-access.py`.
+- `portal-junctions.json`: OSM-derived original junction vertices for Niayesh
+  approach way 375989964, restored from `cache/roads.json.gz` after simplification.
+  Coordinates use the origin above. Both supplements retain ODbL attribution and
+  are bundled into the application; they require no runtime external requests.
 - `elevation.json`: resampled [Terrain Tiles](https://registry.opendata.aws/terrain-tiles/).
   Source URLs are embedded. Preserve the shared
   [terrain attribution](../terrain-attribution.md), including USGS SRTM/GMTED2010 credits.
@@ -181,6 +197,7 @@ python3 scripts/scenery/download-scenery.py --tehran
 python3 scripts/scenery/import-osm.py data/tehran/cache/osm.json.gz --tehran
 python3 scripts/scenery/import-elevation.py --tehran
 node scripts/scenery/import-map-pois.mjs
+python3 scripts/scenery/structure-access.py
 ```
 
 The merged `cache/osm.json.gz` is an ignored intermediate that can be regenerated

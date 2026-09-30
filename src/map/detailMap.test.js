@@ -89,7 +89,8 @@ test('spatial index queries only intersecting cells, includes line-width margins
     expect(fine.span).toBe(index.span / 2);
     expect(fine.buckets[1].flat()).toContain(f);
     index.add({ ...f, id: 'tunnel', tunnel: 'yes' });
-    expect(index.buckets[0].flat()).toHaveLength(1);
+    // Navigation may show a dashed underground route; the ground painter omits it.
+    expect(index.buckets[0].flat()).toHaveLength(2);
 });
 
 test('tile cache evicts old regions and releases backing canvases', () => {

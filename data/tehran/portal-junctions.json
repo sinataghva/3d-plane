@@ -1,0 +1,26 @@
+{
+  "source": "OpenStreetMap contributors; preserved roads.json.gz, way 375989964",
+  "license": "ODbL-1.0",
+  "sourceUrl": "https://www.openstreetmap.org/copyright",
+  "description": "Restore cached approach junction vertices removed by map simplification. No new geographic download.",
+  "features": {
+    "w375989964-0": [
+      [
+        4735.0,
+        -11766.0
+      ],
+      [
+        4724.4,
+        -11757.9
+      ],
+      [
+        4673.6,
+        -11718.9
+      ],
+      [
+        4642.6,
+        -11699.2
+      ]
+    ]
+  }
+}

@@ -15,6 +15,20 @@ export function paintCloseFeature(ctx, f, scale, minX, minZ, pass = 'surface') {
     const x = (/** @type {number} */ value) => (value - minX) * scale + 2;
     const y = (/** @type {number} */ value) => (value - minZ) * scale + 2;
     const width = Math.max(1.2, (f.width || 4) * scale);
+    if (f.kind === 'road' && f.tunnel === 'yes') {
+        if (pass !== 'surface') return;
+        ctx.save();
+        ctx.beginPath();
+        f.points.forEach((p, i) =>
+            i ? ctx.lineTo(x(p[0]), y(p[1])) : ctx.moveTo(x(p[0]), y(p[1]))
+        );
+        ctx.strokeStyle = '#8b8981';
+        ctx.lineWidth = Math.max(0.8, width * 0.55);
+        ctx.setLineDash([4, 3]);
+        ctx.stroke();
+        ctx.restore();
+        return;
+    }
     if (pass === 'symbols') {
         // Respect reverse one-way tags. Omit tiny paths and short segments.
         if (
@@ -93,9 +107,11 @@ export function paintCloseFeature(ctx, f, scale, minX, minZ, pass = 'surface') {
         ctx.lineWidth = width + (pass === 'casing' ? 1.1 : 0);
         ctx.strokeStyle =
             pass === 'casing'
-                ? major(f)
-                    ? '#b49968'
-                    : '#9e998d'
+                ? f.bridge && f.bridge !== 'no'
+                    ? '#686c68'
+                    : major(f)
+                      ? '#b49968'
+                      : '#9e998d'
                 : major(f)
                   ? '#f9dfa5'
                   : '#f3eee2';

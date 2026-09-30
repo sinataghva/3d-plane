@@ -1,3 +1,4 @@
+import { createRoadStructures } from './scenery/roadStructures.js';
 import { isJet } from './aircraft/capabilities.js';
 import { aircraftCapabilities } from './aircraft/capabilities.js';
 import { createPhantom } from './aircraft/phantom.js';
@@ -298,7 +299,14 @@ async function startApp() {
     scene.add(airplane);
 
     const restoreRandom = visualScenario ? useSeededRandom(12345) : null;
+    const roadStructures = createRoadStructures(world);
     const airbase = createTerrain(world);
+    roadStructures.attachTerrain(
+        /** @type {THREE.Mesh<THREE.BufferGeometry,THREE.MeshLambertMaterial>} */ (
+            airbase.children[0]
+        )
+    );
+    scene.add(roadStructures.group);
     const groundTexture = createGroundTextureDetail(
         world,
         /** @type {THREE.Mesh<THREE.BufferGeometry, THREE.MeshLambertMaterial>} */ (
@@ -364,6 +372,7 @@ async function startApp() {
         flightAudio.dispose();
         machEffect?.dispose();
         roadTraffic.dispose();
+        roadStructures.dispose();
         groundDetail.dispose();
         groundTexture.dispose();
         destinationBeacon.dispose();
@@ -853,6 +862,8 @@ async function startApp() {
         scene.userData.followSun(airplane.position);
         parkedAircraft.update(camera.position, scene.userData.quality);
         updateRegionDetail(airbase, camera.position, scene.userData.quality);
+        roadStructures.update(camera.position, scene.userData.quality);
+        if (roadStructures.consumeSurfaceChange()) groundTexture.invalidate();
         serviceVehicles.update(camera.position, scene.userData.quality);
         roadTraffic.update(camera.position, scene.userData.quality, 0, camera);
         if (bombing) {
@@ -867,6 +878,7 @@ async function startApp() {
                 calls: renderer.info.render.calls,
                 triangles: renderer.info.render.triangles,
                 ...roadTraffic.stats(),
+                ...roadStructures.stats(),
                 ...groundDetail.stats(),
                 ...groundTexture.stats(),
                 ...bombing?.stats(),
@@ -1202,6 +1214,8 @@ async function startApp() {
         scene.userData.followSun(airplane.position);
         parkedAircraft.update(camera.position, scene.userData.quality);
         updateRegionDetail(airbase, camera.position, scene.userData.quality);
+        roadStructures.update(camera.position, scene.userData.quality);
+        if (roadStructures.consumeSurfaceChange()) groundTexture.invalidate();
         serviceVehicles.update(camera.position, scene.userData.quality);
         const trafficStarted = performance.now();
         roadTraffic.update(
@@ -1228,6 +1242,7 @@ async function startApp() {
                 machTransitions: machTransition.count,
                 ...bombing?.stats(),
                 ...roadTraffic.stats(),
+                ...roadStructures.stats(),
                 ...groundDetail.stats(),
                 ...groundTexture.stats(),
                 ...airbase.userData.summary
