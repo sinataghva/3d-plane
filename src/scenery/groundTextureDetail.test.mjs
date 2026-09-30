@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {
     createGroundTextureDetail,
     groundTextureStrength,
+    closeGroundStrength,
     GROUND_TEXTURE_BYTES
 } from './groundTextureDetail.js';
 import { paintFeature } from '../map/detailMap.js';
@@ -13,6 +14,10 @@ test('ground detail is smoothly altitude gated and Low opts out', () => {
     expect(groundTextureStrength(750, 'high')).toBeCloseTo(0.5);
     expect(groundTextureStrength(950, 'high')).toBe(0);
     expect(groundTextureStrength(0, 'low')).toBe(0);
+    expect(closeGroundStrength(250, 'high')).toBe(1);
+    expect(closeGroundStrength(375, 'balanced')).toBeCloseTo(0.5);
+    expect(closeGroundStrength(500, 'high')).toBe(0);
+    expect(closeGroundStrength(0, 'low')).toBe(0);
 });
 
 test('ground style never paints buildings or labels and respects paved/grass airfield surfaces', () => {
@@ -81,24 +86,42 @@ test('bounded terrain atlas reuses tiles, evicts across travel, falls back at al
         material.onBeforeCompile(shader, {});
         expect(shader.fragmentShader).toContain('fineGroundAtlas');
         expect(shader.fragmentShader).toContain('seam');
+        expect(
+            shader.fragmentShader.indexOf('texture2D(closeGroundAtlas')
+        ).toBeGreaterThan(
+            shader.fragmentShader.indexOf('texture2D(fineGroundAtlas')
+        );
         for (const [x, z] of [
             [4000, 4000],
             [7000, 5000],
             [12000, 8000],
             [4000, 4000]
         ]) {
-            for (let n = 0; n < 50; n++)
+            for (let n = 0; n < 100; n++) {
+                const uploads = detail.stats().groundTextureUploads;
                 detail.update({ x, y: 100, z }, 'high', 0.1);
+                expect(
+                    detail.stats().groundTextureUploads - uploads
+                ).toBeLessThanOrEqual(1);
+            }
             expect(detail.stats().groundTexturePending).toBe(0);
             expect(detail.stats().groundTextureTiles).toBe(9);
+            expect(detail.stats().groundCloseTiles).toBe(9);
+            expect(shader.uniforms.fineGroundFlight.value.w).toBe(3000);
+            expect(shader.uniforms.closeGroundFlight.value.w).toBe(1200);
             expect(detail.stats().groundTextureBytes).toBe(
-                GROUND_TEXTURE_BYTES + 4
+                2 * (GROUND_TEXTURE_BYTES + 4)
             );
-            expect(canvases.filter((c) => c.width > 0)).toHaveLength(3);
+            expect(canvases.filter((c) => c.width > 0)).toHaveLength(6);
             const count = detail.stats().groundTextureGenerated;
             detail.update({ x, y: 100, z }, 'high', 0.1);
             expect(detail.stats().groundTextureGenerated).toBe(count);
         }
+        for (let n = 0; n < 30; n++)
+            detail.update({ x: 4000, y: 525, z: 4000 }, 'high', 0.1);
+        expect(detail.stats().groundCloseStrength).toBeLessThan(0.001);
+        expect(detail.stats().groundTextureStrength).toBeGreaterThan(0.99);
+        expect(detail.stats().groundClosePending).toBe(0);
         for (let n = 0; n < 30; n++)
             detail.update({ x: 4000, y: 1200, z: 4000 }, 'high', 0.1);
         expect(detail.stats().groundTextureStrength).toBeLessThan(0.001);
@@ -106,11 +129,22 @@ test('bounded terrain atlas reuses tiles, evicts across travel, falls back at al
         detail.reset();
         expect(detail.stats().groundTextureBytes).toBe(0);
         expect(canvases.every((c) => !c.width && !c.height)).toBe(true);
+        vi.stubGlobal('performance', { now: () => (clock += 5) });
+        detail.update({ x: 4000, y: 100, z: 4000 }, 'high', 0.1);
+        expect(detail.stats().groundTextureBytes).toBe(0);
+        expect(detail.stats().groundTexturePending).toBeGreaterThan(0);
+        detail.update({ x: 4000, y: 100, z: 4000 }, 'low', 0.1);
+        expect(detail.stats().groundTexturePending).toBe(0);
+        expect(detail.stats().groundCloseStrength).toBe(0);
+        vi.stubGlobal('performance', { now: () => (clock += 0.05) });
         for (let n = 0; n < 50; n++)
             detail.update({ x: 4000, y: 100, z: 4000 }, 'balanced', 0.1);
         expect(detail.stats().groundTextureTiles).toBe(9);
+        expect(shader.uniforms.fineGroundFlight.value.w).toBe(2400);
+        expect(shader.uniforms.closeGroundFlight.value.w).toBe(800);
         detail.update({ x: 4000, y: 100, z: 4000 }, 'low', 0.1);
         expect(detail.stats().groundTextureBytes).toBe(0);
+        expect(detail.stats().groundCloseTiles).toBe(0);
         detail.dispose();
         detail.update({ x: 4000, y: 100, z: 4000 }, 'high', 0.1);
         expect(detail.stats().groundTextureTiles).toBe(0);

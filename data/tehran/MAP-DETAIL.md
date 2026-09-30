@@ -29,7 +29,7 @@ invented street features. This style is the default; no review query is needed.
 The shared 24-canvas budget is unchanged. Only the index for the requested
 resolution is built; cached coarser tiles remain the loading fallback. Text
 is drawn separately at screen resolution. The map and terrain have independent
-resolution choices; this change adds no third 3D ground level.
+resolution choices; the ground levels have their own distance and altitude thresholds.
 
 ## Geographic data and POIs
 
@@ -104,33 +104,72 @@ the current world. No external services or background network requests are used.
 
 ## Low-altitude 3D ground
 
-Balanced and High use one **8,192-pixel-equivalent** local level, approximately
-**6.2 m/pixel**, over the existing 4,096-pixel-wide regional texture. Low keeps
-only the regional texture. Detail is fully enabled below 550 m above local
-ground and fades out between 550 and 950 m. Horizontal blending ends at 2.4 km
-on Balanced / 3 km on High. These thresholds are independent of 2D map zoom.
+Balanced and High blend two local texture levels over the 4,096 regional
+texture. Low keeps the regional texture alone. These thresholds are independent
+of the 2D map zoom; all distances below are horizontal from the aircraft to the
+ground fragment, and AGL is the aircraft altitude above local terrain.
 
-The shared spatial-index implementation and surface painter generate label-free
-ground tiles with the existing terrain colors and relief shading. Building
-footprints, map labels, POI icons and markers are not painted onto the terrain.
-The shader samples detail on the existing terrain mesh: there is no overlay
-mesh, added elevation or change to collision geometry. Padded tiles, edge
-blending and a half-second tile fade keep loading boundaries unobtrusive.
-The regional texture remains the fallback while new tiles are prepared.
+| Level | Resolution | Balanced full / fade-end distance | High full / fade-end distance | AGL full / fade-end |
+| --- | --- | --- | --- | --- |
+| Regional | 4,096 (~12.4 m/pixel) | Underlying fallback everywhere | Underlying fallback everywhere | All |
+| Intermediate | 8,192 (~6.2 m/pixel) | 1,200 / 2,400 m | 1,500 / 3,000 m | 550 / 950 m |
+| Close | 16,384 (~3.1 m/pixel) | 400 / 800 m | 600 / 1,200 m | 250 / 500 m |
 
-A nine-slot atlas retains a 3 × 3 neighborhood (each cell about 3.17 km across),
-prefetching in every direction for flight and turns. Moving away cancels obsolete
-partial work; slots outside the neighborhood are reused. Generation targets
-2 ms per frame and completes at most one tile/upload per frame. A complex
-feature, canvas allocation or GPU upload can exceed that target. High-altitude
-flight stops generation; Low, restart and mission disposal release the atlas.
+Between each full/fade-end pair, smoothstep reduces that level's strength.
+Distance and altitude strengths multiply. The shader first blends intermediate
+over regional, then close over that result, so a missing or fading close tile
+retains the intermediate surface. There is no overlay mesh, added elevation or
+change to collision geometry. Labels, POIs and building footprints are omitted.
+The existing ground palette, solid paths and relief shading are retained;
+Phase 1's geographic indexing and finer resolution are reused without map ink.
 
-The fixed budget is a 1,548 × 1,548 canvas and matching GPU texture without
-mipmaps, one 516 × 516 staging canvas and a 256 × 256 relief canvas: approximately
-**19.6 MiB**, plus indexes and driver/browser overhead. Together with the 2D
-map's maximum 24 backing tiles this is approximately **44 MiB** of additional
-texture/backing storage. This excludes the existing regional texture, overview,
-visible map canvas and the rest of the scene; it is not total process memory.
+Each local level has a separate nine-slot atlas and a 3 × 3 aircraft-centered
+neighborhood: intermediate cells span about 3.17 km; close cells about 1.58 km.
+Padded tiles use linear filtering, a 55 m edge blend and a half-second load fade.
+The close footprint fits within the finer neighborhood even near a cell edge.
+Generation across both levels shares a **2 ms CPU target and at most one atlas
+upload per frame**, with intermediate fallback prepared first. Individual
+features, allocation and GPU upload may overrun the target. Low, restart and
+mission disposal release both atlases. Altitude fades stop preparation for a
+level once its target strength is zero; retained tiles can be reused on descent.
+
+Each atlas is 1,548 × 1,548 with a matching GPU texture, no mipmaps, and a
+516 × 516 staging canvas. The main world shares one 256 × 256 relief canvas.
+Together the two levels use approximately **38.8 MiB** of backing/texture
+storage; adding the map's maximum 24 backing tiles gives approximately
+**63.2 MiB**. The new level adds approximately **19.3 MiB** within the agreed
+nine-slot allowance. These totals exclude indexes, driver overhead, the existing
+regional texture, visible map canvas and the rest of the scene. They are not
+total process-memory measurements.
+
+### Close-level validation and scheduling
+
+Three alternating runs compared the previous two-level renderer, close detail
+with all-direction preparation, and close detail with camera-prioritized
+preparation. The 216 scene records cover Balanced/High, six locations/altitudes,
+1280 × 720 DPR 1 and 844 × 390 DPR 2, on Apple M4 Pro / Metal Chromium.
+Camera priority improved pooled visible preparation by about 5–10%, below the
+15% adoption threshold, without a repeatable CPU saving. **All-direction
+preparation is retained**; the experimental camera scheduler is not shipped.
+
+Two noisy static frame comparisons were repeated with three alternating,
+600-frame measurements. Baseline/close p95 was 13.0/13.0 ms for Balanced south
+and 13.4/13.3 ms for High intermediate; p99 was 14.0/14.1 and 14.6/14.9 ms.
+Both satisfy baseline plus the greater of 1 ms or 10%. High stress replays
+with travel, quick turns, looking skyward and altitude changes also passed:
+close p95/p99 was 11.8/13.2 ms desktop and 11.1/14.2 ms mobile-sized, versus
+12.4/14.5 and 12.3/13.9 ms baseline. These comparisons establish no repeatable
+regression in the measured cases, not a speed improvement.
+
+Both local levels initially prepare in roughly 0.63–0.66 seconds, versus
+0.31–0.33 seconds for intermediate alone, with fallback visible throughout.
+Maximum completed uploads remained one per frame. Recorded CPU slices reached
+about 2.9 ms; the 2 ms work budget is a cooperative target. The unchanged
+initial distance thresholds are retained on Balanced and High. Matched park
+and southern-neighborhood views show sharper paths and land-cover edges.
+The protocol, raw records, before/after originals and transition replays are
+saved locally under ignored `note/ground-close/`. Mobile-sized host emulation
+does not establish native iOS Safari or physical-phone performance.
 
 ### Surface-data audit and limits
 

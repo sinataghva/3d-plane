@@ -104,11 +104,26 @@ POI labels are separate from the eight gold 3D-landmark markers. Overlapping
 labels are filtered, and businesses are not listed. Tiles are prepared locally
 on demand within one shared 24-tile limit, with lower-resolution imagery visible while loading; gameplay makes no external
 map requests. Saint-Cyr and Luxeuil have a 400% cap; the minimap uses the overview.
-Tehran's 3D ground uses label-free **8,192-pixel-equivalent detail (about 6.2 m/pixel)**
-near the aircraft on Balanced and High, fading back to the 4,096-pixel regional
-texture with distance and altitude. Low retains the regional texture. This
-sharpens mapped surfaces without adding terrain geometry or satellite imagery.
-See the [data audit and rendering notes](data/tehran/MAP-DETAIL.md).
+### Tehran ground-detail levels
+
+The ground has three distance levels, with label-free textures from the same
+cached geography used by the map. The close level sharpens mapped paths and
+land-cover edges; existing 3D buildings and nearby road meshes remain separate.
+
+| Level | Adds | Whole-region-equivalent resolution | Full detail by horizontal distance | Distance blend band | Altitude above local ground | Presets |
+| --- | --- | --- | --- | --- | --- | --- |
+| Far / minimum | Regional land cover and relief | 4,096 (~12.4 m/pixel) | Always available underneath | Fallback beyond the local levels | All altitudes | Low, Balanced, High |
+| Intermediate / level 2 | Sharper local surface boundaries and paths | 8,192 (~6.2 m/pixel) | Balanced: 0–1.2 km; High: 0–1.5 km | Balanced: 1.2–2.4 km; High: 1.5–3 km → far | Full below 550 m; fades from 550–950 m | Balanced, High |
+| Close / level 3 | Finer cached paths and narrow land-cover shapes | 16,384 (~3.1 m/pixel) | Balanced: 0–400 m; High: 0–600 m | Balanced: 400–800 m; High: 600–1,200 m → intermediate | Full below 250 m; fades from 250–500 m | Balanced, High |
+
+Distances are horizontal from the aircraft to each ground point, independent of
+camera direction. Altitude is the aircraft's height above the terrain directly
+beneath it. Distance and altitude fades multiply; these are smooth blends,
+not whole-world switches. Near, intermediate and far detail can coexist in one
+view. Tiles fade in over half a second; missing close tiles reveal intermediate
+or regional detail. Tile-edge blending also softens the level near seams.
+Low retains the regional texture. No extra terrain elevation or satellite
+imagery is introduced. See [data and rendering notes](data/tehran/MAP-DETAIL.md).
 
 Tehran's decorative road traffic supports surface highways and one-way routes,
 with up to **120 cars on Balanced / 240 on High** nearby; Low disables it.
@@ -734,7 +749,7 @@ two per frame. Recently used tiles remain available beyond the activation
 range to avoid rebuilding when crossing a boundary. The original physics and
 collision terrain remain authoritative. Distant fields and forests use the
 regional texture. Tehran also refines nearby land-cover textures on Balanced/High
-with its independent 8,192-pixel-equivalent ground level; see
+with independent 8,192 and 16,384 ground-texture levels; see
 [ground-texture budgets and transitions](data/tehran/MAP-DETAIL.md#low-altitude-3d-ground).
 Neither system uses satellite imagery.
 

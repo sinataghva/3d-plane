@@ -82,6 +82,7 @@ test('fast low flight and turns keep loading bounded without shader errors', asy
     expect(report.final.simulationSeconds).toBeGreaterThan(80);
     for (const s of report.samples) {
         expect(s.detail.groundTextureTiles).toBeLessThanOrEqual(9);
+        expect(s.detail.groundCloseTiles).toBeLessThanOrEqual(9);
         expect(s.detail.groundTextureStrength).toBeGreaterThanOrEqual(0);
         expect(s.detail.groundTextureStrength).toBeLessThanOrEqual(1);
     }
@@ -125,6 +126,10 @@ for (const mobile of [false, true])
         await page.waitForTimeout(600);
         const runway = await stats(page);
         expect(runway.groundTextureResolution).toBe(8192);
+        expect(runway.groundCloseResolution).toBe(16384);
+        expect(runway.groundCloseTiles).toBeGreaterThan(0);
+        expect(runway.groundCloseTiles).toBeLessThanOrEqual(9);
+        expect(runway.groundCloseStrength).toBeGreaterThan(0.99);
         expect(runway.groundTextureStrength).toBeGreaterThan(0.99);
         expect(runway.groundTextureStrength).toBeLessThanOrEqual(1);
         expect(runway.groundTextureTiles).toBeLessThanOrEqual(9);
@@ -174,7 +179,7 @@ for (const mobile of [false, true])
             .locator('#world-map-canvas')
             .evaluate((c) => JSON.parse(c.dataset.detailMetrics));
         const combinedBytes = runway.groundTextureBytes + map.backingBytes;
-        expect(combinedBytes).toBeLessThan(46 * 1024 * 1024);
+        expect(combinedBytes).toBeLessThan(65 * 1024 * 1024);
         await page.screenshot({
             path: info.outputPath('fine-map-and-ground.png')
         });
@@ -244,6 +249,21 @@ for (const mobile of [false, true])
             ),
             contentType: 'application/json'
         });
+        for (const mode of ['cockpit', 'orbit', 'chase']) {
+            await page.locator('#settings-button').click();
+            await page.locator('#camera-select').selectOption(mode);
+            await page.locator('#close-settings').click();
+            await expect(page.locator('#camera-mode-value')).toHaveText(
+                mode[0].toUpperCase() + mode.slice(1)
+            );
+            await page.waitForTimeout(600);
+            await page.screenshot({
+                path: info.outputPath(`ground-${mode}.png`)
+            });
+        }
+        // UI camera changes release automation ownership; reload for reset validation.
+        await page.reload();
+        await page.waitForFunction(() => window.planeAutomation);
         await page.evaluate(() => window.planeAutomation.reset());
         await ready(page);
         expect((await stats(page)).groundTextureTiles).toBeLessThanOrEqual(9);
@@ -314,7 +334,7 @@ test('fine terrain handles tile boundaries, rapid travel, altitude cycles and di
     for (const s of report.samples) {
         expect(s.groundTextureTiles).toBeLessThanOrEqual(9);
         expect(s.groundTexturePending).toBe(0);
-        expect(s.groundTextureBytes).toBeLessThan(21 * 1024 * 1024);
+        expect(s.groundTextureBytes).toBeLessThan(40 * 1024 * 1024);
     }
     expect(report.samples[5].groundTextureStrength).toBeLessThan(0.001);
     expect(report.samples[6].groundTextureStrength).toBeGreaterThan(0.99);

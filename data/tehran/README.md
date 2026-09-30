@@ -102,8 +102,9 @@ landmarks. Detail generation is incremental, with a shared 24-tile limit across
 all three detail levels, including an in-progress tile; there
 are no live map-service requests. See [map rendering and data notes](MAP-DETAIL.md).
 The 3D ground retains its 4,096-pixel-wide regional texture (about 12.4 m/pixel),
-with locally generated, label-free 8,192-pixel-equivalent detail (about 6.2 m/pixel)
-near the aircraft on Balanced and High. Its altitude/distance transitions are
+with locally generated, label-free 8,192 intermediate detail (~6.2 m/pixel)
+and 16,384 close detail (~3.1 m/pixel) near the aircraft on Balanced and High.
+See the [three-level distance table](../../README.md#tehran-ground-detail-levels). Its altitude/distance transitions are
 independent of map zoom. Low uses only the regional texture. Roads, waterways and
 land-cover boundaries become sharper; terrain geometry and source coverage do not change.
 

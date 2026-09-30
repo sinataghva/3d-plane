@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {
     createDetailIndex,
     FINE_DETAIL_WIDTH,
+    CLOSE_DETAIL_WIDTH,
     TILE_SIZE,
     hasDetailMap,
     paintFeature
@@ -25,10 +26,12 @@ export function groundTextureStrength(altitude, quality) {
  * geographic grid and surface painter are reused, but labels never enter it.
  * @param {import('./geography.js').Geography} world
  * @param {THREE.MeshLambertMaterial} material
- * @param {HTMLCanvasElement} [baseRelief] */
-export function createGroundTextureDetail(world, material, baseRelief) {
+ * @param {HTMLCanvasElement} [baseRelief]
+ * @param {boolean} [close] */
+function createGroundLayer(world, material, baseRelief, close = false) {
     const enabled = hasDetailMap(world);
-    const index = enabled ? createDetailIndex(world, FINE_DETAIL_WIDTH) : null;
+    const resolution = close ? CLOSE_DETAIL_WIDTH : FINE_DETAIL_WIDTH;
+    const index = enabled ? createDetailIndex(world, resolution) : null;
     const uniforms = {
         fineGroundAtlas: {
             value: /** @type {THREE.CanvasTexture|null} */ (null)
@@ -49,7 +52,9 @@ export function createGroundTextureDetail(world, material, baseRelief) {
         groundTextureMaxWorkMs: 0,
         groundTextureBytes: 0,
         groundTextureStrength: 0,
-        groundTextureResolution: enabled ? FINE_DETAIL_WIDTH : 0
+        groundTextureWorkMs: 0,
+        groundTextureUploads: 0,
+        groundTextureResolution: enabled ? resolution : 0
     };
     /** @type {HTMLCanvasElement|null} */ let atlas = null;
     /** @type {HTMLCanvasElement|null} */ let staging = null;
@@ -66,20 +71,38 @@ export function createGroundTextureDetail(world, material, baseRelief) {
         const key = material.customProgramCacheKey();
         material.onBeforeCompile = (shader, renderer) => {
             previous.call(material, shader, renderer);
-            Object.assign(shader.uniforms, uniforms);
+            const prefix = (/** @type {string} */ source) =>
+                close
+                    ? source
+                          .replaceAll('fineGround', 'closeGround')
+                          .replaceAll('vFineGroundXZ', 'vCloseGroundXZ')
+                          .replaceAll('groundBlend', 'closeBlend')
+                    : source;
+            Object.assign(
+                shader.uniforms,
+                Object.fromEntries(
+                    Object.entries(uniforms).map(([key, value]) => [
+                        prefix(key),
+                        value
+                    ])
+                )
+            );
             shader.vertexShader =
-                'varying vec2 vFineGroundXZ;\n' + shader.vertexShader;
+                prefix('varying vec2 vFineGroundXZ;\n') + shader.vertexShader;
             shader.vertexShader = shader.vertexShader.replace(
                 '#include <begin_vertex>',
-                '#include <begin_vertex>\nvFineGroundXZ = (modelMatrix * vec4(position, 1.0)).xz;'
+                prefix(
+                    '#include <begin_vertex>\nvFineGroundXZ = (modelMatrix * vec4(position, 1.0)).xz;'
+                )
             );
             shader.fragmentShader =
-                `uniform sampler2D fineGroundAtlas;
+                prefix(`uniform sampler2D fineGroundAtlas;
                 uniform vec4 fineGroundTiles[9]; uniform vec4 fineGroundFlight;
-                varying vec2 vFineGroundXZ;\n` + shader.fragmentShader;
+                varying vec2 vFineGroundXZ;\n`) + shader.fragmentShader;
             shader.fragmentShader = shader.fragmentShader.replace(
-                '#include <map_fragment>',
-                `#include <map_fragment>
+                close ? '// fine-ground-end' : '#include <map_fragment>',
+                (close ? '' : '#include <map_fragment>\n') +
+                    prefix(`
                 float groundBlend = fineGroundFlight.z * (1.0 - smoothstep(
                     fineGroundFlight.w * 0.5, fineGroundFlight.w,
                     distance(vFineGroundXZ, fineGroundFlight.xy)));
@@ -97,12 +120,15 @@ export function createGroundTextureDetail(world, material, baseRelief) {
                             float seam = smoothstep(0.0, 55.0, min(edge.x, edge.y));
                             diffuseColor.rgb = mix(diffuseColor.rgb,
                                 texture2D(fineGroundAtlas, uv).rgb, groundBlend * tile.w * seam);
+                            break;
                         }
                     }
-                }`
+                }
+                // fine-ground-end`)
             );
         };
-        material.customProgramCacheKey = () => key + '-ground-atlas-v1';
+        material.customProgramCacheKey = () =>
+            key + (close ? '-close-atlas-v1' : '-ground-atlas-v1');
         material.needsUpdate = true;
     }
 
@@ -157,15 +183,21 @@ export function createGroundTextureDetail(world, material, baseRelief) {
             }
         },
         stats: () => ({ ...metrics }),
-        /** @param {{x:number,y:number,z:number}} position @param {string} quality @param {number} delta */
-        update(position, quality, delta) {
+        /** @param {{x:number,y:number,z:number}} position @param {string} quality @param {number} delta @param {{deadline:number,uploaded:boolean}} budget */
+        update(position, quality, delta, budget) {
+            metrics.groundTextureWorkMs = 0;
             if (!index || disposed) return;
-            const strength = groundTextureStrength(
-                position.y - world.height(position.x, position.z),
-                quality
-            );
+            const strength = (
+                close ? closeGroundStrength : groundTextureStrength
+            )(position.y - world.height(position.x, position.z), quality);
             if (quality === 'low') {
-                if (atlas) reset();
+                // A shared-budget yield can leave demand before an atlas exists.
+                if (
+                    atlas ||
+                    metrics.groundTexturePending ||
+                    metrics.groundTextureStrength
+                )
+                    reset();
                 return;
             }
             const flight = uniforms.fineGroundFlight.value;
@@ -178,7 +210,13 @@ export function createGroundTextureDetail(world, material, baseRelief) {
                     5,
                     THREE.MathUtils.clamp(delta, 0, 0.1)
                 ),
-                quality === 'balanced' ? 2400 : 3000
+                close
+                    ? quality === 'balanced'
+                        ? 800
+                        : 1200
+                    : quality === 'balanced'
+                      ? 2400
+                      : 3000
             );
             metrics.groundTextureStrength = flight.z;
             if (strength === 0) {
@@ -195,7 +233,10 @@ export function createGroundTextureDetail(world, material, baseRelief) {
                 world.minX + (col + 2) * index.span - 1,
                 world.minZ + (row + 2) * index.span - 1
             ]);
-            ids.sort((a, b) => distance(a) - distance(b));
+            const centerId = row * index.columns + col;
+            const priority = (/** @type {number} */ id) =>
+                close && id === centerId ? -1 : distance(id);
+            ids.sort((a, b) => priority(a) - priority(b));
             function distance(/** @type {number} */ id) {
                 if (!index) return Infinity;
                 return Math.hypot(
@@ -217,10 +258,15 @@ export function createGroundTextureDetail(world, material, baseRelief) {
                 uniforms.fineGroundTiles.value[i].w =
                     slot.id < 0 ? 0 : slot.fade;
             }
+            // Report demand even when the shared budget is exhausted by the other level.
+            metrics.groundTexturePending = ids.filter(
+                (id) => !slots.some((s) => s.id === id)
+            ).length;
             const start = performance.now();
+            if (budget.uploaded || start >= budget.deadline) return;
             while (
                 cursor < world.data.features.length &&
-                performance.now() - start < 2
+                performance.now() < budget.deadline
             ) {
                 const feature = world.data.features[cursor++];
                 if (feature.kind !== 'building') index.add(feature);
@@ -230,10 +276,11 @@ export function createGroundTextureDetail(world, material, baseRelief) {
                 metrics.groundTextureMaxWorkMs,
                 performance.now() - start
             );
+            metrics.groundTextureWorkMs = performance.now() - start;
             if (!metrics.groundTextureReady) return;
             if (ids.length) allocate();
             if (!ctx || !atlasCtx || !staging || !relief) return;
-            while (performance.now() - start < 2) {
+            while (performance.now() < budget.deadline) {
                 if (!pending) {
                     const id = ids.find(
                         (id) => !slots.some((s) => s.id === id)
@@ -253,7 +300,7 @@ export function createGroundTextureDetail(world, material, baseRelief) {
                     paintFeature(
                         ctx,
                         feature,
-                        FINE_DETAIL_WIDTH / world.width,
+                        resolution / world.width,
                         minX,
                         minZ,
                         true
@@ -263,7 +310,7 @@ export function createGroundTextureDetail(world, material, baseRelief) {
                     pending.item = 0;
                 }
                 if (pending.layer === layers.length) {
-                    const scale = FINE_DETAIL_WIDTH / world.width;
+                    const scale = resolution / world.width;
                     ctx.drawImage(
                         relief,
                         (world.minX - minX) * scale + 2,
@@ -290,6 +337,8 @@ export function createGroundTextureDetail(world, material, baseRelief) {
                     if (uniforms.fineGroundAtlas.value)
                         uniforms.fineGroundAtlas.value.needsUpdate = true;
                     metrics.groundTextureGenerated++;
+                    metrics.groundTextureUploads++;
+                    budget.uploaded = true;
                     pending = null;
                     // At most one atlas upload per frame.
                     break;
@@ -299,10 +348,74 @@ export function createGroundTextureDetail(world, material, baseRelief) {
             metrics.groundTexturePending = ids.filter(
                 (id) => !slots.some((s) => s.id === id)
             ).length;
+            metrics.groundTextureWorkMs = performance.now() - start;
             metrics.groundTextureMaxWorkMs = Math.max(
                 metrics.groundTextureMaxWorkMs,
-                performance.now() - start
+                metrics.groundTextureWorkMs
             );
+        }
+    };
+}
+
+/** @param {number} altitude @param {string} quality */
+export function closeGroundStrength(altitude, quality) {
+    return quality === 'low'
+        ? 0
+        : 1 - THREE.MathUtils.smoothstep(altitude, 250, 500);
+}
+
+/** Three-level ground: each atlas has nine slots; both share one work/upload budget.
+ * @param {import('./geography.js').Geography} world
+ * @param {THREE.MeshLambertMaterial} material
+ * @param {HTMLCanvasElement} [baseRelief] */
+export function createGroundTextureDetail(world, material, baseRelief) {
+    const intermediate = createGroundLayer(world, material, baseRelief);
+    const close = createGroundLayer(world, material, baseRelief, true);
+    let maxWork = 0;
+    return {
+        reset() {
+            intermediate.reset();
+            close.reset();
+        },
+        dispose() {
+            intermediate.dispose();
+            close.dispose();
+        },
+        stats() {
+            const a = intermediate.stats(),
+                b = close.stats();
+            return {
+                ...a,
+                groundTextureReady:
+                    a.groundTextureReady &&
+                    (b.groundTextureReady || b.groundTextureStrength < 0.001),
+                groundTexturePending:
+                    a.groundTexturePending + b.groundTexturePending,
+                groundTextureBytes:
+                    a.groundTextureBytes +
+                    b.groundTextureBytes -
+                    (baseRelief && b.groundTextureBytes && a.groundTextureBytes
+                        ? baseRelief.width * baseRelief.height * 4
+                        : 0),
+                groundTextureMaxWorkMs: maxWork,
+                groundCloseTiles: b.groundTextureTiles,
+                groundClosePending: b.groundTexturePending,
+                groundCloseStrength: b.groundTextureStrength,
+                groundCloseResolution: b.groundTextureResolution,
+                groundCloseGenerated: b.groundTextureGenerated,
+                groundTextureUploads:
+                    a.groundTextureUploads + b.groundTextureUploads,
+                groundTextureWorkMs:
+                    a.groundTextureWorkMs + b.groundTextureWorkMs
+            };
+        },
+        /** @param {{x:number,y:number,z:number}} position @param {string} quality @param {number} delta */
+        update(position, quality, delta) {
+            const start = performance.now();
+            const budget = { deadline: start + 2, uploaded: false };
+            intermediate.update(position, quality, delta, budget);
+            close.update(position, quality, delta, budget);
+            maxWork = Math.max(maxWork, performance.now() - start);
         }
     };
 }
