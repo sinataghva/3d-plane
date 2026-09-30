@@ -205,7 +205,11 @@ export function createScene({ container }) {
     }
 
     const qualitySelect = document.getElementById('graphics-quality');
-    let quality = 'high';
+    // A phone's 2x framebuffer and 2048px shadow map consume substantial GPU
+    // memory, which can cause iOS to discard the standalone web process.
+    let quality = matchMedia('(pointer: coarse) and (max-width: 900px)').matches
+        ? 'balanced'
+        : 'high';
     try {
         const saved = localStorage.getItem('plane-graphics-quality');
         if (saved && ['low', 'balanced', 'high'].includes(saved))

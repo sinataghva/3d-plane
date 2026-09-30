@@ -5,6 +5,7 @@ import { createPhantom } from './aircraft/phantom.js';
 import { createRoadTraffic } from './scenery/roadTraffic.js';
 import { createPhotoMode } from './ui/photoMode.js';
 import { createCameraShortcut } from './ui/cameraShortcut.js';
+import { useCurrentBuild } from './ui/buildUpdate.js';
 import { updateFlightGuide } from './ui/flightGuide.js';
 import { createRunwayLights } from './rendering/timeOfDay.js';
 import { createFpsCounter } from './ui/fps.js';
@@ -35,6 +36,7 @@ import { createWorldMap } from './map/worldMap.js';
 import { createExperience, describeTouchdown } from './ui/experience.js';
 import './ui/styles.css';
 import { createSimulationClock } from './flight/simulationClock.js';
+import { createFlightRecovery } from './flight/recovery.js';
 import {
     createFlightAutomation,
     registerFlightTools
@@ -246,10 +248,12 @@ async function startApp() {
         );
     let closed = false;
     let disposeFlight = () => {};
+    let clearRecovery = () => {};
     const menu = document.createElement('button');
     menu.id = 'missions-button';
     menu.textContent = 'Change flight';
     menu.onclick = () => {
+        clearRecovery();
         closed = true;
         disposeFlight();
         window.dispatchEvent(new Event('flight-input-clear'));
@@ -295,6 +299,9 @@ async function startApp() {
               : createAirplane();
     const planeState = createPlaneState(mission.aircraft);
     planeState.mission = mission.id;
+    const flightRecovery = createFlightRecovery(planeState, world, mission.id);
+    clearRecovery = flightRecovery.clear;
+    flightRecovery.restore();
     syncPlaneMesh({ airplane, propeller, planeState });
     scene.add(airplane);
 
@@ -415,6 +422,7 @@ async function startApp() {
     let wasCrashed = false;
 
     const resetFlight = () => {
+        flightRecovery.clear();
         clearDestination();
         worldMap.resetView();
         roadTraffic.reset();
@@ -959,6 +967,13 @@ async function startApp() {
     let lastHudUpdate = -Infinity;
     let lastRadarUpdate = -Infinity;
     let lastCameraMode = '';
+    let lastRecoverySave = 0;
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && !closed) flightRecovery.save();
+    });
+    window.addEventListener('pagehide', () => {
+        if (!closed) flightRecovery.save();
+    });
     let statsAt = 0,
         frames = 0;
     const render = () => {
@@ -1133,6 +1148,10 @@ async function startApp() {
     /** @param {number} timestamp */
     function animate(timestamp) {
         if (closed) return;
+        if (timestamp - lastRecoverySave >= 2000) {
+            flightRecovery.save();
+            lastRecoverySave = timestamp;
+        }
         requestAnimationFrame(animate);
         timer.update(timestamp);
         if (automation?.active && !document.hidden)
@@ -1255,8 +1274,8 @@ async function startApp() {
     requestAnimationFrame(animate);
 }
 
-try {
-    startApp().catch(reportRuntimeError);
-} catch (error) {
-    reportRuntimeError(error);
-}
+useCurrentBuild()
+    .then((current) => {
+        if (current) return startApp();
+    })
+    .catch(reportRuntimeError);

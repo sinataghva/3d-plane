@@ -794,6 +794,13 @@ Safari's address bar. The app includes its own aircraft icon and a standalone
 web manifest. Network access is still needed to load the app: offline caching
 is not included. Re-add an older shortcut if iOS retains its old icon/settings.
 
+On launch, the app checks for a newer deployed build and refreshes a stale entry
+page when online. If iOS closes the web process under memory pressure, a recent
+flight checkpoint can restore the aircraft's position on relaunch (within ten
+minutes, in the same scenario). Mobile defaults to Balanced graphics to reduce
+GPU memory use; the graphics setting can still be changed in Settings. A checkpoint
+does not preserve effects, weapons, or a paused menu.
+
 Mobile flight uses a compact Flight Data panel; tap **Flight details** for the
 secondary instruments. The smaller radar still rotates with heading and opens
 the full map on tap. Game surfaces suppress text selection, long-press callouts

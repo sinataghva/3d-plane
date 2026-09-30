@@ -1,12 +1,26 @@
 import { fileURLToPath, URL } from 'node:url';
 
 import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 
 import { defineConfig } from 'vite';
+
+const buildId =
+    process.env.GITHUB_SHA ||
+    execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 
 export default defineConfig({
     base: '/3d-plane/',
     plugins: [
+        {
+            name: 'build-version',
+            transformIndexHtml(html) {
+                return html.replace(
+                    '</head>',
+                    `    <meta name="open-skies-build" content="${buildId}" />\n    </head>`
+                );
+            }
+        },
         {
             name: 'local-scenery-data',
             generateBundle() {
