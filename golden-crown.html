@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Golden Crown · F-5E study</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #dce4e4;
+                color: #243e41;
+                font-family: Arial, sans-serif;
+                overflow: hidden;
+            }
+            canvas {
+                display: block;
+                width: 100%;
+                height: 100%;
+            }
+            header {
+                position: absolute;
+                top: 38px;
+                left: 44px;
+                pointer-events: none;
+            }
+            .eyebrow {
+                font-size: 11px;
+                letter-spacing: 3px;
+                font-weight: bold;
+            }
+            h1 {
+                font-family: Georgia, serif;
+                font-size: 52px;
+                font-weight: normal;
+                margin: 12px 0 6px;
+            }
+            header p {
+                font-size: 13px;
+                letter-spacing: 1px;
+                margin: 0;
+                color: #567174;
+            }
+            .badge {
+                position: absolute;
+                right: 44px;
+                top: 42px;
+                font-size: 11px;
+                letter-spacing: 2px;
+                border-top: 3px solid #17664f;
+                padding-top: 12px;
+            }
+            footer {
+                position: absolute;
+                bottom: 30px;
+                left: 44px;
+                right: 44px;
+                display: flex;
+                align-items: end;
+                justify-content: space-between;
+                gap: 20px;
+            }
+            .caption {
+                font-size: 11px;
+                line-height: 1.8;
+                letter-spacing: 1px;
+            }
+            .caption strong {
+                font-size: 13px;
+            }
+            nav {
+                display: flex;
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+            button {
+                cursor: pointer;
+                border: 1px solid #8ca6a5;
+                background: #edf2efcc;
+                color: #264c45;
+                border-radius: 3px;
+                padding: 10px 14px;
+                font: 11px Arial;
+                letter-spacing: 1px;
+            }
+            button[aria-pressed='true'] {
+                background: #164d3e;
+                color: #fff;
+                border-color: #164d3e;
+            }
+            button:focus-visible {
+                outline: 3px solid #c91e32;
+                outline-offset: 3px;
+            }
+            @media (max-width: 650px) {
+                header {
+                    top: 24px;
+                    left: 22px;
+                }
+                h1 {
+                    font-size: 34px;
+                }
+                .badge {
+                    display: none;
+                }
+                footer {
+                    left: 22px;
+                    right: 22px;
+                    bottom: 18px;
+                    flex-direction: column;
+                    align-items: start;
+                    gap: 12px;
+                }
+                .caption {
+                    font-size: 9px;
+                }
+                button {
+                    padding: 9px;
+                }
+            }
+            @media (max-height: 500px) {
+                header {
+                    top: 18px;
+                    left: 24px;
+                }
+                h1 {
+                    font-size: 30px;
+                    margin: 5px 0;
+                }
+                header p {
+                    font-size: 10px;
+                }
+                .eyebrow {
+                    font-size: 9px;
+                }
+                .badge {
+                    top: 22px;
+                    right: 24px;
+                    font-size: 9px;
+                }
+                footer {
+                    bottom: 14px;
+                    left: 24px;
+                    right: 24px;
+                }
+                .caption {
+                    font-size: 9px;
+                }
+                .caption strong {
+                    font-size: 10px;
+                }
+                button {
+                    padding: 8px 10px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <div class="eyebrow">OPEN SKIES / AIRCRAFT STUDIES</div>
+            <h1>Golden Crown</h1>
+            <p>Northrop F-5E Tiger II · Imperial Iranian Air Force</p>
+        </header>
+        <div class="badge">01 / PROCEDURAL MODEL</div>
+        <footer>
+            <div class="caption">
+                <strong>WHITE · GREEN · CRIMSON</strong><br />Drag to orbit ·
+                Scroll to zoom<br />Visual prototype / historical livery
+                interpretation
+            </div>
+            <nav aria-label="Model views">
+                <button data-view="hero" aria-pressed="true">Perspective</button
+                ><button data-view="side" aria-pressed="false">Profile</button
+                ><button data-view="opposite" aria-pressed="false">
+                    Other side
+                </button>
+                <button data-view="top" aria-pressed="false">Planform</button
+                ><button data-view="underside" aria-pressed="false">
+                    Underside
+                </button>
+                <button data-view="rear" aria-pressed="false">Exhausts</button
+                ><button data-view="crown" aria-pressed="false">
+                    Crown detail
+                </button>
+                <button data-view="tail" aria-pressed="false">
+                    Tail detail
+                </button>
+                <button data-view="tailPersian" aria-pressed="false">
+                    Persian tail
+                </button>
+                <button id="gear" aria-pressed="true">Gear</button>
+            </nav>
+        </footer>
+        <script
+            type="module"
+            src="/src/aircraft/goldenCrownPreview.js"
+        ></script>
+    </body>
+</html>
