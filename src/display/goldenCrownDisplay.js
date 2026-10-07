@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createLayeredSmoke } from '../rendering/transparency.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createGoldenCrown } from '../aircraft/goldenCrown.js';
 import {
@@ -164,9 +165,8 @@ export function createGoldenCrownDisplay(world) {
         }`
     });
     // Connected camera-facing strips stay continuous from side and overhead views.
-    const smoke = new THREE.Mesh(smokeGeometry, smokeMaterial);
-    smoke.frustumCulled = false;
-    root.add(smoke);
+    const smoke = createLayeredSmoke(smokeGeometry, smokeMaterial);
+    root.add(smoke.group);
     let time = 8,
         paused = false,
         activeSamples = count,
@@ -232,6 +232,7 @@ export function createGoldenCrownDisplay(world) {
         root,
         jets,
         duration: DISPLAY_DURATION,
+        prepareCamera: smoke.update,
         /** @param {string} style */
         setSmokeStyle(style) {
             smokeMaterial.uniforms.tricolor.value = style === 'white' ? 0 : 1;

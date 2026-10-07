@@ -1,4 +1,9 @@
 import * as THREE from 'three';
+import {
+    TRANSPARENT_LAYERS,
+    transparentLayer,
+    transparentOrder
+} from '../rendering/transparency.js';
 
 /** Regional cloud banks, distributed independently of the airfield.
  * @param {number} [seed]
@@ -89,28 +94,13 @@ function createCloudTexture() {
     return texture;
 }
 
-/** Soft instanced billboards: one draw call, no cloud shadow maps or per-frame
- * instance uploads. Wind wrapping happens beyond the visible region.
+/** Soft instanced billboards grouped by camera depth to blend with smoke.
+ * Wind wrapping happens beyond the visible region.
  * @param {THREE.Scene} scene
  * @param {THREE.Texture} [texture]
  */
 export function addClouds(scene, texture = createCloudTexture()) {
     const { span, puffs } = createCloudLayout();
-    const geometry = new THREE.PlaneGeometry(1, 1);
-    geometry.setAttribute(
-        'cloudOpacity',
-        new THREE.InstancedBufferAttribute(
-            new Float32Array(puffs.map((p) => p.opacity)),
-            1
-        )
-    );
-    geometry.setAttribute(
-        'cloudVariant',
-        new THREE.InstancedBufferAttribute(
-            new Float32Array(puffs.map((p) => p.variant)),
-            1
-        )
-    );
     const material = new THREE.ShaderMaterial({
         transparent: true,
         depthWrite: false,
@@ -159,29 +149,79 @@ export function addClouds(scene, texture = createCloudTexture()) {
                 #include <colorspace_fragment>
             }`
     });
-    const clouds = new THREE.InstancedMesh(geometry, material, puffs.length);
+    const clouds = new THREE.Group();
     clouds.name = 'Regional wind-driven clouds';
-    const transform = new THREE.Object3D();
-    puffs.forEach((p, i) => {
-        transform.position.set(p.x, p.y, p.z);
-        transform.scale.set(p.width, p.height, 1);
-        transform.updateMatrix();
-        clouds.setMatrixAt(i, transform.matrix);
+    const layers = Array.from({ length: TRANSPARENT_LAYERS }, (_, layer) => {
+        const geometry = new THREE.PlaneGeometry(1, 1);
+        for (const name of ['cloudOpacity', 'cloudVariant'])
+            geometry.setAttribute(
+                name,
+                new THREE.InstancedBufferAttribute(
+                    new Float32Array(puffs.length),
+                    1
+                ).setUsage(THREE.DynamicDrawUsage)
+            );
+        const mesh = new THREE.InstancedMesh(geometry, material, puffs.length);
+        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        mesh.count = 0;
+        mesh.frustumCulled = false;
+        mesh.renderOrder = transparentOrder(layer);
+        clouds.add(mesh);
+        return mesh;
     });
-    clouds.instanceMatrix.needsUpdate = true;
-    // Shader wrapping keeps a field around the observer, so CPU bounds are stale.
-    clouds.frustumCulled = false;
-    clouds.renderOrder = 2;
     scene.add(clouds);
+    const point = new THREE.Vector3();
+    const transform = new THREE.Object3D();
+    const wrap = (/** @type {number} */ n) =>
+        ((((n + span / 2) % span) + span) % span) - span / 2;
     let elapsed = 0;
     return {
-        /** @param {number} delta @param {THREE.Vector3} position */
-        update(delta, position) {
+        /** @param {number} delta @param {THREE.Camera} camera */
+        update(delta, camera) {
+            camera.updateMatrixWorld();
+            const position = camera.position;
             elapsed =
                 (elapsed + Math.max(0, Math.min(delta, 0.25))) % (span * 10);
             // Light westerly wind: 3 m/s east, 1 m/s north. No change to flight forces.
             material.uniforms.windOffset.value.set(elapsed * 3, -elapsed);
             material.uniforms.observer.value.set(position.x, position.z);
+            for (const mesh of layers) mesh.count = 0;
+            for (const p of puffs) {
+                point
+                    .set(
+                        wrap(p.x + elapsed * 3 - position.x) + position.x,
+                        p.y,
+                        wrap(p.z - elapsed - position.z) + position.z
+                    )
+                    .applyMatrix4(camera.matrixWorldInverse);
+                if (-point.z < -p.width || point.length() > 13500) continue;
+                const mesh = layers[transparentLayer(-point.z)];
+                const index = mesh.count++;
+                // Keep original centers: wind/wrapping remains in the shader.
+                transform.position.set(p.x, p.y, p.z);
+                transform.scale.set(p.width, p.height, 1);
+                transform.updateMatrix();
+                mesh.setMatrixAt(index, transform.matrix);
+                mesh.geometry.attributes.cloudOpacity.setX(index, p.opacity);
+                mesh.geometry.attributes.cloudVariant.setX(index, p.variant);
+            }
+            for (const mesh of layers) {
+                mesh.visible = mesh.count > 0;
+                if (!mesh.visible) continue;
+                for (const attribute of [
+                    mesh.instanceMatrix,
+                    mesh.geometry.attributes.cloudOpacity,
+                    mesh.geometry.attributes.cloudVariant
+                ]) {
+                    if (!(attribute instanceof THREE.BufferAttribute)) continue;
+                    attribute.clearUpdateRanges();
+                    attribute.addUpdateRange(
+                        0,
+                        mesh.count * attribute.itemSize
+                    );
+                    attribute.needsUpdate = true;
+                }
+            }
         }
     };
 }

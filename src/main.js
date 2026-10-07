@@ -646,6 +646,24 @@ async function startApp() {
                 // View the broad arch from the west, with Milad and Damavand beyond.
                 camera.position.set(l.x - 140, y + 85, l.z + 70);
                 camera.lookAt(l.x, y + 32, l.z);
+                if (goldenCrown) {
+                    // Stage the background flypast for the reproducible menu capture.
+                    goldenCrown.paused = true;
+                    goldenCrown.seek(34);
+                    const leadJet = goldenCrown.jets[0].jet;
+                    const forward = new THREE.Vector3(1, 0, 0)
+                        .applyQuaternion(leadJet.quaternion);
+                    const turn = -1.45 - Math.atan2(-forward.z, forward.x);
+                    // Tilt the whole formation and its trail history: far-side
+                    // green jets rise, near-side red jets drop into a flag stack.
+                    goldenCrown.root.quaternion.setFromAxisAngle(
+                        new THREE.Vector3(0, 1, 0), turn
+                    ).multiply(new THREE.Quaternion().setFromAxisAngle(forward, 0.60));
+                    const leader = leadJet.position.clone()
+                        .applyQuaternion(goldenCrown.root.quaternion);
+                    goldenCrown.root.position.set(l.x, y + 85, l.z + 95)
+                        .sub(leader);
+                }
             } else if (visualScenario.name === 'azadi-detail') {
                 camera.position.set(l.x + 65, y + 27, l.z + 88);
                 const azadiView = new URLSearchParams(location.search).get(
@@ -859,7 +877,7 @@ async function startApp() {
 
         clouds.update(
             visualScenario || experience.paused ? 0 : timer.getDelta(),
-            camera.position
+            camera
         );
         if (visualScenario.name.startsWith('landmark-'))
             for (let i = 0; i < 12; i++)
@@ -894,6 +912,7 @@ async function startApp() {
                 bombing.render(planeState, cameraMode.getMode() === 'cockpit');
             bombing.projectMarker(camera, planeState);
         }
+        goldenCrown?.prepareCamera(camera);
         renderer.render(scene, camera);
         document.getElementById('scenery-loading')?.remove();
         if (import.meta.env.DEV)
@@ -1248,7 +1267,7 @@ async function startApp() {
         );
         clouds.update(
             visualScenario || experience.paused ? 0 : timer.getDelta(),
-            camera.position
+            camera
         );
         groundDetail.update(
             detailPosition,
@@ -1277,6 +1296,7 @@ async function startApp() {
             camera
         );
         const trafficMs = performance.now() - trafficStarted;
+        goldenCrown?.prepareCamera(camera);
         renderer.render(scene, camera);
         document.getElementById('scenery-loading')?.remove();
         fpsCounter.update(timestamp);

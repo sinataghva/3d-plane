@@ -18,26 +18,28 @@ it('covers every regional quadrant and keeps cloud bases clear of the terrain', 
     expect(createCloudLayout()).toEqual({ span, puffs });
 });
 
-it('moves the regional layer with wind without uploading instance transforms', () => {
+it('keeps wind and camera-depth batches synchronized', () => {
     const scene = new THREE.Scene();
     const layer = addClouds(scene, new THREE.Texture());
-    expect(scene.children).toHaveLength(1);
-    const mesh = scene.children[0];
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(6000, 200, -4000);
+    camera.lookAt(0, 600, 0);
+    for (let i = 0; i < 600; i++) layer.update(1 / 60, camera);
+    const meshes = scene.children[0].children;
+    const mesh = meshes[0];
     if (
         !(mesh instanceof THREE.InstancedMesh) ||
         !(mesh.material instanceof THREE.ShaderMaterial)
     )
         throw new Error('Missing cloud batch');
-    expect(mesh.count).toBeGreaterThan(2000);
-    const version = mesh.instanceMatrix.version;
-    const observer = new THREE.Vector3(6000, 200, -4000);
-    for (let i = 0; i < 600; i++) layer.update(1 / 60, observer);
     expect(mesh.material.uniforms.windOffset.value.x).toBeCloseTo(30);
     expect(mesh.material.uniforms.windOffset.value.y).toBeCloseTo(-10);
-    layer.update(0, observer);
+    layer.update(0, camera);
     expect(mesh.material.uniforms.windOffset.value.x).toBeCloseTo(30);
     expect(mesh.material.uniforms.observer.value.toArray()).toEqual([
         6000, -4000
     ]);
-    expect(mesh.instanceMatrix.version).toBe(version);
+    expect(meshes.filter((m) => m.visible).length).toBeGreaterThan(5);
+    expect(mesh.material.transparent).toBe(true);
+    expect(mesh.material.depthWrite).toBe(false);
 });
