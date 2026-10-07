@@ -1,0 +1,133 @@
+#golden-crown-review {
+    display: none;
+}
+body.golden-crown-reviewing
+    > :not(#canvas-container):not(#golden-crown-review):not(script):not(style) {
+    display: none !important;
+}
+body.golden-crown-reviewing #golden-crown-review {
+    display: grid;
+    gap: 10px;
+    position: fixed;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(820px, calc(100% - 24px));
+    box-sizing: border-box;
+    z-index: 1000;
+    padding: 16px;
+    background: #10232aeb;
+    color: #f4f1dc;
+    border: 1px solid #66867d;
+    border-radius: 14px;
+    font: 14px system-ui;
+}
+#golden-crown-review .gc-heading,
+#golden-crown-review .gc-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+#golden-crown-review .gc-heading {
+    justify-content: space-between;
+}
+#golden-crown-review strong small {
+    display: block;
+    font-weight: normal;
+    margin-top: 3px;
+}
+#golden-crown-review button,
+#golden-crown-review select {
+    min-height: 38px;
+    border: 1px solid #6c8f83;
+    border-radius: 7px;
+    padding: 6px 10px;
+    background: #233e45;
+    color: white;
+    font: inherit;
+    cursor: pointer;
+}
+#golden-crown-review input {
+    display: block;
+    width: 100%;
+    accent-color: #e0c87b;
+    min-height: 26px;
+}
+#golden-crown-review small {
+    color: #bbccc5;
+}
+#golden-crown-review label {
+    font-size: 12px;
+}
+@media (max-height: 500px) {
+    body.golden-crown-reviewing #golden-crown-review {
+        padding: 8px 12px;
+        gap: 3px;
+        bottom: 6px;
+    }
+    #golden-crown-review > small,
+    #golden-crown-review strong small {
+        display: none;
+    }
+}
+
+#golden-crown-watch {
+    position: fixed;
+    top: calc(68px + env(safe-area-inset-top));
+    right: max(16px, env(safe-area-inset-right));
+    min-height: 44px;
+    z-index: 40;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid #66867d;
+    background: #10232aeb;
+    color: #f4f1dc;
+    font: 13px system-ui;
+    cursor: pointer;
+}
+.visual-test-mode #golden-crown-watch,
+.photo-mode #golden-crown-watch {
+    display: none;
+}
+
+@media (pointer: coarse), (max-width: 900px) and (max-height: 500px) {
+    #golden-crown-watch {
+        top: calc(60px + env(safe-area-inset-top));
+        right: calc(122px + env(safe-area-inset-right));
+    }
+}
+@media (max-width: 480px) and (min-height: 501px) {
+    #golden-crown-watch {
+        top: calc(154px + env(safe-area-inset-top));
+        right: max(8px, env(safe-area-inset-right));
+    }
+}
+
+#golden-crown-review .gc-collapse {
+    position: absolute;
+    top: -42px;
+    right: 12px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    background: #10232aeb;
+    border-radius: 10px 10px 0 0;
+}
+body.golden-crown-reviewing #golden-crown-review.gc-collapsed {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+#golden-crown-review.gc-collapsed > :not(.gc-collapse) {
+    display: none;
+}
+#golden-crown-review.gc-collapsed .gc-collapse {
+    top: 0;
+    right: 0;
+    border-radius: 10px;
+}

@@ -1,3 +1,5 @@
+import { createGoldenCrownDisplay } from './display/goldenCrownDisplay.js';
+import { createGoldenCrownReview } from './display/goldenCrownReview.js';
 import { createRoadStructures } from './scenery/roadStructures.js';
 import { isJet } from './aircraft/capabilities.js';
 import { aircraftCapabilities } from './aircraft/capabilities.js';
@@ -334,6 +336,18 @@ async function startApp() {
     const groundDetail = createGroundDetail(world);
     scene.add(groundDetail.group);
 
+    const goldenCrown =
+        mission.id === 'tehran' ? createGoldenCrownDisplay(world) : null;
+    if (goldenCrown) scene.add(goldenCrown.root);
+    const goldenReview = goldenCrown
+        ? createGoldenCrownReview({
+              display: goldenCrown,
+              camera,
+              controls,
+              world
+          })
+        : null;
+
     const clouds = addClouds(scene);
     scene.add(createRunwayLights(world));
     scene.userData.setTimeOfDay(scene.userData.timeOfDay);
@@ -374,6 +388,7 @@ async function startApp() {
     const timer = new THREE.Timer();
     timer.connect(document);
     disposeFlight = () => {
+        goldenReview?.dispose();
         photoMode.dispose();
         cameraShortcut.dispose();
         flightAudio.dispose();
@@ -1154,9 +1169,14 @@ async function startApp() {
         }
         requestAnimationFrame(animate);
         timer.update(timestamp);
-        if (automation?.active && !document.hidden)
+        if (automation?.active && !document.hidden && !goldenReview?.active)
             automation.update(timer.getDelta());
-        if (!trafficBench && !automation?.active && !experience.paused) {
+        if (
+            !trafficBench &&
+            !automation?.active &&
+            !experience.paused &&
+            !goldenReview?.active
+        ) {
             simulationClock.update(timer.getDelta(), (delta) =>
                 simulate(delta, keyboard)
             );
@@ -1171,7 +1191,7 @@ async function startApp() {
         flightAudio.update(
             planeState,
             keyboard,
-            experience.paused || !document.hasFocus(),
+            experience.paused || !!goldenReview?.active || !document.hasFocus(),
             mode === 'cockpit'
         );
         // Resolve this frame's pause/cockpit mix before playing the crossing cue.
@@ -1186,7 +1206,13 @@ async function startApp() {
             propeller,
             isCockpit: mode === 'cockpit'
         });
-        if (photoMode.active) photoMode.update();
+        goldenCrown?.update(
+            timer.getDelta(),
+            !document.hidden && (goldenReview?.active || !experience.paused),
+            scene.userData.quality
+        );
+        if (goldenReview?.active) goldenReview.update();
+        else if (photoMode.active) photoMode.update();
         else
             updateCamera({
                 camera,
@@ -1210,8 +1236,13 @@ async function startApp() {
             lastRadarUpdate = timestamp;
         }
         // Render at most once per browser frame, including automation substeps.
+        // The F-4 stays parked during display review; stream visible detail
+        // around the spectator camera instead of the player aircraft.
+        const detailPosition = goldenReview?.active
+            ? camera.position
+            : planeState.position;
         groundTexture.update(
-            planeState.position,
+            detailPosition,
             scene.userData.quality,
             Math.min(timer.getDelta(), 0.1)
         );
@@ -1220,7 +1251,7 @@ async function startApp() {
             camera.position
         );
         groundDetail.update(
-            planeState.position,
+            detailPosition,
             scene.userData.quality,
             Math.min(timer.getDelta(), 0.1),
             visualScenario || experience.paused || document.hidden

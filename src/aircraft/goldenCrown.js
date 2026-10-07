@@ -127,11 +127,13 @@ export function createGoldenCrown() {
         for (let x = 0; x < width; x++) {
             const px = (x / (width - 1)) * 14.5 - 7.25,
                 angle = (y / height) * Math.PI * 2;
-            const chevron = 0.9 * Math.abs(Math.cos(angle));
+            // +X points toward the nose. The side points sweep aft (-X),
+            // with a crisp tip at each side and rounded wrapping over the top.
+            const chevron = 0.9 * (1 - Math.abs(Math.sin(angle)));
             let color = [244, 242, 233];
-            if (px > 4.65 + chevron * 0.3) color = [6, 74, 56];
+            if (px > 5.15 - chevron * 0.55) color = [6, 74, 56];
             if (px > 6.0) color = [20, 25, 29];
-            if (px > 2.75 + chevron && px < 3.92 + chevron)
+            if (px > 3.55 - chevron && px < 4.72 - chevron)
                 color = [201, 30, 50];
             if (
                 px < 1.0 &&
@@ -273,8 +275,8 @@ export function createGoldenCrown() {
         // and a small white hook beneath the green cap.
         const sweep = new THREE.Shape();
         sweep.moveTo(-3.36, 2.1);
-        sweep.lineTo(-5.02, 4.06);
-        sweep.bezierCurveTo(-5.33, 4.05, -5.52, 4.08, -5.7, 4.11);
+        sweep.lineTo(-4.76, 3.8);
+        sweep.bezierCurveTo(-5.08, 3.88, -5.4, 3.98, -5.62, 4.03);
         sweep.bezierCurveTo(-5.26, 3.91, -5.05, 3.72, -5.62, 3.57);
         sweep.bezierCurveTo(-4.8, 3.47, -4.37, 2.36, -5.62, 2.02);
         sweep.lineTo(-6.22, 1.97);
@@ -284,8 +286,7 @@ export function createGoldenCrown() {
             [
                 [-5.81, 4.18],
                 [-4.95, 4.18],
-                [-5.11, 3.99],
-                [-5.65, 4.12]
+                [-4.72, 3.89]
             ],
             green,
             side * 0.052
@@ -295,7 +296,7 @@ export function createGoldenCrown() {
         wing(
             [
                 [0.45, s * 0.62],
-                [-1.28, s * 4.065],
+                [-1.95, s * 4.065],
                 [-2.9, s * 4.065],
                 [-3.27, s * 0.55]
             ],
@@ -304,13 +305,13 @@ export function createGoldenCrown() {
         // Bands are near the tips, not diagonal rays across the wing.
         for (const offset of [0.068]) {
             for (const [inner, outer, paint] of [
-                [3.3, 3.52, green],
-                [3.82, 4.065, red]
+                [3.3, 3.52, red],
+                [3.82, 4.065, green]
             ]) {
                 const lo = Number(inner),
                     hi = Number(outer);
                 const leading = (/** @type {number} */ z) =>
-                    0.45 + ((-1.28 - 0.45) * (z - 0.62)) / (4.065 - 0.62);
+                    0.45 + ((-1.95 - 0.45) * (z - 0.62)) / (4.065 - 0.62);
                 const trailing = (/** @type {number} */ z) =>
                     -3.27 + (0.37 * (z - 0.55)) / (4.065 - 0.55);
                 const stripe = wing(
@@ -330,8 +331,8 @@ export function createGoldenCrown() {
         wing(
             [
                 [0.38, s * 0.7],
-                [-1.31, s * 4.065],
-                [-2.23, s * 4.065],
+                [-1.97, s * 4.065],
+                [-2.51, s * 4.065],
                 [-1.42, s * 0.72]
             ],
             green,
@@ -340,8 +341,8 @@ export function createGoldenCrown() {
         wing(
             [
                 [-0.62, s * 0.7],
-                [-1.86, s * 4.065],
-                [-2.02, s * 4.065],
+                [-2.29, s * 4.065],
+                [-2.38, s * 4.065],
                 [-0.78, s * 0.72]
             ],
             white,
@@ -361,22 +362,22 @@ export function createGoldenCrown() {
         wing(
             [
                 [-4.1, s * 0.5],
-                [-5.43, s * 2.38],
-                [-6.65, s * 2.38],
+                [-5.3, s * 2.38],
+                [-6.2, s * 2.38],
                 [-6.39, s * 0.42]
             ],
             white
         ).position.y = 1.48;
         for (const [lo, hi, paint] of [
-            [1.73, 1.94, green],
-            [2.16, 2.38, red]
+            [1.73, 1.94, red],
+            [2.16, 2.38, green]
         ]) {
             const a = Number(lo),
                 b = Number(hi);
             const lead = (/** @type {number} */ z) =>
-                -4.1 - (1.33 * (z - 0.5)) / 1.88;
+                -4.1 - (1.2 * (z - 0.5)) / 1.88;
             const trail = (/** @type {number} */ z) =>
-                -6.39 - (0.26 * (z - 0.42)) / 1.96;
+                -6.39 + (0.19 * (z - 0.42)) / 1.96;
             wing(
                 [
                     [lead(a), s * a],
@@ -391,8 +392,8 @@ export function createGoldenCrown() {
         wing(
             [
                 [-4.14, s * 0.54],
-                [-5.45, s * 2.38],
-                [-6.27, s * 2.38],
+                [-5.31, s * 2.38],
+                [-5.92, s * 2.38],
                 [-5.65, s * 0.54]
             ],
             green,
@@ -401,14 +402,28 @@ export function createGoldenCrown() {
         wing(
             [
                 [-4.53, s * 0.54],
-                [-5.85, s * 2.38],
-                [-6.01, s * 2.38],
+                [-5.62, s * 2.38],
+                [-5.73, s * 2.38],
                 [-5.28, s * 0.54]
             ],
             white,
             0.006
         ).position.y = 1.461;
-        rod([-1.05, 1.44, s * 4.065], [-3.22, 1.44, s * 4.065], 0.045, green);
+        // Slender green wingtip rails extend beyond the narrow tip chord.
+        // Taper both ends rather than leaving blunt cylinder caps.
+        const railGeometry = new THREE.LatheGeometry(
+            [
+                [0, -1.3],
+                [0.055, -1.13],
+                [0.085, -0.87],
+                [0.085, 0.9],
+                [0.05, 1.15],
+                [0, 1.3]
+            ].map(([radius, x]) => new THREE.Vector2(radius, x)),
+            12
+        );
+        railGeometry.rotateZ(-Math.PI / 2);
+        mesh(railGeometry, green, [-2.15, 1.44, s * 4.065]);
         // Rounded rectangular intakes merge into the fuselage; no exposed tubes.
         const section = [
             [0.53, 1.22],
@@ -670,6 +685,7 @@ export function createGoldenCrown() {
                     [Number(x), Number(y), side * Number(z)]
                 );
                 marking.name = String(text);
+                if (Number(x) === -5.49) marking.userData.displayNumber = side;
                 marking.castShadow = false;
                 marking.receiveShadow = false;
                 if (side < 0) marking.rotation.y = Math.PI;
