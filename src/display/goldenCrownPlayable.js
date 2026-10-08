@@ -15,6 +15,12 @@ export function createGoldenCrownPlayable({
     const button = document.createElement('button');
     button.id = 'golden-crown-fly';
     button.textContent = 'Fly Golden Crown';
+    const crest = document.createElement('img');
+    crest.src = `${import.meta.env.BASE_URL}textures/golden-crown/team-crest.png`;
+    crest.alt = '';
+    crest.width = 23;
+    crest.height = 28;
+    button.prepend(crest);
     document.body.append(button);
     const returnButton = document.createElement('button');
     returnButton.id = 'golden-crown-return';

@@ -13,6 +13,16 @@
     font: 13px system-ui;
     cursor: pointer;
 }
+#golden-crown-fly {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding-block: 7px;
+}
+#golden-crown-fly img {
+    flex: none;
+    object-fit: contain;
+}
 #golden-crown-toast {
     position: fixed;
     top: calc(68px + env(safe-area-inset-top));
