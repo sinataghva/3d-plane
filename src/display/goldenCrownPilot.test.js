@@ -15,6 +15,61 @@ function create(t = 18) {
     return pilot;
 }
 describe('playable Golden Crown', () => {
+    it.each([250, 300, 450, 600, 800])('keeps up with a hard elevator turn at %s km/h', (speed) => {
+        const pilot = create();
+        pilot.states.forEach((state) => {
+            state.position.y += 5000;
+            state.velocity.setLength(speed / 3.6);
+        });
+        pilot.takeControl();
+        advance(pilot, 5);
+        const q = new THREE.Quaternion().setFromEuler(
+            new THREE.Euler(1.1, pilot.flight.yawAngle, 0, 'YZX')
+        );
+        pilot.flight.attitude = { x: q.x, y: q.y, z: q.z, w: q.w };
+        const keys = input();
+        keys.stickPitch = 0.8;
+        for (let i = 0; i < 900; i++) {
+            pilot.update(1 / 60, keys);
+            expect(pilot.flight.isCrashed).toBe(false);
+            expect(pilot.diagnostics.formationError).toBeLessThan(22);
+        }
+    });
+    it.each(['heading', 'bank'])('follows a %s turn and settles after leveling', (turn) => {
+        const pilot = create();
+        pilot.states.forEach((state) => (state.position.y += 2000));
+        pilot.takeControl();
+        advance(pilot, 4);
+        const keys = input();
+        keys.a = turn === 'heading';
+        if (turn === 'bank') {
+            const q = new THREE.Quaternion().setFromEuler(
+                new THREE.Euler(0.85, pilot.flight.yawAngle, 0, 'YZX')
+            );
+            pilot.flight.attitude = { x: q.x, y: q.y, z: q.z, w: q.w };
+            keys.stickPitch = 0.08;
+        }
+        let settledError = 0;
+        for (let i = 0; i < 900; i++) {
+            const velocities = pilot.states.map((state) => state.velocity.clone());
+            pilot.update(1 / 60, keys);
+            expect(pilot.flight.isCrashed).toBe(false);
+            for (let j = 1; j < 6; j++)
+                expect(pilot.states[j].velocity.distanceTo(velocities[j]) * 60)
+                    .toBeLessThanOrEqual(48.000001);
+            if (i >= 600)
+                settledError = Math.max(settledError, pilot.diagnostics.formationError);
+        }
+        expect(settledError).toBeLessThan(turn === 'heading' ? 12.5 : 8);
+        keys.a = false;
+        keys.stickPitch = 0;
+        advance(pilot, 10, keys);
+        for (let i = 0; i < 180; i++) {
+            pilot.update(1 / 60, keys);
+            expect(pilot.flight.isCrashed).toBe(false);
+            expect(pilot.diagnostics.formationError).toBeLessThan(3);
+        }
+    });
     it('takes over the same positions and orientations at every script phase', () => {
         for (const t of [18, 49, 78, 94, 112, 142, 160, 194]) {
             const pilot = create(t);

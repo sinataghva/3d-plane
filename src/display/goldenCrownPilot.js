@@ -213,13 +213,13 @@ export function createGoldenCrownPilot(environment) {
         return true;
     }
     /** Bounded velocity pursuit with short-range separation; never set position to a slot.
-     * @param {number} i @param {THREE.Vector3} target @param {THREE.Vector3} velocity @param {number} dt */
-    function follow(i, target, velocity, dt) {
+     * @param {number} i @param {THREE.Vector3} target @param {THREE.Vector3} velocity @param {number} dt @param {boolean} formation */
+    function follow(i, target, velocity, dt, formation = false) {
         const s = states[i];
         const desired = target
             .clone()
             .sub(s.position)
-            .multiplyScalar(0.65)
+            .multiplyScalar(formation ? 1 : 0.65)
             .add(velocity);
         const floor = environment.height(s.position) + 90;
         if (s.position.y < floor) desired.y += (floor - s.position.y) * 1.5;
@@ -230,11 +230,18 @@ export function createGoldenCrownPilot(environment) {
             if (distance < 22 && distance > 0.01)
                 desired.addScaledVector(away, ((22 - distance) * 8) / distance);
         });
-        desired.clampLength(0, 220);
+        const leaderSpeed = states[0].velocity.length();
+        // Retain the low-speed response, but allow the acceleration needed for
+        // tighter elevator turns as the leader gains lift authority with speed.
+        const accelerationLimit = formation
+            ? 48 + 40 * THREE.MathUtils.smoothstep(leaderSpeed, 300 / 3.6, 140)
+            : 32;
+        const speedLimit = formation ? Math.max(220, leaderSpeed + 35) : 220;
+        desired.clampLength(0, speedLimit);
         const acceleration = desired
             .sub(s.velocity)
-            .multiplyScalar(2)
-            .clampLength(0, 32);
+            .multiplyScalar(formation ? 3 : 2)
+            .clampLength(0, accelerationLimit);
         s.velocity.addScaledVector(acceleration, dt);
         s.position.addScaledVector(s.velocity, dt);
         const q = attitude(s.velocity, s.quaternion);
@@ -245,7 +252,7 @@ export function createGoldenCrownPilot(environment) {
                 clamp(Math.atan2(acceleration.dot(right), 9.81), -0.9, 0.9)
             )
         );
-        s.quaternion.rotateTowards(q, dt * 1.3);
+        s.quaternion.rotateTowards(q, dt * (formation ? 1.8 : 1.3));
         s.gear = Math.max(0, s.gear - dt / 1.6);
     }
     /** @param {number} dt @param {import('../flight/input.js').KeyboardState} k */
@@ -255,6 +262,8 @@ export function createGoldenCrownPilot(environment) {
             script(time + dt);
             return;
         }
+        const previousSlots =
+            mode === 'player' ? states.map((_, i) => slot(i)) : null;
         const lead = states[0];
         if (mode === 'player' && !flight.isCrashed) {
             // Display-speed envelope tuned for this aerobatic F-5: throttle sets
@@ -472,6 +481,15 @@ export function createGoldenCrownPilot(environment) {
                 if (inherited) states[i].quaternion.copy(target.quaternion);
             } else {
                 const target = slot(i);
+                // Outside slots travel faster through a turn than inside slots.
+                // Blend a quarter of that velocity difference into pursuit:
+                // full compensation can exceed the outer jets' acceleration
+                // budget in hard turns. Keep the existing limits and banking.
+                const slotVelocity =
+                    previousSlots && dt > 0
+                        ? target.clone().sub(previousSlots[i])
+                            .divideScalar(dt).lerp(lead.velocity, 0.75)
+                        : lead.velocity;
                 // Outer lanes first; close only after speed/heading are matched.
                 if (
                     i >= 4 &&
@@ -487,7 +505,7 @@ export function createGoldenCrownPilot(environment) {
                         )
                     );
                 }
-                follow(i, target, lead.velocity, dt);
+                follow(i, target, slotVelocity, dt, mode === 'player');
             }
         }
         for (const i of [1, 2]) {
