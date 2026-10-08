@@ -1,0 +1,70 @@
+#golden-crown-fly,
+#golden-crown-return {
+    position: fixed;
+    top: 16px;
+    right: 120px;
+    z-index: 45;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid #829fa7;
+    border-radius: 12px;
+    background: #142d3be8;
+    color: white;
+    font: 13px system-ui;
+    cursor: pointer;
+}
+#golden-crown-toast {
+    position: fixed;
+    top: calc(68px + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: min(420px, calc(100vw - 32px));
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #10232ae8;
+    color: #f4f1dc;
+    font: 13px system-ui;
+    pointer-events: none;
+    z-index: 40;
+}
+#golden-crown-fly[hidden],
+#golden-crown-return[hidden],
+#golden-crown-toast[hidden] {
+    display: none;
+}
+.golden-crown-playing #jet-controls,
+.golden-crown-playing #jet-readout,
+.golden-crown-playing #guide-card,
+.golden-crown-playing #warning-banner,
+.golden-crown-playing #bomb-readout,
+.golden-crown-playing #guide-mode,
+.golden-crown-playing #crash-overlay,
+.golden-crown-playing #instructions-panel {
+    display: none !important;
+}
+.visual-test-mode #golden-crown-fly,
+.photo-mode #golden-crown-fly {
+    display: none;
+}
+@media (pointer: coarse), (max-width: 900px) and (max-height: 500px) {
+    #golden-crown-fly,
+    #golden-crown-return {
+        top: calc(8px + var(--safe-top));
+        right: calc(278px + var(--safe-right));
+    }
+    #golden-crown-toast {
+        font-size: 12px;
+        max-width: 45vw;
+    }
+}
+@media (max-width: 700px) and (max-height: 500px) {
+    #golden-crown-fly,
+    #golden-crown-return {
+        padding: 8px;
+        font-size: 11px;
+    }
+}
+
+.jet-flight.golden-crown-playing .touch-throttle::after {
+    content: 'SLOWER ← AIRSPEED → FASTER';
+}

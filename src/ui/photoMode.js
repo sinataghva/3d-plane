@@ -3,12 +3,13 @@ import { updateCamera } from '../rendering/camera.js';
 /** Pause the scene and frame it with the existing orbit controls.
  * @param {{camera: import('three').PerspectiveCamera,
  * controls: import('three/addons/controls/OrbitControls.js').OrbitControls,
- * airplane: import('three').Object3D, canvas: HTMLCanvasElement,
+ * airplane: import('three').Object3D, getAirplane?: () => import('three').Object3D, canvas: HTMLCanvasElement,
  * onPause: (active: boolean) => void}} options */
 export function createPhotoMode({
     camera,
     controls,
     airplane,
+    getAirplane = () => airplane,
     canvas,
     onPause
 }) {
@@ -40,7 +41,7 @@ export function createPhotoMode({
         updateCamera({
             camera,
             controls,
-            airplane,
+            airplane: getAirplane(),
             cameraMode: {
                 getMode: () => 'orbit',
                 isOrbitMode: () => true,

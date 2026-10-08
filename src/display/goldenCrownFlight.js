@@ -134,7 +134,7 @@ export function sampleDisplay(time, aircraft) {
         -0.95,
         0.95
     );
-    const coreRoll = (aircraft === 1 ? 1 : aircraft === 2 ? -1 : 0)
+    const coreRoll = (aircraft === 1 ? -1 : aircraft === 2 ? 1 : 0)
         * Math.PI * 2 * ramp(t, 74, 86);
     const roll = coreRoll + (
         aircraft === 4

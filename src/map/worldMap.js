@@ -36,6 +36,8 @@ export function mapProjection(width = 800, height = 600) {
 
 /** @param {import('../flight/physics.js').PlaneState} planeState */
 export function createWorldMap(planeState) {
+    /** @type {import("./geographicMap.js").FormationContact[]} */
+    let contacts = [];
     const dialog = /** @type {HTMLDialogElement} */ (
         document.getElementById('world-map')
     );
@@ -410,7 +412,8 @@ export function createWorldMap(planeState) {
                 planeState,
                 world,
                 viewport.view,
-                detailed ? detail : undefined
+                detailed ? detail : undefined,
+                contacts
             );
             canvas.dataset.detailLevel = String(level);
             canvas.dataset.detailMetrics = JSON.stringify(
@@ -545,7 +548,12 @@ export function createWorldMap(planeState) {
         readout.textContent = `You · heading ${formatHeading(planeState.yawAngle)}° · ${Math.round(planeState.position.x)} m E / ${Math.round(-planeState.position.z)} m N${outside ? ' · Outside mapped terrain (marker at edge)' : ''}`;
     }
     return {
-        update: draw,
+        /** @param {import('../flight/physics.js').PlaneState} [state] @param {import("./geographicMap.js").FormationContact[]} [formation] */
+        update(state = planeState, formation = contacts) {
+            planeState = state;
+            contacts = formation;
+            draw();
+        },
         resetView() {
             detail?.release();
             viewport.reset();

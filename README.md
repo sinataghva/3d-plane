@@ -1,6 +1,6 @@
 # Open Skies
 
-An arcade-style 3D flight simulator for your browser, built with Three.js and Vite. Fly a light aircraft over Saint-Cyr and Versailles, a Mirage 2000 around Luxeuil, or an IIAF-liveried F-4 Phantom over Tehran and Mehrabad.
+An arcade-style 3D flight simulator for your browser, built with Three.js and Vite. Fly a light aircraft over Saint-Cyr and Versailles, a Mirage 2000 around Luxeuil, or an IIAF-liveried F-4 Phantom over Tehran and Mehrabad, where you can also take command of the Golden Crown F-5 team.
 
 ## Play now
 
@@ -18,9 +18,9 @@ An arcade-style 3D flight simulator for your browser, built with Three.js and Vi
 | Map | Hold **M** or select the radar | Tap the radar |
 | Settings and pause | **P** | Settings button |
 | Jet landing gear | **G** | Gear button |
-| Aircraft action | **Space** | Smoke, Fire, or Drop bomb button |
+| Aircraft action | **Space** | Smoke, Fire, Drop bomb, or Maneuver button |
 
-The aircraft action toggles blue smoke at Saint-Cyr, fires the Mirage cannon while held, or drops one bomb per press in the F-4. See the [full flight guide](docs/full-reference.md#controls) for handling, landing, map, photo mode, and mobile details. The simulator uses stylized arcade physics and is not real-world flight guidance.
+The aircraft action toggles blue smoke at Saint-Cyr, fires the Mirage cannon while held, drops one bomb per press in the F-4, or commands formation maneuvers while leading Golden Crown. See the [full flight guide](docs/full-reference.md#controls) for handling, landing, map, photo mode, and mobile details. The simulator uses stylized arcade physics and is not real-world flight guidance.
 
 ## Run locally
 
@@ -37,22 +37,31 @@ Build and preview the production site with `npm run build` and `npm run preview`
 
 ## Golden Crown model study
 
-With the development server running, open [the F-5E model preview](http://127.0.0.1:5173/3d-plane/golden-crown.html). Drag to orbit, scroll to zoom, choose side, upper, or underside views, toggle the landing gear, or select aircraft 1–6 to inspect both English and Persian tail numbers. The procedural Three.js model lives in `src/aircraft/goldenCrown.js`; it is a visual prototype and is not yet a selectable flight. This development-only preview is not included in the production build.
+With the development server running, open [the F-5E model preview](http://127.0.0.1:5173/3d-plane/golden-crown.html). Drag to orbit, scroll to zoom, choose side, upper, or underside views, toggle the landing gear, or select aircraft 1–6 to inspect both English and Persian tail numbers. The procedural Three.js model lives in `src/aircraft/goldenCrown.js`; it is shared by the ambient show and playable leader flight inside the Mehrabad scenario. This development-only preview is not included in the production build.
 
 The airframe is refined against [USAF F-5E photographs](<https://commons.wikimedia.org/wiki/File:Northrop_F-5E_(SN_72-01401)_061006-F-1234S-066.jpg>). The livery is an original interpretation informed by user-supplied Golden Crown plan and model images (using the HA3397 multi-view sheet for the distinct upper/lower paint and English/Persian side markings), [IIAF historical photographs](https://commons.wikimedia.org/wiki/File:6_Imperial_Iranian_Air_Force_F-5Es_in_an_arobatic_exhibit.jpg) and [Fred Shammas's Golden Crown F-5E model](https://www.arcair.com/Gal3/2301-2400/Gal2339-F-5-Shammas/00.shtm). Geometry and paint are procedural. The Pahlavi crown decal uses the supplied reference artwork; its source note is in `public/textures/golden-crown/README.md`.
 
-## Golden Crown display at Mehrabad
+## Fly Golden Crown at Mehrabad
 
-The Tehran F-4 mission includes six non-playable Golden Crown F-5Es with individual tail numbers. Their four-minute, continuously looping routine includes a formation arrival, coordinated turn, mirrored solo looping breaks with outward exits, opposed 360° rolls by two of the core four while the other two fly level, upright/inverted solo pair, rejoin, gear-down pass with lights, and departure. Smoke follows each aircraft's recent path as continuous, soft-edged trails that stay attached to the exhausts, widen, and fade with age. The default stylized smoke uses green on the left, white in the centre and red on the right (two jets per colour); choose **Smoke → White** in review for neutral smoke. The flag-colour smoke is an artistic addition, not a historical claim. Choreography is inspired by the [Manoto Golden Crown documentary](https://www.youtube.com/watch?v=1umNa1gHjb4&t=2214s) and supplied archival stills; timing, spacing and routes are authored for the game, not an exact historical reconstruction.
+The Tehran F-4 mission includes six Golden Crown F-5Es with individual tail numbers and matching serials from the supplied decal reference: 1 → 3-7099, 2 → 3-7015, 3 → 3-7046, 4 → 3-7078, 5 → 3-7079, 6 → 3-7136. Serials use Latin digits on the English side and Persian digits on the Persian side. Their four-minute, continuously looping routine includes a formation arrival, coordinated turn, mirrored solo looping breaks with outward exits, opposed 360° rolls by two of the core four while the other two fly level, upright/inverted solo pair, rejoin, gear-down pass with lights, and departure. Smoke follows each aircraft's recent path as continuous, soft-edged trails that stay attached to the exhausts, widen, and fade with age. The default stylized smoke uses green on the left, white in the centre and red on the right (two jets per colour); choose **Smoke → White** in review for neutral smoke. The flag-colour smoke is an artistic addition, not a historical claim. Choreography is inspired by the [Manoto Golden Crown documentary](https://www.youtube.com/watch?v=1umNa1gHjb4&t=2214s) and supplied archival stills; timing, spacing and routes are authored for the game, not an exact historical reconstruction.
 
-Choose **Watch Golden Crown**, below the upper-right camera/photo/settings controls in Tehran, to pause the F-4 and review the display. Drag to orbit, scroll/pinch to zoom, select an aerial, wide, solo-pair or ground telephoto view, and use the timeline, maneuver selector, or one-second buttons. Use the downward chevron to hide the controls and the bottom upward chevron to restore them; playback continues while controls are hidden. Scrubbing pauses the show and rebuilds its smoke history. Local road and ground-texture detail follows the review camera. **Return to F-4** resumes free flight. The direct review URL is [Tehran display review](http://127.0.0.1:5173/3d-plane/?mission=tehran&goldenCrown=review); it starts paused.
+Choose **Fly Golden Crown** in the Mehrabad flight to take control of leader **#1 at its current position and speed**. The same five wingmen follow you; solos already performing a maneuver finish it and then rejoin. There is no separate main-menu scenario or player-facing video timeline.
 
-The route uses Mehrabad's runway orientation, an offset display area and terrain clearance. Aircraft are visual scenery, without player collision response or reactive avoidance. Static geometry/materials are shared and batched; smoke has a bounded history with fewer samples on low graphics quality. Clouds and smoke share camera-depth layers so distant clouds blend behind nearer trails while foreground clouds can obscure them. The show pauses with flight settings/photo mode or a hidden tab; its review clock can run independently while the player is paused. Playable leadership, mission guidance, recording and replay are not included.
+- **Space** releases the two solos when the formation is settled, level, and at a suitable speed/altitude. While they are away, each fresh press commands one full outward opposed roll by two core wingmen (left counterclockwise, right clockwise when viewed from behind), about **2.5 seconds** per roll. Each roll follows a continuous shallow arc: the pair rise as they rotate, then descend through the second half and meet formation altitude as the rotation finishes. Another press queues another roll; holding Space does not repeat it. Mobile has a **Maneuver** button and a speed slider.
+- **W/S** changes the F-5's target speed; arrows and **A/D** retain pitch, bank, and rudder controls. **C** cycles chase, cockpit, and orbit views, with a temporary camera-view toast in F-5 mode (also shown when using the mobile camera button). Temporary toasts explain when to hold steady or adjust speed. Every rejected Space press or maneuver tap shows the current blocking reason again, even if its earlier toast has faded. Temporary prompts explain when to press **Space** for maneuvers; no permanent desktop maneuver button is shown. On mobile, the maneuver action replaces bomb/fire. A **Return to F-4** button beside the camera controls returns control to the Phantom. **Fly Golden Crown** uses the same position, and Photo mode remains available while flying the F-5. The radar and world map show all six Golden Crown aircraft in both F-4 and F-5 modes; the radar follows the controlled aircraft at the usual jet scale. The large yellow marker always represents the F-4, and the six small blue markers represent the F-5s. Radar and Flight Data keep the same positions in both modes. Smoke is always on for all six aircraft; Space never toggles it.
+- Solos automatically intercept your moving formation. Keep a reasonable speed and heading to help them return. New rolls are unavailable once solos start rejoining; accepted rolls finish before the solos close into their slots.
+- **Return to F-4** restores control of the F-4 wherever it has reached. An unattended airborne F-4 maintains its handoff speed and direction, with terrain/obstacle checks; a parked F-4 stays parked. The same F-5 team regroups and flies a connecting leg back into its scripted show, without teleporting. You can take control again during that return.
+
+The F-5 uses arcade aerobatic handling with bounded follower acceleration and catch-up speed. It is an airborne leader experience; coordinated takeoffs/landings, guidance gates, actual-flight replay, and video export are not included. Local terrain detail follows the controlled aircraft. Aircraft geometry/materials are shared and batched; smoke keeps a bounded history across control handoffs and has fewer samples on low graphics quality. Clouds and smoke share camera-depth layers. Settings/photo pause and a hidden tab pause the active simulation. Native phone performance still requires device testing.
+
+### Development / filming viewer
+
+With the development server running, [the dedicated display review URL](http://127.0.0.1:5173/3d-plane/?mission=tehran&goldenCrown=review) retains the scripted viewer: play/pause, seeking, one-second stepping, maneuver selection, aerial/solo/ground views, white or tricolour smoke, and collapsible controls. It starts paused and holds the F-4 while reviewing. This viewer has no entry in the normal game UI; its code is excluded from production, where the legacy query parameter does not enable it.
 
 ## What is included
 
-- Three aircraft and three cached geographic regions, with procedural scenery and local map assets.
-- Chase, cockpit, and orbit cameras; flight instruments; a radar and a zoomable regional map.
+- Three cached geographic regions with procedural scenery and local assets; three starting aircraft plus the playable Golden Crown F-5 team in Tehran.
+- Chase, cockpit, and orbit cameras (orbit zooms out to 300 m); flight instruments; a radar and a zoomable regional map.
 - Optional guides, circuits, destinations, photo mode, graphics presets, and time-of-day settings.
 - An opt-in [automation interface](docs/full-reference.md#machine--agent-controls) for scripted flight and browser testing.
 

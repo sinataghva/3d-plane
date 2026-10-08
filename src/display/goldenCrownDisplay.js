@@ -1,6 +1,13 @@
 import * as THREE from 'three';
+import { createGoldenCrownPilot } from './goldenCrownPilot.js';
+import { createSimulationClock } from '../flight/simulationClock.js';
+import { createInputController } from '../flight/input.js';
 import { createLayeredSmoke } from '../rendering/transparency.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import {
+    createGoldenCrownSerial,
+    goldenCrownSerial
+} from '../aircraft/goldenCrownSerial.js';
 import { createGoldenCrownNumber } from '../aircraft/goldenCrownNumber.js';
 import { createGoldenCrown } from '../aircraft/goldenCrown.js';
 import {
@@ -9,7 +16,7 @@ import {
     wrapTime
 } from './goldenCrownFlight.js';
 
-/** @param {{runway: {points: number[][]}, height: (x:number,z:number)=>number}} world */
+/** @param {{runway: {points: number[][]}, height: (x:number,z:number)=>number, obstacle?:(x:number,z:number,y:number)=>string|null}} world */
 export function createGoldenCrownDisplay(world) {
     const root = new THREE.Group();
     root.name = 'Golden Crown display';
@@ -46,7 +53,7 @@ export function createGoldenCrownDisplay(world) {
         let parent = o.parent;
         while (parent && parent !== original.gear) parent = parent.parent;
         if (parent === original.gear) return;
-        if (o.userData.displayNumber) {
+        if (o.userData.displayNumber || o.userData.displaySerial) {
             numbers.push(o);
             return;
         }
@@ -75,10 +82,21 @@ export function createGoldenCrownDisplay(world) {
         jet.add(gear);
         for (const source of numbers) {
             const marking = source.clone();
-            marking.material = createGoldenCrownNumber(
-                i + 1,
-                source.userData.displayNumber
-            );
+            if (source.userData.displaySerial) {
+                marking.material = createGoldenCrownSerial(
+                    i + 1,
+                    source.userData.displaySerial
+                );
+                marking.name = goldenCrownSerial(
+                    i + 1,
+                    source.userData.displaySerial
+                );
+            } else {
+                marking.material = createGoldenCrownNumber(
+                    i + 1,
+                    source.userData.displayNumber
+                );
+            }
             jet.add(marking);
         }
         const lights = new THREE.Group();
@@ -118,7 +136,10 @@ export function createGoldenCrownDisplay(world) {
         'smokeColor',
         new THREE.BufferAttribute(colors, 3)
     );
-    smokeGeometry.setAttribute('tangent', new THREE.BufferAttribute(tangents, 3));
+    smokeGeometry.setAttribute(
+        'tangent',
+        new THREE.BufferAttribute(tangents, 3)
+    );
     smokeGeometry.setAttribute('edge', new THREE.BufferAttribute(edges, 1));
     smokeGeometry.setIndex(new THREE.BufferAttribute(indices, 1));
     const smokeMaterial = new THREE.ShaderMaterial({
@@ -150,13 +171,85 @@ export function createGoldenCrownDisplay(world) {
     // Connected camera-facing strips stay continuous from side and overhead views.
     const smoke = createLayeredSmoke(smokeGeometry, smokeMaterial);
     root.add(smoke.group);
+    const pilot = createGoldenCrownPilot({
+        height(p) {
+            const point = root.localToWorld(p.clone());
+            return world.height(point.x, point.z) - root.position.y;
+        },
+        obstacle(p) {
+            const point = root.localToWorld(p.clone());
+            return Boolean(world.obstacle?.(point.x, point.z, point.y));
+        }
+    });
+    const clock = createSimulationClock();
+    const idleInput = createInputController().state;
+    let live = false;
+    let smokeTime = 8;
+    /** @type {{time:number, states:ReturnType<typeof sampleDisplay>[]}[]} */
+    let trail = [];
     let time = 8,
         paused = false,
         activeSamples = count,
         lastSmoke = -Infinity;
+    function remember() {
+        trail.push({
+            time: smokeTime,
+            states: pilot.states.map((s) => ({
+                ...s,
+                position: s.position.clone(),
+                quaternion: s.quaternion.clone()
+            }))
+        });
+        while (trail.length > 1250) trail.shift();
+    }
+    function enableLive() {
+        if (live) return;
+        // Seed actual pre-handoff history; never rebuild it from a new route.
+        trail = [];
+        for (let t = smokeTime - history; t < smokeTime; t += 1 / 60)
+            trail.push({
+                time: t,
+                states: jets.map((_, i) =>
+                    sampleDisplay(time + t - smokeTime, i)
+                )
+            });
+        live = true;
+        remember();
+    }
+    /** @param {number} age @param {number} i */
+    function smokeSample(age, i) {
+        if (!live) return sampleDisplay(time - age * history, i);
+        const desired = smokeTime - age * history;
+        let lo = 0,
+            hi = trail.length - 1;
+        while (lo < hi) {
+            const mid = Math.ceil((lo + hi) / 2);
+            if (trail[mid].time <= desired) lo = mid;
+            else hi = mid - 1;
+        }
+        const a = trail[lo],
+            b = trail[Math.min(lo + 1, trail.length - 1)];
+        const u =
+            b.time > a.time
+                ? THREE.MathUtils.clamp(
+                      (desired - a.time) / (b.time - a.time),
+                      0,
+                      1
+                  )
+                : 0;
+        return {
+            ...a.states[i],
+            position: a.states[i].position
+                .clone()
+                .lerp(b.states[i].position, u),
+            quaternion: a.states[i].quaternion
+                .clone()
+                .slerp(b.states[i].quaternion, u)
+        };
+    }
     function render(quality = 'high') {
         jets.forEach(({ jet, gear, lights }, i) => {
-            const state = sampleDisplay(time, i);
+            const state = pilot.states[i];
             jet.position.copy(state.position);
             jet.quaternion.copy(state.quaternion);
             gear.visible = state.gear > 0.01;
@@ -166,8 +259,11 @@ export function createGoldenCrownDisplay(world) {
             // The trail head follows the nozzle every rendered frame, even
             // when the more expensive history reconstruction is throttled.
             const nozzle = new THREE.Vector3(-7, 1.5, 0)
-                .applyQuaternion(state.quaternion).add(state.position);
-            const direction = new THREE.Vector3(1, 0, 0).applyQuaternion(state.quaternion);
+                .applyQuaternion(state.quaternion)
+                .add(state.position);
+            const direction = new THREE.Vector3(1, 0, 0).applyQuaternion(
+                state.quaternion
+            );
             const head = i * activeSamples * 2;
             for (let edge = 0; edge < 2; edge++) {
                 positions.set(nozzle.toArray(), (head + edge) * 3);
@@ -180,19 +276,21 @@ export function createGoldenCrownDisplay(world) {
         smokeGeometry.attributes.position.needsUpdate = true;
         smokeGeometry.attributes.tangent.needsUpdate = true;
         smokeGeometry.attributes.age.needsUpdate = true;
-        if (Math.abs(time - lastSmoke) < 0.1) return;
-        lastSmoke = time;
+        if (Math.abs(smokeTime - lastSmoke) < 0.1) return;
+        lastSmoke = smokeTime;
         const samples = quality === 'low' ? 200 : count;
         activeSamples = samples;
         for (let i = 0; i < 6; i++) {
             for (let j = 0; j < samples; j++) {
                 const age = j / (samples - 1),
-                    state = sampleDisplay(time - age * history, i);
+                    state = smokeSample(age, i);
                 const p = new THREE.Vector3(-7, 1.5, 0)
                     .applyQuaternion(state.quaternion)
                     .add(state.position);
                 const index = (i * samples + j) * 2;
-                const direction = new THREE.Vector3(1, 0, 0).applyQuaternion(state.quaternion);
+                const direction = new THREE.Vector3(1, 0, 0).applyQuaternion(
+                    state.quaternion
+                );
                 for (let edge = 0; edge < 2; edge++) {
                     positions.set(p.toArray(), (index + edge) * 3);
                     tangents.set(direction.toArray(), (index + edge) * 3);
@@ -201,19 +299,38 @@ export function createGoldenCrownDisplay(world) {
                     edges[index + edge] = edge === 0 ? -1 : 1;
                 }
                 if (j < samples - 1) {
-                    indices.set([index, index + 1, index + 2, index + 1, index + 3, index + 2],
-                        (i * (samples - 1) + j) * 6);
+                    indices.set(
+                        [
+                            index,
+                            index + 1,
+                            index + 2,
+                            index + 1,
+                            index + 3,
+                            index + 2
+                        ],
+                        (i * (samples - 1) + j) * 6
+                    );
                 }
             }
         }
         smokeGeometry.setDrawRange(0, 6 * (samples - 1) * 6);
-        for (const attribute of Object.values(smokeGeometry.attributes)) attribute.needsUpdate = true;
+        for (const attribute of Object.values(smokeGeometry.attributes))
+            attribute.needsUpdate = true;
         if (smokeGeometry.index) smokeGeometry.index.needsUpdate = true;
     }
     render();
     return {
         root,
         jets,
+        pilot,
+        takeControl() {
+            enableLive();
+            pilot.takeControl();
+            paused = false;
+        },
+        release() {
+            pilot.release();
+        },
         duration: DISPLAY_DURATION,
         prepareCamera: smoke.update,
         /** @param {string} style */
@@ -235,13 +352,23 @@ export function createGoldenCrownDisplay(world) {
         /** @param {number} value */
         seek(value) {
             time = wrapTime(value);
+            smokeTime = time;
+            live = false;
+            trail = [];
+            pilot.script(time);
             lastSmoke = -Infinity;
             render();
         },
-        /** @param {number} delta @param {boolean} running @param {string} quality */
-        update(delta, running, quality) {
+        /** @param {number} delta @param {boolean} running @param {string} quality @param {import('../flight/input.js').KeyboardState} [input] */
+        update(delta, running, quality, input = idleInput) {
             if (!paused && running)
-                time = wrapTime(time + Math.min(delta, 0.1));
+                clock.update(delta, (dt) => {
+                    pilot.update(dt, input);
+                    time = pilot.time;
+                    smokeTime += dt;
+                    if (live) remember();
+                });
+            else clock.reset();
             render(quality);
         },
         /** @param {number} [index] */

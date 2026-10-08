@@ -43,14 +43,14 @@ describe('Golden Crown choreography', () => {
         }
         expect(directions.size).toBe(2);
     });
-    it('rolls two core aircraft in opposite directions while two stay level', () => {
+    it('rolls two core aircraft outward while two stay level', () => {
         /** @param {number} time @param {number} aircraft */
         const up = (time, aircraft) => new Vector3(0, 1, 0)
             .applyQuaternion(sampleDisplay(time, aircraft).quaternion);
         const sideways = new Vector3(0, 0, 1)
             .applyQuaternion(sampleDisplay(78, 0).quaternion);
-        expect(up(78, 1).dot(sideways)).toBeGreaterThan(0.8);
-        expect(up(78, 2).dot(sideways)).toBeLessThan(-0.8);
+        expect(up(78, 1).dot(sideways)).toBeLessThan(-0.8);
+        expect(up(78, 2).dot(sideways)).toBeGreaterThan(0.8);
         for (const aircraft of [0, 3]) {
             expect(up(80, aircraft).y).toBeGreaterThan(0.999);
             expect(sampleDisplay(76, aircraft).position.y)

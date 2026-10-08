@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import {
+    createGoldenCrownSerial,
+    goldenCrownSerial
+} from './goldenCrownSerial.js';
 import { createGoldenCrownNumber } from './goldenCrownNumber.js';
 import { createGoldenCrown } from './goldenCrown.js';
 
@@ -79,7 +83,8 @@ document
         airplane.traverse((object) => {
             if (
                 !(object instanceof THREE.Mesh) ||
-                !object.userData.displayNumber
+                (!object.userData.displayNumber &&
+                    !object.userData.displaySerial)
             )
                 return;
             const material = /** @type {THREE.MeshBasicMaterial} */ (
@@ -87,10 +92,21 @@ document
             );
             material.map?.dispose();
             material.dispose();
-            object.material = createGoldenCrownNumber(
-                number,
-                object.userData.displayNumber
-            );
+            if (object.userData.displaySerial) {
+                object.material = createGoldenCrownSerial(
+                    number,
+                    object.userData.displaySerial
+                );
+                object.name = goldenCrownSerial(
+                    number,
+                    object.userData.displaySerial
+                );
+            } else {
+                object.material = createGoldenCrownNumber(
+                    number,
+                    object.userData.displayNumber
+                );
+            }
         });
         document.documentElement.dataset.aircraftNumber = String(number);
     });

@@ -1,3 +1,4 @@
+/** @typedef {{position:{x:number,z:number},yawAngle:number,number:number}} FormationContact */
 import { isJet } from '../aircraft/capabilities.js';
 import { tehranLandmarks } from '../scenery/tehranLandmarks.js';
 import {
@@ -21,15 +22,15 @@ export function mapImage(world) {
     }
     return canvas;
 }
-/** @param {CanvasRenderingContext2D} ctx @param {number} x @param {number} y @param {number} yaw @param {number} [size] */
-export function drawAircraft(ctx, x, y, yaw, size = 1) {
+/** @param {CanvasRenderingContext2D} ctx @param {number} x @param {number} y @param {number} yaw @param {number} [size] @param {string} [color] */
+export function drawAircraft(ctx, x, y, yaw, size = 1, color = '#ffd166') {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(Math.PI / 2 - yaw);
     ctx.scale(size, size);
     ctx.shadowColor = '#142524';
     ctx.shadowBlur = 5;
-    ctx.fillStyle = '#ffd166';
+    ctx.fillStyle = color;
     ctx.strokeStyle = '#fff7d5';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
@@ -57,8 +58,17 @@ export function drawAircraft(ctx, x, y, yaw, size = 1) {
     ctx.stroke();
     ctx.restore();
 }
-/** @param {CanvasRenderingContext2D} ctx @param {number} width @param {number} height @param {import('../flight/physics.js').PlaneState} state @param {import('../scenery/geography.js').Geography} world @param {import('./mapViewport.js').MapView} [view] @param {ReturnType<typeof import('./detailMap.js').createDetailMap>} [detail] */
-export function drawOverview(ctx, width, height, state, world, view, detail) {
+/** @param {CanvasRenderingContext2D} ctx @param {number} width @param {number} height @param {import('../flight/physics.js').PlaneState} state @param {import('../scenery/geography.js').Geography} world @param {import('./mapViewport.js').MapView} [view] @param {ReturnType<typeof import('./detailMap.js').createDetailMap>} [detail] @param {FormationContact[]} [contacts] */
+export function drawOverview(
+    ctx,
+    width,
+    height,
+    state,
+    world,
+    view,
+    detail,
+    contacts = []
+) {
     const { scale, w, h, left, top } = destinationProjection(
         width,
         height,
@@ -224,10 +234,46 @@ export function drawOverview(ctx, width, height, state, world, view, detail) {
             break;
         }
     }
+    for (const contact of contacts) {
+        const p = project([contact.position.x, contact.position.z]);
+        drawAircraft(ctx, p[0], p[1], contact.yawAngle, 0.38, '#69d2ff');
+        if (view && view.zoom >= 32) {
+            ctx.fillStyle = '#fff';
+            ctx.font = '11px system-ui';
+            ctx.textAlign = 'left';
+            ctx.fillText('F-5 ' + contact.number, p[0] + 7, p[1] - 7);
+        }
+    }
     const x = Math.max(world.minX, Math.min(world.maxX, state.position.x)),
         z = Math.max(world.minZ, Math.min(world.maxZ, state.position.z));
     const p = project([x, z]);
     drawAircraft(ctx, p[0], p[1], state.yawAngle, height < 400 ? 0.75 : 1);
+    if (contacts.length && (!view || view.zoom < 32)) {
+        const centre = contacts.reduce(
+            (sum, contact) => [
+                sum[0] + contact.position.x,
+                sum[1] + contact.position.z
+            ],
+            [0, 0]
+        );
+        const group = project([
+            centre[0] / contacts.length,
+            centre[1] / contacts.length
+        ]);
+        ctx.font = 'bold 11px system-ui';
+        ctx.textAlign = 'left';
+        const label = 'Golden Crown · ' + contacts.length + ' F-5s';
+        const tx = Math.max(
+            8,
+            Math.min(width - ctx.measureText(label).width - 8, group[0] + 18)
+        );
+        const ty = Math.max(18, Math.min(height - 50, group[1] - 20));
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#10242d';
+        ctx.strokeText(label, tx, ty);
+        ctx.fillStyle = '#69d2ff';
+        ctx.fillText(label, tx, ty);
+    }
     ctx.fillStyle = '#edf5f1';
     ctx.font = '12px system-ui';
     ctx.textAlign = 'left';
@@ -253,10 +299,17 @@ export function drawOverview(ctx, width, height, state, world, view, detail) {
     const outside = x !== state.position.x || z !== state.position.z;
     const east = (state.position.x - world.spawn.x) / 1000,
         north = (world.spawn.z - state.position.z) / 1000;
-    return `Heading ${formatHeading(state.yawAngle)}° · ${Math.abs(east).toFixed(1)} km ${east < 0 ? 'W' : 'E'} / ${Math.abs(north).toFixed(1)} km ${north < 0 ? 'S' : 'N'} of airfield${outside ? ' · Outside detailed area' : ''}`;
+    return `Heading ${formatHeading(state.yawAngle)}° · ${Math.abs(east).toFixed(1)} km ${east < 0 ? 'W' : 'E'} / ${Math.abs(north).toFixed(1)} km ${north < 0 ? 'S' : 'N'} of airfield${contacts.length ? ' · Blue: Golden Crown F-5s · Gold: F-4' : ''}${outside ? ' · Outside detailed area' : ''}`;
 }
-/** @param {CanvasRenderingContext2D} ctx @param {number} size @param {import('../flight/physics.js').PlaneState} state @param {import('../scenery/geography.js').Geography} world */
-export function drawRadar(ctx, size, state, world) {
+/** @param {CanvasRenderingContext2D} ctx @param {number} size @param {import('../flight/physics.js').PlaneState} state @param {import('../scenery/geography.js').Geography} world @param {FormationContact[]} [contacts] @param {import("../flight/physics.js").PlaneState} [primary] */
+export function drawRadar(
+    ctx,
+    size,
+    state,
+    world,
+    contacts = [],
+    primary = state
+) {
     const scale = size / (isJet(state.aircraft) ? 8000 : 1800);
     ctx.fillStyle = '#10242d';
     ctx.fillRect(0, 0, size, size);
@@ -313,5 +366,40 @@ export function drawRadar(ctx, size, state, world) {
         y *= factor;
         drawDestinationPin(ctx, size / 2 + x, size / 2 + y);
     }
-    drawAircraft(ctx, size / 2, size / 2, Math.PI / 2, 0.48);
+    for (const contact of contacts) {
+        const dx = (contact.position.x - state.position.x) * scale;
+        const dz = (contact.position.z - state.position.z) * scale;
+        const angle = state.yawAngle - Math.PI / 2;
+        let x = dx * Math.cos(angle) - dz * Math.sin(angle);
+        let y = dx * Math.sin(angle) + dz * Math.cos(angle);
+        const factor = Math.min(
+            1,
+            (size / 2 - 9) / Math.max(1, Math.hypot(x, y))
+        );
+        x *= factor;
+        y *= factor;
+        drawAircraft(
+            ctx,
+            size / 2 + x,
+            size / 2 + y,
+            contact.yawAngle - angle,
+            0.22,
+            '#69d2ff'
+        );
+    }
+    const dx = (primary.position.x - state.position.x) * scale;
+    const dz = (primary.position.z - state.position.z) * scale;
+    const angle = state.yawAngle - Math.PI / 2;
+    let x = dx * Math.cos(angle) - dz * Math.sin(angle);
+    let y = dx * Math.sin(angle) + dz * Math.cos(angle);
+    const factor = Math.min(1, (size / 2 - 12) / Math.max(1, Math.hypot(x, y)));
+    x *= factor;
+    y *= factor;
+    drawAircraft(
+        ctx,
+        size / 2 + x,
+        size / 2 + y,
+        primary.yawAngle - angle,
+        0.48
+    );
 }

@@ -256,12 +256,19 @@ export function createMiniMap() {
 
     return {
         /**
-         * @param {{ planeState: PlaneState }} args
+         * @param {{ planeState: PlaneState, contacts?: import("./geographicMap.js").FormationContact[], primary?: PlaneState }} args
          */
-        update({ planeState }) {
+        update({ planeState, contacts = [], primary = planeState }) {
             const world = getGeography();
             if (world) {
-                drawRadar(radarContext, canvas.width, planeState, world);
+                drawRadar(
+                    radarContext,
+                    canvas.width,
+                    planeState,
+                    world,
+                    contacts,
+                    primary
+                );
                 return;
             }
             radarContext.clearRect(0, 0, canvas.width, canvas.height);

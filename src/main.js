@@ -1,5 +1,5 @@
 import { createGoldenCrownDisplay } from './display/goldenCrownDisplay.js';
-import { createGoldenCrownReview } from './display/goldenCrownReview.js';
+import { createGoldenCrownPlayable } from './display/goldenCrownPlayable.js';
 import { createRoadStructures } from './scenery/roadStructures.js';
 import { isJet } from './aircraft/capabilities.js';
 import { aircraftCapabilities } from './aircraft/capabilities.js';
@@ -35,7 +35,11 @@ import { createTehranHorizon } from './scenery/tehranHorizon.js';
 import { tehranLandmarks } from './scenery/tehranLandmarks.js';
 import { updateRegionDetail } from './scenery/regionDetail.js';
 import { createWorldMap } from './map/worldMap.js';
-import { createExperience, describeTouchdown } from './ui/experience.js';
+import {
+    createExperience,
+    describeTouchdown,
+    showLandingFeedback
+} from './ui/experience.js';
 import './ui/styles.css';
 import { createSimulationClock } from './flight/simulationClock.js';
 import { createFlightRecovery } from './flight/recovery.js';
@@ -339,14 +343,20 @@ async function startApp() {
     const goldenCrown =
         mission.id === 'tehran' ? createGoldenCrownDisplay(world) : null;
     if (goldenCrown) scene.add(goldenCrown.root);
-    const goldenReview = goldenCrown
-        ? createGoldenCrownReview({
-              display: goldenCrown,
-              camera,
-              controls,
-              world
-          })
-        : null;
+    const developmentReview =
+        import.meta.env.DEV &&
+        new URLSearchParams(location.search).get('goldenCrown') === 'review';
+    const goldenReview =
+        goldenCrown && developmentReview
+            ? (
+                  await import('./display/goldenCrownReview.js')
+              ).createGoldenCrownReview({
+                  display: goldenCrown,
+                  camera,
+                  controls,
+                  world
+              })
+            : null;
 
     const clouds = addClouds(scene);
     scene.add(createRunwayLights(world));
@@ -388,6 +398,7 @@ async function startApp() {
     const timer = new THREE.Timer();
     timer.connect(document);
     disposeFlight = () => {
+        goldenPlayable?.dispose();
         goldenReview?.dispose();
         photoMode.dispose();
         cameraShortcut.dispose();
@@ -437,6 +448,7 @@ async function startApp() {
     let wasCrashed = false;
 
     const resetFlight = () => {
+        goldenPlayable?.exit();
         flightRecovery.clear();
         clearDestination();
         worldMap.resetView();
@@ -472,6 +484,8 @@ async function startApp() {
         controls,
         airplane,
         canvas: renderer.domElement,
+        getAirplane: () =>
+            goldenPlayable?.active ? goldenPlayable.proxy : airplane,
         onPause: (active) => experience.setPhotoPaused(active)
     });
     flightAudio.mount();
@@ -479,6 +493,39 @@ async function startApp() {
     const jetControls = createJetControls(planeState, () => {
         if (automation?.active) automation.release();
     });
+    const goldenPlayable =
+        goldenCrown && !developmentReview
+            ? createGoldenCrownPlayable({
+                  display: goldenCrown,
+                  planeState,
+                  world,
+                  camera,
+                  keyboard,
+                  paused: () => experience.paused || document.hidden,
+                  onEnter: () => {
+                      if (automation?.active) automation.release();
+                      cameraMode.setMode('chase');
+                  }
+              })
+            : null;
+    if (import.meta.env.DEV && goldenCrown && goldenPlayable)
+        Object.assign(window, {
+            goldenCrownTest: {
+                display: goldenCrown,
+                playable: goldenPlayable,
+                planeState,
+                snapshot: () => ({
+                    ...goldenCrown.pilot.diagnostics,
+                    f4: { ...planeState.position },
+                    jets: goldenCrown.pilot.states.map((s) => ({
+                        position: s.position.toArray(),
+                        quaternion: s.quaternion.toArray(),
+                        speed: s.velocity.length(),
+                        smoke: s.smoke
+                    }))
+                })
+            }
+        });
     if (visualScenario) {
         applyVisualScenario({
             planeState,
@@ -651,17 +698,25 @@ async function startApp() {
                     goldenCrown.paused = true;
                     goldenCrown.seek(34);
                     const leadJet = goldenCrown.jets[0].jet;
-                    const forward = new THREE.Vector3(1, 0, 0)
-                        .applyQuaternion(leadJet.quaternion);
+                    const forward = new THREE.Vector3(1, 0, 0).applyQuaternion(
+                        leadJet.quaternion
+                    );
                     const turn = -1.45 - Math.atan2(-forward.z, forward.x);
                     // Tilt the whole formation and its trail history: far-side
                     // green jets rise, near-side red jets drop into a flag stack.
-                    goldenCrown.root.quaternion.setFromAxisAngle(
-                        new THREE.Vector3(0, 1, 0), turn
-                    ).multiply(new THREE.Quaternion().setFromAxisAngle(forward, 0.60));
-                    const leader = leadJet.position.clone()
+                    goldenCrown.root.quaternion
+                        .setFromAxisAngle(new THREE.Vector3(0, 1, 0), turn)
+                        .multiply(
+                            new THREE.Quaternion().setFromAxisAngle(
+                                forward,
+                                0.6
+                            )
+                        );
+                    const leader = leadJet.position
+                        .clone()
                         .applyQuaternion(goldenCrown.root.quaternion);
-                    goldenCrown.root.position.set(l.x, y + 85, l.z + 95)
+                    goldenCrown.root.position
+                        .set(l.x, y + 85, l.z + 95)
                         .sub(leader);
                 }
             } else if (visualScenario.name === 'azadi-detail') {
@@ -866,7 +921,10 @@ async function startApp() {
             }
         }
         hud.update({ planeState, cameraMode });
-        cockpitOverlay.update({ planeState, cameraMode });
+        const viewedState = goldenPlayable?.active
+            ? goldenPlayable.flight
+            : planeState;
+        cockpitOverlay.update({ planeState: viewedState, cameraMode });
         miniMap.update({ planeState });
         warningBanner.update({
             planeState,
@@ -899,8 +957,14 @@ async function startApp() {
         );
         destinationBeacon.update(camera, planeState.position);
         const beacon = scene.getObjectByName('destination-beacon');
-        if (photoMode.active && beacon) beacon.visible = false;
-        scene.userData.followSun(airplane.position, camera.position);
+        if ((photoMode.active || goldenPlayable?.active) && beacon)
+            beacon.visible = false;
+        scene.userData.followSun(
+            goldenPlayable?.active
+                ? goldenPlayable.proxy.position
+                : airplane.position,
+            camera.position
+        );
         parkedAircraft.update(camera.position, scene.userData.quality);
         updateRegionDetail(airbase, camera.position, scene.userData.quality);
         roadStructures.update(camera.position, scene.userData.quality);
@@ -1188,7 +1252,12 @@ async function startApp() {
         }
         requestAnimationFrame(animate);
         timer.update(timestamp);
-        if (automation?.active && !document.hidden && !goldenReview?.active)
+        if (
+            automation?.active &&
+            !document.hidden &&
+            !goldenReview?.active &&
+            !goldenPlayable?.active
+        )
             automation.update(timer.getDelta());
         if (
             !trafficBench &&
@@ -1196,19 +1265,23 @@ async function startApp() {
             !experience.paused &&
             !goldenReview?.active
         ) {
-            simulationClock.update(timer.getDelta(), (delta) =>
-                simulate(delta, keyboard)
-            );
+            simulationClock.update(timer.getDelta(), (delta) => {
+                if (goldenPlayable?.active) goldenPlayable.advanceF4(delta);
+                else simulate(delta, keyboard);
+            });
             document.querySelector('.automation-status')?.remove();
         }
         if (!photoMode.active)
             updateMirage(airplane, planeState, keyboard, timestamp / 1000);
         syncPlaneMesh({ airplane, propeller, planeState });
         const mode = photoMode.active ? 'orbit' : cameraMode.getMode();
-        bombing?.render(planeState, mode === 'cockpit');
+        bombing?.render(
+            planeState,
+            !goldenPlayable?.active && mode === 'cockpit'
+        );
         machEffect?.render(mode === 'cockpit', planeState.isCrashed);
         flightAudio.update(
-            planeState,
+            goldenPlayable?.active ? goldenPlayable.flight : planeState,
             keyboard,
             experience.paused || !!goldenReview?.active || !document.hasFocus(),
             mode === 'cockpit'
@@ -1220,38 +1293,82 @@ async function startApp() {
         }
         const modeChanged = mode !== lastCameraMode;
         lastCameraMode = mode;
+        if (modeChanged && goldenPlayable?.active && !photoMode.active) {
+            const feedback = document.getElementById('flight-feedback');
+            if (feedback)
+                showLandingFeedback(
+                    feedback,
+                    'Camera: ' + mode[0].toUpperCase() + mode.slice(1)
+                );
+        }
         updateAirplaneCockpitVisibility({
             airplane,
             propeller,
-            isCockpit: mode === 'cockpit'
+            isCockpit: !goldenPlayable?.active && mode === 'cockpit'
         });
+        goldenPlayable?.consumeCommands();
         goldenCrown?.update(
             timer.getDelta(),
             !document.hidden && (goldenReview?.active || !experience.paused),
-            scene.userData.quality
+            scene.userData.quality,
+            goldenPlayable?.active ? keyboard : undefined
         );
+        goldenPlayable?.refresh();
+        if (goldenCrown)
+            goldenCrown.jets[0].jet.visible = !(
+                goldenPlayable?.active && mode === 'cockpit'
+            );
         if (goldenReview?.active) goldenReview.update();
         else if (photoMode.active) photoMode.update();
         else
             updateCamera({
                 camera,
                 controls,
-                airplane,
+                airplane: goldenPlayable?.active
+                    ? goldenPlayable.proxy
+                    : airplane,
                 cameraMode,
                 delta: timer.getDelta()
             });
         if (trafficBench) trafficBench.position();
         bombing?.projectMarker(camera, planeState);
-        cockpitOverlay.update({ planeState, cameraMode });
+        const viewedState = goldenPlayable?.active
+            ? goldenPlayable.flight
+            : planeState;
+        cockpitOverlay.update({ planeState: viewedState, cameraMode });
         if (modeChanged || timestamp - lastHudUpdate >= 100) {
-            experience.update();
-            jetControls.update();
-            hud.update({ planeState, cameraMode });
+            if (!goldenPlayable?.active) {
+                experience.update();
+                jetControls.update();
+            }
+            hud.update({ planeState: viewedState, cameraMode });
             lastHudUpdate = timestamp;
         }
         if (timestamp - lastRadarUpdate >= 1000 / 15) {
-            miniMap.update({ planeState });
-            worldMap.update();
+            const contacts = goldenCrown
+                ? goldenCrown.jets.map(({ jet }, i) => {
+                      const position = goldenCrown.target(i);
+                      const rotation = jet.getWorldQuaternion(
+                          new THREE.Quaternion()
+                      );
+                      const forward = new THREE.Vector3(
+                          1,
+                          0,
+                          0
+                      ).applyQuaternion(rotation);
+                      return {
+                          position,
+                          yawAngle: Math.atan2(-forward.z, forward.x),
+                          number: i + 1
+                      };
+                  })
+                : [];
+            miniMap.update({
+                planeState: viewedState,
+                contacts,
+                primary: planeState
+            });
+            worldMap.update(planeState, contacts);
             lastRadarUpdate = timestamp;
         }
         // Render at most once per browser frame, including automation substeps.
@@ -1259,7 +1376,7 @@ async function startApp() {
         // around the spectator camera instead of the player aircraft.
         const detailPosition = goldenReview?.active
             ? camera.position
-            : planeState.position;
+            : viewedState.position;
         groundTexture.update(
             detailPosition,
             scene.userData.quality,
@@ -1279,8 +1396,14 @@ async function startApp() {
         );
         destinationBeacon.update(camera, planeState.position);
         const beacon = scene.getObjectByName('destination-beacon');
-        if (photoMode.active && beacon) beacon.visible = false;
-        scene.userData.followSun(airplane.position, camera.position);
+        if ((photoMode.active || goldenPlayable?.active) && beacon)
+            beacon.visible = false;
+        scene.userData.followSun(
+            goldenPlayable?.active
+                ? goldenPlayable.proxy.position
+                : airplane.position,
+            camera.position
+        );
         parkedAircraft.update(camera.position, scene.userData.quality);
         updateRegionDetail(airbase, camera.position, scene.userData.quality);
         roadStructures.update(camera.position, scene.userData.quality);

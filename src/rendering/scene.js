@@ -113,7 +113,7 @@ export function createScene({ container }) {
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.minDistance = 2;
-    controls.maxDistance = 100;
+    controls.maxDistance = 300;
 
     const hemisphereLight = new THREE.HemisphereLight(0xcfe8ff, 0x496238, 1.15);
     scene.add(hemisphereLight);

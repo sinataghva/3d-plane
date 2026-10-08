@@ -20,9 +20,9 @@ export const MISSIONS = {
         map: 'tehran/map.json',
         elevation: 'tehran/elevation.json',
         image: 'tehran.png',
-        name: 'F-4 Phantom · IIAF',
+        name: 'F-4 Phantom · IIAF + Golden Crown',
         description:
-            'Depart Mehrabad, explore Tehran and head out over the desert.',
+            'Depart Mehrabad in the F-4, or take command of the Golden Crown F-5 formation.',
         traits: ['Twin-engine jet', 'Imperial Iranian livery', 'Free flight']
     },
     luxeuil: {
@@ -59,7 +59,7 @@ export function selectFlight() {
     document.body.classList.add('choosing-flight');
     const screen = document.createElement('main');
     screen.id = 'mission-select';
-    screen.innerHTML = `<div class="mission-heading"><span class="eyebrow">OPEN SKIES / FLIGHT EXPERIENCES</span><h1>Where will you fly?</h1><p>Three aircraft. From France to Tehran. Explore at your own pace.</p></div><div class="mission-cards" role="group" aria-label="Choose a flight experience"></div><div class="mission-footer"><p id="mission-selection" aria-live="polite">Saint-Cyr · Versailles selected</p><button id="fly-button">Fly Saint-Cyr →</button><small>Free flight comes first. Guides are always optional.</small><small>© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a> · <a href="data/terrain-attribution.md" target="_blank" rel="noreferrer">Elevation credits</a></small></div>`;
+    screen.innerHTML = `<div class="mission-heading"><span class="eyebrow">OPEN SKIES / FLIGHT EXPERIENCES</span><h1>Where will you fly?</h1><p>Three destinations. From France to Tehran. Explore at your own pace.</p></div><div class="mission-cards" role="group" aria-label="Choose a flight experience"></div><div class="mission-footer"><p id="mission-selection" aria-live="polite">Saint-Cyr · Versailles selected</p><button id="fly-button">Fly Saint-Cyr →</button><small>Free flight comes first. Guides are always optional.</small><small>© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a> · <a href="data/terrain-attribution.md" target="_blank" rel="noreferrer">Elevation credits</a></small></div>`;
     document.body.append(screen);
     let selected = MISSIONS['saint-cyr'];
     for (const mission of [
