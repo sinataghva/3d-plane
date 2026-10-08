@@ -974,7 +974,7 @@ async function startApp() {
         if (bombing) {
             for (let i = 0; i < 60; i++)
                 bombing.render(planeState, cameraMode.getMode() === 'cockpit');
-            bombing.projectMarker(camera, planeState);
+            bombing.projectMarker(camera, planeState, !goldenPlayable?.active);
         }
         goldenCrown?.prepareCamera(camera);
         renderer.render(scene, camera);
@@ -1331,7 +1331,7 @@ async function startApp() {
                 delta: timer.getDelta()
             });
         if (trafficBench) trafficBench.position();
-        bombing?.projectMarker(camera, planeState);
+        bombing?.projectMarker(camera, planeState, !goldenPlayable?.active);
         const viewedState = goldenPlayable?.active
             ? goldenPlayable.flight
             : planeState;

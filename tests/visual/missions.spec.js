@@ -109,3 +109,15 @@ test.describe('touchscreen', () => {
         await expect(page.locator('#thrust-value')).toHaveText('100');
     });
 });
+
+test('mission card images and titles align', async ({ page }, info) => {
+    await page.goto('/3d-plane/');
+    await expect(page.locator('.mission-card')).toHaveCount(3);
+    for (const selector of ['img', '.mission-copy h2']) {
+        const tops = await page.locator(`.mission-card ${selector}`).evaluateAll(
+            (elements) => elements.map((element) => element.getBoundingClientRect().top)
+        );
+        expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(1);
+    }
+    await page.screenshot({ path: info.outputPath('aligned-mission-cards.png') });
+});

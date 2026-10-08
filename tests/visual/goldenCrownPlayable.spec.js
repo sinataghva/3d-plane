@@ -264,12 +264,21 @@ test('Golden Crown possession, maneuvers and persistent return', async ({
     );
     expect(moving.y).toBeCloseTo(airborne.y, 3);
     expect(moving.z).toBeCloseTo(airborne.z, 3);
+    const bombMarkerVisible = () =>
+        page.evaluate(
+            () =>
+                JSON.parse(document.documentElement.dataset.sceneryStats)
+                    .bombMarkerVisible
+        );
+    await expect.poll(bombMarkerVisible).toBe(false);
+    await page.screenshot({ path: info.outputPath('f5-no-bomb-marker.png') });
     await page
         .getByRole('button', { name: 'Return to F-4', exact: true })
         .click();
     expect(
         (await page.evaluate(() => window.goldenCrownTest.snapshot().f4)).x
     ).toBeGreaterThan(airborne.x + 120);
+    await expect.poll(bombMarkerVisible).toBe(true);
     expect(errors).toEqual([]);
 });
 

@@ -269,8 +269,12 @@ export function createBombing(scene, airplane, world, sound) {
             // publish() updates store visibility for simulation; respect cockpit hiding again.
             if (cockpit) stores.forEach((mesh) => (mesh.visible = false));
         },
-        /** @param {import('three').Camera} camera @param {import('../flight/physics.js').PlaneState} state */
-        projectMarker(camera, state) {
+        /** @param {import('three').Camera} camera @param {import('../flight/physics.js').PlaneState} state @param {boolean} visible */
+        projectMarker(camera, state, visible = true) {
+            if (!visible) {
+                marker.hide();
+                return;
+            }
             const belowReleaseHeight =
                 state.position.y -
                     surfaces.height(state.position.x, state.position.z) <

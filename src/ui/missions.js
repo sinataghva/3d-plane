@@ -20,7 +20,7 @@ export const MISSIONS = {
         map: 'tehran/map.json',
         elevation: 'tehran/elevation.json',
         image: 'tehran.png',
-        name: 'F-4 Phantom · IIAF + Golden Crown',
+        name: 'IIAF F-4/F-5',
         description:
             'Depart Mehrabad in the F-4, or take command of the Golden Crown F-5 formation.',
         traits: ['Twin-engine jet', 'Imperial Iranian livery', 'Free flight']
