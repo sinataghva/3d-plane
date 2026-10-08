@@ -75,7 +75,8 @@
                 gap: 6px;
                 flex-wrap: wrap;
             }
-            button {
+            button,
+            select {
                 cursor: pointer;
                 border: 1px solid #8ca6a5;
                 background: #edf2efcc;
@@ -90,7 +91,8 @@
                 color: #fff;
                 border-color: #164d3e;
             }
-            button:focus-visible {
+            button:focus-visible,
+            select:focus-visible {
                 outline: 3px solid #c91e32;
                 outline-offset: 3px;
             }
@@ -171,6 +173,14 @@
                 interpretation
             </div>
             <nav aria-label="Model views">
+                <select id="aircraft-number" aria-label="Aircraft number">
+                    <option value="1">Aircraft 1 · ۱</option>
+                    <option value="2">Aircraft 2 · ۲</option>
+                    <option value="3">Aircraft 3 · ۳</option>
+                    <option value="4">Aircraft 4 · ۴</option>
+                    <option value="5">Aircraft 5 · ۵</option>
+                    <option value="6">Aircraft 6 · ۶</option>
+                </select>
                 <button data-view="hero" aria-pressed="true">Perspective</button
                 ><button data-view="side" aria-pressed="false">Profile</button
                 ><button data-view="opposite" aria-pressed="false">

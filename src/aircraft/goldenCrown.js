@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createGoldenCrownNumber } from './goldenCrownNumber.js';
 
 /** Original procedural Golden Crown F-5E study, informed by the IIAF archive
  * general USAF F-5E photographs and user-supplied livery references. The crown decal uses the user-supplied reference image.
@@ -677,15 +678,17 @@ export function createGoldenCrown() {
                     0.26
                 ],
                 [side < 0 ? '3-7099' : '۳–۷۰۹۹', -5.12, 1.72, 0.77, 0.62, 0.14],
-                [side < 0 ? '1' : '۱', -5.49, 2.88, 0.055, 0.65, 1.42]
+                [side < 0 ? '1' : '۱', -5.58, 2.78, 0.058, 0.68, 1.02]
             ]) {
                 const marking = mesh(
                     new THREE.PlaneGeometry(Number(w), Number(h)),
-                    label(String(text), Number(w), Number(h)),
+                    Number(x) === -5.58
+                        ? createGoldenCrownNumber(1, side)
+                        : label(String(text), Number(w), Number(h)),
                     [Number(x), Number(y), side * Number(z)]
                 );
                 marking.name = String(text);
-                if (Number(x) === -5.49) marking.userData.displayNumber = side;
+                if (Number(x) === -5.58) marking.userData.displayNumber = side;
                 marking.castShadow = false;
                 marking.receiveShadow = false;
                 if (side < 0) marking.rotation.y = Math.PI;

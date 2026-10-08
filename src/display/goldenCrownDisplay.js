@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createLayeredSmoke } from '../rendering/transparency.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { createGoldenCrownNumber } from '../aircraft/goldenCrownNumber.js';
 import { createGoldenCrown } from '../aircraft/goldenCrown.js';
 import {
     sampleDisplay,
@@ -74,28 +75,10 @@ export function createGoldenCrownDisplay(world) {
         jet.add(gear);
         for (const source of numbers) {
             const marking = source.clone();
-            const canvas = document.createElement('canvas');
-            canvas.width = 128;
-            canvas.height = 256;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) throw new Error('Unable to draw display numbers');
-            ctx.fillStyle = '#101619';
-            ctx.font = 'bold 220px serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(
-                source.userData.displayNumber < 0 ? String(i + 1) : '۱۲۳۴۵۶'[i],
-                64,
-                138
+            marking.material = createGoldenCrownNumber(
+                i + 1,
+                source.userData.displayNumber
             );
-            const map = new THREE.CanvasTexture(canvas);
-            map.colorSpace = THREE.SRGBColorSpace;
-            marking.material = new THREE.MeshBasicMaterial({
-                map,
-                transparent: true,
-                side: THREE.DoubleSide,
-                depthWrite: false
-            });
             jet.add(marking);
         }
         const lights = new THREE.Group();

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { createGoldenCrownNumber } from './goldenCrownNumber.js';
 import { createGoldenCrown } from './goldenCrown.js';
 
 const scene = new THREE.Scene();
@@ -69,6 +70,30 @@ for (let i = -6; i <= 6; i++) {
 }
 const { airplane, gear } = createGoldenCrown();
 scene.add(airplane);
+document
+    .getElementById('aircraft-number')
+    ?.addEventListener('change', (event) => {
+        const number = Number(
+            /** @type {HTMLSelectElement} */ (event.currentTarget).value
+        );
+        airplane.traverse((object) => {
+            if (
+                !(object instanceof THREE.Mesh) ||
+                !object.userData.displayNumber
+            )
+                return;
+            const material = /** @type {THREE.MeshBasicMaterial} */ (
+                object.material
+            );
+            material.map?.dispose();
+            material.dispose();
+            object.material = createGoldenCrownNumber(
+                number,
+                object.userData.displayNumber
+            );
+        });
+        document.documentElement.dataset.aircraftNumber = String(number);
+    });
 /** @type {Record<string, number[]>} */
 const views = {
     hero: [14, 8, 17],
