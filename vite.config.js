@@ -11,6 +11,16 @@ const buildId =
 
 export default defineConfig({
     base: '/3d-plane/',
+    build: {
+        rolldownOptions: {
+            input: {
+                main: fileURLToPath(new URL('./index.html', import.meta.url)),
+                goldenCrown: fileURLToPath(
+                    new URL('./golden-crown.html', import.meta.url)
+                )
+            }
+        }
+    },
     plugins: [
         {
             name: 'build-version',
