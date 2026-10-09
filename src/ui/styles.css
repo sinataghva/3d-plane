@@ -1422,6 +1422,7 @@ body:has(.automation-status) .warning-banner {
 }
 
 .mission-card {
+    position: relative;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1441,6 +1442,24 @@ body:has(.automation-status) .warning-banner {
     border-color: #a2dbc5;
     box-shadow: 0 0 0 3px #a2dbc518;
 }
+.mission-badge {
+    position: absolute;
+    bottom: 16px;
+    right: 20px;
+    width: 68px;
+    height: 52px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+@media (pointer: coarse) {
+    .mission-badge {
+        bottom: 8px;
+        right: 6px;
+        width: 48px;
+        height: 36px;
+    }
+}
 .mission-card:hover {
     transform: translateY(-3px);
 }
@@ -1458,7 +1477,7 @@ body:has(.automation-status) .warning-banner {
     background: #7094aa;
 }
 .mission-copy {
-    padding: 24px;
+    padding: 24px 24px 80px;
 }
 .mission-copy h2 {
     font-size: 27px;
@@ -2381,4 +2400,16 @@ body.photo-controls-hidden #photo-controls {
 }
 body.photo-mode #canvas-container canvas {
     outline: none;
+}
+
+@media (pointer: coarse), (max-height: 500px) {
+    .mission-card:has(.mission-badge) .mission-copy {
+        padding-right: 64px;
+    }
+    .mission-badge {
+        bottom: 8px;
+        right: 8px;
+        width: 44px;
+        height: 34px;
+    }
 }

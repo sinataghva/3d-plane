@@ -16,7 +16,7 @@ export function createGoldenCrownPlayable({
     button.id = 'golden-crown-fly';
     button.textContent = 'Fly Golden Crown';
     const crest = document.createElement('img');
-    crest.src = `${import.meta.env.BASE_URL}textures/golden-crown/team-crest.png`;
+    crest.src = `${import.meta.env.BASE_URL}textures/golden-crown/team-crest.svg`;
     crest.alt = '';
     crest.width = 23;
     crest.height = 28;
@@ -25,6 +25,12 @@ export function createGoldenCrownPlayable({
     const returnButton = document.createElement('button');
     returnButton.id = 'golden-crown-return';
     returnButton.textContent = 'Return to F-4';
+    const phantomEmblem = document.createElement('img');
+    phantomEmblem.src = `${import.meta.env.BASE_URL}textures/golden-crown/iiaf-emblem.svg`;
+    phantomEmblem.alt = '';
+    phantomEmblem.width = 23;
+    phantomEmblem.height = 28;
+    returnButton.prepend(phantomEmblem);
     returnButton.setAttribute('aria-label', 'Return to F-4');
     returnButton.title = 'Return to F-4';
     returnButton.hidden = true;

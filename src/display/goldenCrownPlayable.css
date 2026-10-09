@@ -13,13 +13,15 @@
     font: 13px system-ui;
     cursor: pointer;
 }
-#golden-crown-fly {
+#golden-crown-fly,
+#golden-crown-return {
     display: inline-flex;
     align-items: center;
     gap: 7px;
     padding-block: 7px;
 }
-#golden-crown-fly img {
+#golden-crown-fly img,
+#golden-crown-return img {
     flex: none;
     object-fit: contain;
 }

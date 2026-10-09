@@ -72,6 +72,26 @@ export function selectFlight() {
         button.dataset.mission = mission.id;
         button.setAttribute('aria-pressed', String(mission === selected));
         button.innerHTML = `<img src="${import.meta.env.BASE_URL}previews/${mission.image}" alt="${mission.name} flying over ${mission.title}, rendered in the game"/><div class="mission-copy"><span class="eyebrow">${mission.airfield}</span><h2>${mission.name}</h2><p>${mission.description}</p><div class="mission-traits">${mission.traits.map((t) => `<span>${t}</span>`).join('')}</div></div>`;
+        const badge =
+            mission.id === 'luxeuil'
+                ? {
+                      file: 'air-forces/french-air-force.svg',
+                      label: 'French Air and Space Force'
+                  }
+                : mission.id === 'tehran'
+                  ? {
+                        file: 'golden-crown/iiaf-emblem.svg',
+                        label: 'Imperial Iranian Air Force'
+                    }
+                  : null;
+        if (badge) {
+            const emblem = document.createElement('span');
+            emblem.className = 'mission-badge';
+            emblem.setAttribute('role', 'img');
+            emblem.setAttribute('aria-label', badge.label);
+            emblem.style.backgroundImage = `url("${import.meta.env.BASE_URL}textures/${badge.file}")`;
+            button.append(emblem);
+        }
         button.onclick = () => {
             selected = mission;
             screen
