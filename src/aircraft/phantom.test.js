@@ -48,6 +48,9 @@ test('Phantom model has finite geometry, procedural markings and animated jet pa
         state = createPlaneState('phantom'),
         input = createInputController('phantom').state;
     expect(airplane.name).toContain('Imperial Iranian Air Force');
+    expect(airplane.getObjectByName('F-4E gun fairing')).toBeDefined();
+    expect(airplane.getObjectByName('F-4E gun muzzle')).toBeDefined();
+    expect(airplane.getObjectByName('Tandem canopy glazing')).toBeDefined();
     expect(airplane.getObjectsByProperty('name', 'IIAF')).toHaveLength(2);
     expect(
         airplane.getObjectsByProperty('name', 'Iranian roundel')

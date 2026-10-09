@@ -147,14 +147,24 @@ Airbus-style airliners on separate mapped military/civilian aprons. These are
 procedural, non-playable decorations with fictional placements, not current
 airport operations.
 
-### F-4 Phantom · IIAF
+### F-4E Phantom · IIAF
 
-The original procedural model has twin exhausts, one framed canopy over both crew seats, swept wings,
-raised outer wing panels, drooped stabilators, retractable gear and airbrakes.
-Its stylized pre-1979 Imperial Iranian Air Force livery uses tan/brown/green
-camouflage, green-white-red roundels, a plain tricolor fin flash and IIAF lettering.
-The texture and markings are generated locally; no external aircraft assets are
-loaded. Historical context: [IIAF Association's Phantom history](https://www.iiafassociation.com/fightersf4).
+The procedural F-4E model has a shaped fuselage and radome, the F-4E's long
+under-nose gun fairing, detailed side intakes, a continuous framed two-seat canopy, twin
+exhausts, swept wings, raised outer wing panels, drooped stabilators, retractable
+gear and airbrakes. The gun fairing is visual detail; the game's F-4E action
+remains bomb release. Its stylized pre-1979 Imperial Iranian Air Force livery
+uses tan/brown/green camouflage, a pale underside, green-white-red roundels,
+a tricolor fin flash and IIAF lettering behind the intakes. The texture and
+markings are generated locally; no external aircraft assets are loaded.
+
+The airframe was studied against [USAF F-4E photographs](<https://commons.wikimedia.org/wiki/File:F-4E_Phantom_II_of_the_469th_TFS_at_Korat_Royal_Thai_Air_Force_Base,_in_1970_(176246932).jpg>)
+and an [underside view](https://commons.wikimedia.org/wiki/File:F-4E_Phantom_II_armed_with_missiles_in_1985.JPEG).
+The period livery draws on this [1977 IIAF F-4E photograph](https://commons.wikimedia.org/wiki/File:Left_Front_View_of_Iranian_Air_Force_F-4_342-C-K-064344_001.tif)
+and the [IIAF Association's Phantom history](https://www.iiafassociation.com/fightersf4).
+The [IIAF Museum's F-4E scale-model carousel](https://www.instagram.com/p/DGcL4nJNzof/?img_index=1)
+provides additional side, overhead and cockpit views; it is a modeler's
+interpretation, so its individual serial and stores are not replicated.
 This is an era-inspired game aircraft, not a precise restoration of a particular
 airframe or a historical reconstruction of the present-day cached map.
 
