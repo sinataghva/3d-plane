@@ -63,6 +63,18 @@ test('Phantom model has finite geometry, procedural markings and animated jet pa
                 )
             ).toBe(true);
     });
+    const intakes = airplane.getObjectsByProperty('name', 'Intake trunk');
+    expect(intakes).toHaveLength(2);
+    for (const object of intakes) {
+        const intake = /** @type {THREE.Mesh} */ (object);
+        const normals = intake.geometry.getAttribute('normal');
+        // Outer wall normals must point away from the aircraft on BOTH sides;
+        // mirrored winding otherwise causes incorrect shadow-map bias.
+        for (let row = 0; row < 4; row++)
+            expect(
+                normals.getZ(row * 8 + 5) * intake.userData.side
+            ).toBeGreaterThan(0);
+    }
     const parts = airplane.userData.jetParts;
     expect(
         parts.canopy.children.filter(

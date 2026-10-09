@@ -837,7 +837,7 @@ async function startApp() {
                 bombing.step(planeState, false, 1 / 60);
             }
             if (['bombs-reloading', 'bombs-restored'].includes(name)) {
-                for (let i = 0; i < 6; i++) {
+                for (let i = bombing.sim.remaining; i > 0; i--) {
                     bombing.step(planeState, true, 1 / 60);
                     bombing.step(planeState, false, 1 / 60);
                 }

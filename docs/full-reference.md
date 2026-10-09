@@ -172,7 +172,9 @@ The F-4 shares the Mirage's arcade jet handling, afterburner, G gear toggle,
 airbrakes, instruments, jet audio and camera modes. The same takeoff/landing
 guidance above applies; this is not real-world flight guidance. The Phantom has
 **no gun in this game**. Each **Space** press or mobile **Drop bomb** tap releases
-one of six visible, procedural Mk-82 stores; holding the control does not repeat.
+one of eighteen visible, procedural Mk-82 stores; holding the control does not repeat.
+The loadout uses six bombs on each outer multiple ejector rack and three on
+each inner triple ejector rack, with a centerline fuel tank.
 Release is blocked below **10 m above local ground** (configurable through
 `BOMB_CONFIG.minimumReleaseHeight` in `src/flight/bombs.js`). A blocked press
 does not consume ammunition or queue a release for later.
@@ -189,7 +191,7 @@ Gravity is 9.81 m/s². Arcade tuning retains full horizontal and downward veloci
 but only 25% of upward velocity at release, with linear drag of 0.08/s to shorten
 forward travel. Both values are configurable in `BOMB_CONFIG`; prediction uses
 the same tuned motion as the falling bombs.
-After the sixth release, all six stores return together after **30 simulation
+After the eighteenth release, all eighteen stores return together after **30 simulation
 seconds**, including while landed. The HUD shows remaining bombs and the reload
 countdown. Pausing or backgrounding freezes the simulation; reset restores the
 loadout and clears falling bombs/effects.

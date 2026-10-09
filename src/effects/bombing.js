@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import {
     BOMB_CONFIG,
+    BOMB_CAPACITY,
     BOMB_MOUNTS,
     bombLaunch,
     advanceBomb,
@@ -9,6 +10,7 @@ import {
 } from '../flight/bombs.js';
 import { createBombSurfaces } from '../scenery/bombSurfaces.js';
 import { createBombMarker } from './bombMarker.js';
+import { createPhantomRacks } from '../aircraft/phantomLoadout.js';
 import { createBombGeometry } from '../aircraft/bombModel.js';
 
 /** @param {THREE.Scene} scene @param {THREE.Group} airplane
@@ -32,13 +34,8 @@ export function createBombing(scene, airplane, world, sound) {
         airplane.add(mesh);
         return mesh;
     });
-    const pylonGeometry = new THREE.BoxGeometry(0.6, 0.4, 0.1);
-    const pylons = BOMB_MOUNTS.map((p) => {
-        const mesh = new THREE.Mesh(pylonGeometry, material);
-        mesh.position.set(p[0], 0.4, p[2]);
-        airplane.add(mesh);
-        return mesh;
-    });
+    const racks = createPhantomRacks();
+    airplane.add(racks.group);
     const falling = Array.from({ length: BOMB_CONFIG.maxActive }, () => {
         const mesh = new THREE.Mesh(geometry, material);
         mesh.visible = false;
@@ -124,12 +121,13 @@ export function createBombing(scene, airplane, world, sound) {
         };
         const readout =
             sim.reload > 0
-                ? `Bombs 0/6 · Reloading ${Math.ceil(sim.reload)} s`
-                : `Bombs ${sim.remaining}/6${state.position.y - surfaces.height(state.position.x, state.position.z) < BOMB_CONFIG.minimumReleaseHeight ? ' · Below release height' : ''}`;
+                ? `Bombs 0/${BOMB_CAPACITY} · Reloading ${Math.ceil(sim.reload)} s`
+                : `Bombs ${sim.remaining}/${BOMB_CAPACITY}${state.position.y - surfaces.height(state.position.x, state.position.z) < BOMB_CONFIG.minimumReleaseHeight ? ' · Below release height' : ''}`;
         if (hud.textContent !== readout) hud.textContent = readout;
         stores.forEach(
             (mesh, i) =>
-                (mesh.visible = !state.isCrashed && i >= 6 - sim.remaining)
+                (mesh.visible =
+                    !state.isCrashed && i >= BOMB_CAPACITY - sim.remaining)
         );
     }
     /** @param {import('../flight/physics.js').PlaneState} [state] */
@@ -197,7 +195,9 @@ export function createBombing(scene, airplane, world, sound) {
             stores.forEach(
                 (mesh, i) =>
                     (mesh.visible =
-                        !cockpit && !state.isCrashed && i >= 6 - sim.remaining)
+                        !cockpit &&
+                        !state.isCrashed &&
+                        i >= BOMB_CAPACITY - sim.remaining)
             );
             falling.forEach((mesh, i) => {
                 const bomb = sim.active[i];
@@ -242,7 +242,7 @@ export function createBombing(scene, airplane, world, sound) {
             if (!preview && elapsed >= nextPreview) {
                 preview = bombLaunch(
                     state,
-                    sim.remaining ? 6 - sim.remaining : 0
+                    sim.remaining ? BOMB_CAPACITY - sim.remaining : 0
                 );
                 previewAge = elapsed;
                 nextPreview = elapsed + 0.1;
@@ -318,8 +318,8 @@ export function createBombing(scene, airplane, world, sound) {
             hud.remove();
             scene.remove(group);
             stores.forEach((mesh) => airplane.remove(mesh));
-            pylons.forEach((mesh) => airplane.remove(mesh));
-            pylonGeometry.dispose();
+            airplane.remove(racks.group);
+            racks.dispose();
             geometry.dispose();
             material.dispose();
             marker.dispose();

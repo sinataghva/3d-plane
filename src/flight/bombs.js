@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { BOMB_MOUNTS, BOMB_CAPACITY } from '../aircraft/phantomLoadout.js';
+export { BOMB_MOUNTS, BOMB_CAPACITY } from '../aircraft/phantomLoadout.js';
 
 // Deliberately arcade constants, not a real-world weapon performance model.
 export const BOMB_CONFIG = Object.freeze({
@@ -9,16 +11,8 @@ export const BOMB_CONFIG = Object.freeze({
     upwardVelocityInheritance: 0.25,
     step: 1 / 60,
     lifetime: 120,
-    maxActive: 30
+    maxActive: BOMB_CAPACITY * 5
 });
-export const BOMB_MOUNTS = [
-    [-2.4, 0.05, -2],
-    [-2.4, 0.05, 2],
-    [-2.4, 0.05, -2.6],
-    [-2.4, 0.05, 2.6],
-    [-2.4, 0.05, -3.2],
-    [-2.4, 0.05, 3.2]
-];
 /** @typedef {{position:THREE.Vector3,velocity:THREE.Vector3,age:number}} Bomb */
 /** @param {import('./physics.js').PlaneState} state @param {number} mount */
 export function bombLaunch(state, mount) {
@@ -73,7 +67,7 @@ export function createBombSimulation(sweep, inside, options = {}) {
     const config = { ...BOMB_CONFIG, ...options };
     /** @type {Bomb[]} */ const active = [];
     const previous = new THREE.Vector3();
-    let remaining = 6,
+    let remaining = BOMB_CAPACITY,
         reload = 0,
         held = false;
     return {
@@ -86,7 +80,7 @@ export function createBombSimulation(sweep, inside, options = {}) {
         },
         reset() {
             active.length = 0;
-            remaining = 6;
+            remaining = BOMB_CAPACITY;
             reload = 0;
             held = false;
         },
@@ -109,7 +103,7 @@ export function createBombSimulation(sweep, inside, options = {}) {
                 reload = Math.max(0, reload - dt);
                 if (reload < 1e-8) {
                     reload = 0;
-                    remaining = 6;
+                    remaining = BOMB_CAPACITY;
                 }
             }
             const release = pulse || (pressed && !held);
@@ -120,7 +114,7 @@ export function createBombSimulation(sweep, inside, options = {}) {
                 agl >= config.minimumReleaseHeight &&
                 active.length < config.maxActive
             ) {
-                active.push(bombLaunch(state, 6 - remaining));
+                active.push(bombLaunch(state, BOMB_CAPACITY - remaining));
                 remaining--;
                 if (!remaining) reload = config.reloadSeconds;
             }

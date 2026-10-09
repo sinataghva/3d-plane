@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { TessellateModifier } from 'three/addons/modifiers/TessellateModifier.js';
 import { updateMirage } from './mirage.js';
 
 /** Original procedural Asia Minor-inspired camouflage, not a downloaded skin. */
@@ -17,7 +18,19 @@ export function createPhantomPaint() {
             const field =
                 Math.sin(u * 2 + Math.cos(v) * 1.8) +
                 Math.cos(v * 3 + Math.sin(u) * 1.4);
-            const color = colors[field > 0.48 ? 2 : field < -0.48 ? 1 : 0];
+            // Keep the side-panel lettering inside a broad tan camouflage
+            // patch on both sides. These UVs use the airframe projection below.
+            const labelU = (x / size - 0.5075) / 0.085;
+            const labelV =
+                Math.min(
+                    Math.abs(y / size - 0.434),
+                    Math.abs(y / size - 0.689)
+                ) / 0.055;
+            const tanPanel =
+                labelU * labelU + labelV * labelV <
+                1 + 0.1 * Math.sin(v * 28 + u * 9);
+            const color =
+                colors[tanPanel ? 0 : field > 0.48 ? 2 : field < -0.48 ? 1 : 0];
             pixels.set([...color, 255], (y * size + x) * 4);
         }
     const map = new THREE.DataTexture(pixels, size, size);
@@ -31,7 +44,7 @@ export function createPhantomPaint() {
 }
 
 /** Procedural late-1970s IIAF F-4E. +X forward; the bombing system attaches
- * its six stores. The shared jet updater animates gear, brakes and exhausts. */
+ * its eighteen stores and racks. The shared jet updater animates gear, brakes and exhausts. */
 export function createPhantom() {
     const airplane = new THREE.Group();
     airplane.name = 'F-4 Phantom · Imperial Iranian Air Force';
@@ -67,10 +80,14 @@ export function createPhantom() {
         roughness: 0.95,
         side: THREE.DoubleSide
     });
-    const glass = new THREE.MeshStandardMaterial({
-        color: 0x638c9b,
-        roughness: 0.18,
-        metalness: 0.55
+    const glass = new THREE.MeshPhysicalMaterial({
+        color: 0x6b929c,
+        transparent: true,
+        opacity: 0.62,
+        depthWrite: false,
+        metalness: 0.05,
+        roughness: 0.14,
+        clearcoat: 1
     });
     /** @param {THREE.BufferGeometry} geometry @param {THREE.Material} material @param {number[]} p @param {THREE.Object3D} [parent] */
     function mesh(geometry, material, p, parent = airplane) {
@@ -145,6 +162,62 @@ export function createPhantom() {
         [6.75, 1.02, 0.4, 0.51],
         [7.2, 1.0, 0.31, 0.39]
     ];
+    const intakeStations = [
+        [-2.6, 0.94, 1.08, 0.34, 0.29],
+        [-0.8, 0.9, 1.19, 0.44, 0.35],
+        [1.7, 0.88, 1.17, 0.47, 0.34],
+        [3.5, 0.88, 1.1, 0.46, 0.32]
+    ];
+    // Conform markings to the outer skin, including the engine fairings.
+    /** @param {number} x @param {number} y */
+    function skinZ(x, y) {
+        const i = Math.max(
+            1,
+            stations.findIndex((station) => station[0] >= x)
+        );
+        const a = stations[i - 1],
+            b = stations[i];
+        const t = THREE.MathUtils.clamp((x - a[0]) / (b[0] - a[0]), 0, 1);
+        const cy = THREE.MathUtils.lerp(a[1], b[1], t);
+        const ry = THREE.MathUtils.lerp(a[2], b[2], t);
+        const rz = THREE.MathUtils.lerp(a[3], b[3], t);
+        let z = rz * Math.sqrt(Math.max(0, 1 - ((y - cy) / ry) ** 2));
+        if (x >= -7.65 && x <= -3.95) {
+            const r = THREE.MathUtils.lerp(0.67, 0.82, (x + 7.65) / 3.7);
+            if (Math.abs(y - 0.9) < r)
+                z = Math.max(z, 0.65 + Math.sqrt(r * r - (y - 0.9) ** 2));
+        }
+        if (x >= intakeStations[0][0] && x <= intakeStations[3][0]) {
+            const j = Math.max(
+                1,
+                intakeStations.findIndex((row) => row[0] >= x)
+            );
+            const a = intakeStations[j - 1],
+                b = intakeStations[j];
+            const t = (x - a[0]) / (b[0] - a[0]);
+            const cy = THREE.MathUtils.lerp(a[1], b[1], t);
+            const cz = THREE.MathUtils.lerp(a[2], b[2], t);
+            const hy = THREE.MathUtils.lerp(a[3], b[3], t);
+            const hz = THREE.MathUtils.lerp(a[4], b[4], t);
+            const dy = Math.abs((y - cy) / hy);
+            if (dy <= 1)
+                z = Math.max(
+                    z,
+                    cz + hz * (1 - (Math.max(0, dy - 0.82) / 0.18) * 0.22)
+                );
+        }
+        return z + 0.012;
+    }
+    /** @param {THREE.BufferGeometry} geometry @param {number} side */
+    function conformMarking(geometry, side) {
+        const positions = geometry.getAttribute('position');
+        for (let i = 0; i < positions.count; i++)
+            positions.setZ(
+                i,
+                side * skinZ(positions.getX(i), positions.getY(i))
+            );
+        geometry.computeVertexNormals();
+    }
     shell(stations.slice(0, 8), 0, Math.PI, paint);
     shell(stations.slice(0, 8), Math.PI, Math.PI * 2, underside);
     // The period IIAF photo shows a dark green nose behind the black radome.
@@ -182,17 +255,50 @@ export function createPhantom() {
         dark
     );
     muzzle.name = 'F-4E gun muzzle';
-    mesh(new THREE.SphereGeometry(0.085, 12, 8), dark, [9.7, 1.0, 0]);
+    const noseProbe = shell(
+        [
+            [9.68, 1.0, 0.012, 0.012],
+            [10.05, 1.0, 0.002, 0.002]
+        ],
+        0,
+        Math.PI * 2,
+        dark
+    );
+    noseProbe.name = 'Nose probe';
     const canopy = new THREE.Group();
     airplane.add(canopy);
     // The two closed hoods share one flowing roof line, rising aft from the
     // windscreen and blending into the spine without a dip between the seats.
-    mesh(
-        new THREE.SphereGeometry(1, 32, 16),
-        dark,
-        [2.05, 1.85, 0],
-        canopy
-    ).scale.set(2.45, 0.045, 0.58);
+    /** Upper skin height at a canopy attachment point.
+     * @param {number} x @param {number} z */
+    function cockpitSkinY(x, z) {
+        const i = Math.max(
+            1,
+            stations.findIndex((row) => row[0] >= x)
+        );
+        const a = stations[i - 1],
+            b = stations[i];
+        const t = (x - a[0]) / (b[0] - a[0]);
+        const height = (/** @type {number[]} */ row) =>
+            row[1] + row[2] * Math.sqrt(Math.max(0, 1 - (z / row[3]) ** 2));
+        return THREE.MathUtils.lerp(height(a), height(b), t);
+    }
+    // The cockpit floor follows the nose instead of forming a floating shelf.
+    const deckGeometry = new THREE.SphereGeometry(1, 32, 16);
+    deckGeometry.scale(2.3, 0.007, 0.47);
+    const deckPositions = deckGeometry.getAttribute('position');
+    for (let i = 0; i < deckPositions.count; i++) {
+        const x = 2.05 + deckPositions.getX(i),
+            z = deckPositions.getZ(i);
+        deckPositions.setXYZ(
+            i,
+            x,
+            cockpitSkinY(x, z) + deckPositions.getY(i),
+            z
+        );
+    }
+    deckGeometry.computeVertexNormals();
+    mesh(deckGeometry, dark, [0, 0, 0], canopy);
     const glazing = [
         [-0.4, 1.86, 0.16, 0.32],
         [0.1, 1.86, 0.43, 0.53],
@@ -205,8 +311,17 @@ export function createPhantom() {
         [4.12, 1.86, 0.18, 0.34],
         [4.65, 1.86, 0.025, 0.03]
     ];
+    for (let i = 0; i < glazing.length; i++) {
+        const row = glazing[i];
+        const roof = row[1] + row[2];
+        row[1] = cockpitSkinY(row[0], row[3]) - 0.018;
+        row[2] =
+            i === glazing.length - 1 ? 0.012 : Math.max(0.012, roof - row[1]);
+    }
     const glazingMesh = shell(glazing, 0, Math.PI, glass);
     glazingMesh.name = 'Tandem canopy glazing';
+    glazingMesh.castShadow = false;
+    glazingMesh.renderOrder = 2;
     airplane.remove(glazingMesh);
     canopy.add(glazingMesh);
     for (const [x, y, radiusY, radiusZ] of [
@@ -215,7 +330,7 @@ export function createPhantom() {
         glazing[7]
     ]) {
         const frame = mesh(
-            new THREE.TorusGeometry(1, 0.032, 6, 32, Math.PI),
+            new THREE.TorusGeometry(1, 0.022, 8, 40, Math.PI),
             dark,
             [x, y, 0],
             canopy
@@ -225,15 +340,15 @@ export function createPhantom() {
     }
     for (const x of [0.9, 3.15]) {
         mesh(
-            new THREE.BoxGeometry(0.34, 0.42, 0.41),
+            new THREE.BoxGeometry(0.34, 0.28, 0.32),
             dark,
-            [x, 1.96, 0],
+            [x, 2.04, 0],
             canopy
         );
         mesh(
-            new THREE.BoxGeometry(0.22, 0.2, 0.3),
+            new THREE.BoxGeometry(0.22, 0.12, 0.22),
             dark,
-            [x - 0.12, 2.12, 0],
+            [x - 0.12, x > 2 ? 2.17 : 2.25, 0],
             canopy
         );
     }
@@ -255,12 +370,6 @@ export function createPhantom() {
             [-1, 0.78],
             [-1, -0.78]
         ];
-        const intakeStations = [
-            [-2.6, 0.94, 1.08, 0.34, 0.29],
-            [-0.8, 0.9, 1.19, 0.44, 0.35],
-            [1.7, 0.88, 1.17, 0.47, 0.34],
-            [3.5, 0.88, 1.1, 0.46, 0.32]
-        ];
         for (const [x, y, z, halfY, halfZ] of intakeStations)
             for (const [dy, dz] of intakeProfile)
                 intakeVertices.push(x, y + dy * halfY, side * (z + dz * halfZ));
@@ -270,7 +379,10 @@ export function createPhantom() {
                     b =
                         row * intakeProfile.length +
                         ((j + 1) % intakeProfile.length);
-                intakeIndices.push(a, b, b + 8, a, b + 8, a + 8);
+                // Mirroring positions reverses winding. Keep the normals
+                // outward on both sides for correct shadow-map bias.
+                if (side > 0) intakeIndices.push(a, b, b + 8, a, b + 8, a + 8);
+                else intakeIndices.push(a, b + 8, b, a, a + 8, b + 8);
             }
         const intakeGeometry = new THREE.BufferGeometry();
         intakeGeometry.setAttribute(
@@ -279,7 +391,9 @@ export function createPhantom() {
         );
         intakeGeometry.setIndex(intakeIndices);
         intakeGeometry.computeVertexNormals();
-        mesh(intakeGeometry, paint, [0, 0, 0]);
+        const intake = mesh(intakeGeometry, paint, [0, 0, 0]);
+        intake.name = 'Intake trunk';
+        intake.userData.side = side;
         // An octagonal face follows the trunk's rounded corners. Its thin
         // frame avoids the detached, oversized square-box silhouette.
         foil(
@@ -440,17 +554,21 @@ export function createPhantom() {
             circle.rotation.x = -Math.PI / 2;
             circle.name = 'Iranian roundel';
         }
-        for (const [r, color] of [
-            [0.3, 0x176b38],
-            [0.2, 0xf3f1df],
-            [0.1, 0xbd302c]
+        for (const [inner, outer, color] of [
+            [0.2, 0.3, 0x176b38],
+            [0.1, 0.2, 0xf3f1df],
+            [0, 0.1, 0xbd302c]
         ]) {
-            const circle = mesh(
-                new THREE.CircleGeometry(r, 24),
-                new THREE.MeshBasicMaterial({ color }),
-                [-5.4, 1.55, side * (1.18 + (0.31 - r) * 0.01)]
+            const geometry = new THREE.RingGeometry(inner, outer, 64, 6);
+            geometry.translate(-5.4, 1.3, 0);
+            conformMarking(geometry, side);
+            const roundel = mesh(
+                geometry,
+                new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }),
+                [0, 0, 0]
             );
-            circle.rotation.y = side > 0 ? 0 : Math.PI;
+            roundel.name = 'Fuselage roundel';
+            roundel.castShadow = false;
         }
     }
     const fin = new THREE.Shape([
@@ -466,11 +584,52 @@ export function createPhantom() {
     );
     // Period-style tricolor fin flash; IIAF letters belong on the fuselage
     // behind the intakes, as seen in the 1977 Shiraz photograph.
+    // Continuous vector outlines keep the narrow block letters sharp at any zoom.
     const glyphs = {
-        I: ['111', '010', '010', '010', '111'],
-        A: ['010', '101', '111', '101', '101'],
-        F: ['111', '100', '110', '100', '100']
+        I: [
+            [
+                [0, 0],
+                [0.065, 0],
+                [0.065, 0.36],
+                [0, 0.36]
+            ]
+        ],
+        A: [
+            [
+                [0, 0],
+                [0.07, 0],
+                [0.115, 0.27],
+                [0.16, 0],
+                [0.23, 0],
+                [0.16, 0.36],
+                [0.07, 0.36]
+            ],
+            [
+                [0.06, 0.1],
+                [0.17, 0.1],
+                [0.17, 0.16],
+                [0.06, 0.16]
+            ]
+        ],
+        F: [
+            [
+                [0, 0],
+                [0.065, 0],
+                [0.065, 0.15],
+                [0.17, 0.15],
+                [0.17, 0.21],
+                [0.065, 0.21],
+                [0.065, 0.3],
+                [0.21, 0.3],
+                [0.21, 0.36],
+                [0, 0.36]
+            ]
+        ]
     };
+    const lettering = new THREE.MeshBasicMaterial({
+        color: 0x171b17,
+        side: THREE.DoubleSide
+    });
     for (const side of [-1, 1]) {
         for (const [index, color] of [0x22834d, 0xf4f2dc, 0xb83931].entries())
             mesh(
@@ -480,21 +639,31 @@ export function createPhantom() {
             );
         const label = new THREE.Group();
         label.name = 'IIAF';
-        label.position.set(side > 0 ? -4 : -2.4, 1.52, side * 1.49);
-        label.rotation.y = side > 0 ? 0 : Math.PI;
         airplane.add(label);
-        for (const [i, char] of [...'IIAF'].entries())
-            for (const [row, bits] of glyphs[
-                /** @type {keyof typeof glyphs} */ (char)
-            ].entries())
-                for (let col = 0; col < bits.length; col++)
-                    if (bits[col] === '1')
-                        mesh(
-                            new THREE.BoxGeometry(0.1, 0.1, 0.015),
-                            dark,
-                            [i * 0.43 + col * 0.1, -row * 0.09, 0],
-                            label
-                        );
+        let offset = 0;
+        for (const char of 'IIAF') {
+            const outlines = glyphs[/** @type {keyof typeof glyphs} */ (char)];
+            for (const outline of outlines) {
+                const shape = new THREE.Shape(
+                    outline.map(
+                        ([x, y]) =>
+                            new THREE.Vector2(
+                                0.15 + side * (offset + x - 0.36),
+                                0.84 + y
+                            )
+                    )
+                );
+                const outlineGeometry = new THREE.ShapeGeometry(shape);
+                const geometry = new TessellateModifier(0.045, 6).modify(
+                    outlineGeometry
+                );
+                outlineGeometry.dispose();
+                conformMarking(geometry, side);
+                const letter = mesh(geometry, lettering, [0, 0, 0], label);
+                letter.castShadow = false;
+            }
+            offset += char === 'I' ? 0.13 : 0.29;
+        }
     }
     const gear = new THREE.Group(),
         gearLegs = [];
