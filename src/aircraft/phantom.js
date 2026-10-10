@@ -44,7 +44,7 @@ export function createPhantomPaint() {
 }
 
 /** Procedural late-1970s IIAF F-4E. +X forward; the bombing system attaches
- * its eighteen stores and racks. The shared jet updater animates gear, brakes and exhausts. */
+ * its twenty-four stores and racks. The shared jet updater animates gear, brakes and exhausts. */
 export function createPhantom() {
     const airplane = new THREE.Group();
     airplane.name = 'F-4 Phantom · Imperial Iranian Air Force';

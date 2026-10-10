@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('Phantom eighteen-store layout from below and on its wheels', async ({
+test('Phantom twenty-four-store layout from below and on its wheels', async ({
     page
 }, info) => {
     await page.goto('/3d-plane/');
@@ -55,7 +55,7 @@ test('Phantom eighteen-store layout from below and on its wheels', async ({
         window.loadoutReview = { renderer, scene, camera, light };
         return BOMB_MOUNTS.length;
     });
-    expect(count).toBe(18);
+    expect(count).toBe(24);
     await page.screenshot({ path: info.outputPath('underside.png') });
     await page.evaluate(() => {
         const { renderer, scene, camera } = window.loadoutReview;

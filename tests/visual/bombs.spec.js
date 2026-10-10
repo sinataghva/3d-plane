@@ -28,8 +28,8 @@ for (const view of [
                     view === 'impact' ||
                     view === 'water' ||
                     view === 'building'
-                  ? '17/18'
-                  : '18/18'
+                  ? '23/24'
+                  : '24/24'
         );
         expect(errors).toEqual([]);
         if (view === 'building' || view === 'slope') {
@@ -104,7 +104,7 @@ test('flight release, hold, full reload, pause and reset', async ({
         api.step({ seconds: 1 });
         const first = api.getState().plane.bombs;
         const counts = [];
-        for (let i = 0; i < 17; i++) {
+        for (let i = 0; i < 23; i++) {
             api.setControls({ fire: false });
             api.step({ seconds: 1 / 60 });
             api.setControls({ fire: true });
@@ -115,9 +115,9 @@ test('flight release, hold, full reload, pause and reset', async ({
         api.setControls({ fire: false, throttle: 0.3, boost: false });
         return { blocked, first, counts, empty };
     });
-    expect(result.blocked.remaining).toBe(18);
-    expect(result.first.remaining).toBe(17);
-    expect(result.counts).toEqual(Array.from({ length: 17 }, (_, i) => 16 - i));
+    expect(result.blocked.remaining).toBe(24);
+    expect(result.first.remaining).toBe(23);
+    expect(result.counts).toEqual(Array.from({ length: 23 }, (_, i) => 22 - i));
     expect(result.empty.reloadSeconds).toBeCloseTo(30);
     await page.waitForTimeout(1000);
     const paused = await page.evaluate(
@@ -131,9 +131,9 @@ test('flight release, hold, full reload, pause and reset', async ({
         return api.getState();
     });
     expect(reloaded.plane.isCrashed).toBe(false);
-    expect(reloaded.plane.bombs.remaining).toBe(18);
+    expect(reloaded.plane.bombs.remaining).toBe(24);
     await page.evaluate(() => window.planeAutomation.reset());
-    await expect(page.locator('#bomb-readout')).toContainText('18/18');
+    await expect(page.locator('#bomb-readout')).toContainText('24/24');
     expect(
         await page.evaluate(
             () => window.planeAutomation.getState().plane.bombs.active
@@ -158,7 +158,7 @@ test('touch release control and HUD fit phone landscape', async ({
     await expect(page.locator('.touch-fire')).toBeEnabled();
     await expect(page.locator('.touch-fire')).toHaveText('Drop bomb');
     await page.locator('.touch-fire').tap();
-    await expect(page.locator('#bomb-readout')).toContainText('18/18');
+    await expect(page.locator('#bomb-readout')).toContainText('24/24');
     // A human touch intentionally releases automation ownership. Reopen for setup.
     await page.reload();
     await expect(page.locator('#scenery-loading')).toHaveCount(0, {
@@ -175,7 +175,7 @@ test('touch release control and HUD fit phone landscape', async ({
         api.release();
     });
     await page.locator('.touch-fire').tap();
-    await expect(page.locator('#bomb-readout')).toContainText('17/18');
+    await expect(page.locator('#bomb-readout')).toContainText('23/24');
     const box = await page.locator('#bomb-readout').boundingBox();
     expect(box.y + box.height).toBeLessThanOrEqual(390);
     await page.screenshot({ path: info.outputPath('mobile-bombs.png') });
@@ -229,9 +229,9 @@ for (const quality of ['low', 'balanced', 'high', 'mobile'])
                 const now = performance.now();
                 times.push(now - previous);
                 previous = now;
-                if (i < 360 && i % 20 === 0)
+                if (i < 480 && i % 20 === 0)
                     window.planeAutomation.setControls({ fire: true });
-                if (i < 360 && i % 20 === 1)
+                if (i < 480 && i % 20 === 1)
                     window.planeAutomation.setControls({ fire: false });
                 const s = JSON.parse(
                     document.documentElement.dataset.sceneryStats || '{}'
@@ -257,8 +257,8 @@ for (const quality of ['low', 'balanced', 'high', 'mobile'])
             JSON.stringify(report, null, 2)
         );
         expect(report.state.plane.isCrashed).toBe(false);
-        expect([0, 18]).toContain(report.state.plane.bombs.remaining);
-        expect(report.stats.bombsActive).toBeLessThanOrEqual(90);
+        expect([0, 24]).toContain(report.state.plane.bombs.remaining);
+        expect(report.stats.bombsActive).toBeLessThanOrEqual(120);
         expect(report.stats.bombEffects).toBeLessThanOrEqual(16);
         expect(report.maxEffects).toBeGreaterThan(0);
         expect(report.p95).toBeLessThan(100);

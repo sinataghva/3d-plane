@@ -45,33 +45,33 @@ test('one press, no repeat, no queued release below configurable height', () => 
     const sim = simulation({ minimumReleaseHeight: 15 }),
         s = state();
     sim.step(s, true, 14.99);
-    expect(sim.remaining).toBe(18);
+    expect(sim.remaining).toBe(24);
     sim.step(s, true, 20);
-    expect(sim.remaining).toBe(18);
+    expect(sim.remaining).toBe(24);
     sim.step(s, false, 20);
     sim.step(s, true, 15);
-    expect(sim.remaining).toBe(17);
+    expect(sim.remaining).toBe(23);
     for (let i = 0; i < 60; i++) sim.step(s, true, 20);
-    expect(sim.remaining).toBe(17);
+    expect(sim.remaining).toBe(23);
     expect(sim.reload).toBe(0);
 });
 test('default release boundary is exactly 10 metres', () => {
     const sim = simulation(),
         s = state();
     sim.step(s, true, 9.999);
-    expect(sim.remaining).toBe(18);
+    expect(sim.remaining).toBe(24);
     sim.step(s, false, 10);
     sim.step(s, true, 10);
-    expect(sim.remaining).toBe(17);
+    expect(sim.remaining).toBe(23);
 });
-test('eighteenth drop starts full 30 second reload; continues on ground; hold never auto-drops', () => {
+test('twenty-fourth drop starts full 30 second reload; continues on ground; hold never auto-drops', () => {
     const sim = simulation(),
         s = state();
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; i < 24; i++) {
         sim.step(s, false, 100);
         sim.step(s, true, 100);
-        expect(sim.remaining).toBe(17 - i);
-        if (i < 17) expect(sim.reload).toBe(0);
+        expect(sim.remaining).toBe(23 - i);
+        if (i < 23) expect(sim.reload).toBe(0);
     }
     expect(sim.reload).toBe(30);
     s.isAirborne = false;
@@ -79,10 +79,10 @@ test('eighteenth drop starts full 30 second reload; continues on ground; hold ne
     expect(sim.remaining).toBe(0);
     expect(sim.reload).toBeGreaterThan(0);
     sim.step(s, true, 0);
-    expect(sim.remaining).toBe(18);
+    expect(sim.remaining).toBe(24);
     expect(sim.reload).toBe(0);
     sim.step(s, true, 100);
-    expect(sim.remaining).toBe(18);
+    expect(sim.remaining).toBe(24);
 });
 test('pause, crash and restart do not leak bombs or countdown', () => {
     const sim = simulation(),
@@ -96,7 +96,7 @@ test('pause, crash and restart do not leak bombs or countdown', () => {
     expect(sim.active).toHaveLength(0);
     expect(sim.remaining).toBe(0);
     sim.reset();
-    expect(sim.remaining).toBe(18);
+    expect(sim.remaining).toBe(24);
     expect(sim.reload).toBe(0);
 });
 test('capacity refuses new releases without deleting old bombs or consuming inventory', () => {
@@ -110,7 +110,7 @@ test('capacity refuses new releases without deleting old bombs or consuming inve
     const first = sim.active[0];
     sim.step(s, false, 100);
     sim.step(s, true, 100);
-    expect(sim.remaining).toBe(17);
+    expect(sim.remaining).toBe(23);
     expect(sim.active).toEqual([first]);
 });
 test('drag slows inherited forward speed and gravity increases descent', () => {
@@ -164,7 +164,7 @@ test('lifetime and world bounds remove unsupported bombs', () => {
     timed.step(s, true, 100);
     timed.step(s, false, 100);
     expect(timed.active).toHaveLength(0);
-    expect(BOMB_CONFIG.maxActive).toBe(90);
+    expect(BOMB_CONFIG.maxActive).toBe(120);
 });
 test('quick taps survive between physics ticks; repeats and input clearing do not queue drops', () => {
     const input = createInputController('phantom');
@@ -175,7 +175,7 @@ test('quick taps survive between physics ticks; repeats and input clearing do no
     expect(input.state.space).toBe(false);
     const sim = simulation();
     sim.step(state(), false, 100, 1 / 60, true);
-    expect(sim.remaining).toBe(17);
+    expect(sim.remaining).toBe(23);
     input.reset();
     expect(input.state.bombPresses).toBe(0);
 });
@@ -187,15 +187,15 @@ test('repeated complete reload cycles preserve falling bombs within the lifetime
         ),
         s = state();
     for (let cycle = 0; cycle < 8; cycle++) {
-        for (let bomb = 0; bomb < 18; bomb++) {
+        for (let bomb = 0; bomb < 24; bomb++) {
             sim.step(s, false, 100, 1 / 60, true);
-            expect(sim.remaining).toBe(17 - bomb);
+            expect(sim.remaining).toBe(23 - bomb);
         }
         const falling = sim.active[sim.active.length - 1];
         for (let tick = 0; tick < 1800; tick++) sim.step(s, false, 0);
-        expect(sim.remaining).toBe(18);
+        expect(sim.remaining).toBe(24);
         expect(sim.active).toContain(falling);
-        expect(sim.active.length).toBeLessThanOrEqual(72);
+        expect(sim.active.length).toBeLessThanOrEqual(96);
     }
 });
 
@@ -210,7 +210,7 @@ test('bomb motion and reload agree at 30, 60 and 120 rendered frames per second'
         let ticks = 0;
         for (let frame = 0; frame < fps * 10; frame++) {
             clock.update(1 / fps, (dt) => {
-                sim.step(s, false, 100, dt, ticks++ < 18);
+                sim.step(s, false, 100, dt, ticks++ < 24);
             });
         }
         return {
@@ -223,15 +223,24 @@ test('bomb motion and reload agree at 30, 60 and 120 rendered frames per second'
     expect(results[1]).toEqual(results[2]);
 });
 
-test('eighteen distinct stores form mirrored outer sixes and inner triples', () => {
-    expect(BOMB_MOUNTS).toHaveLength(18);
-    expect(new Set(BOMB_MOUNTS.map(JSON.stringify)).size).toBe(18);
+test('twenty-four stores comprise eighteen wing bombs and six centerline bombs', () => {
+    expect(BOMB_MOUNTS).toHaveLength(24);
+    expect(new Set(BOMB_MOUNTS.map(JSON.stringify)).size).toBe(24);
     for (const side of [-1, 1]) {
-        const wing = BOMB_MOUNTS.filter((p) => Math.sign(p[2]) === side);
+        const wing = BOMB_MOUNTS.filter(
+            (p) => Math.sign(p[2]) === side && Math.abs(p[2]) > 1
+        );
         expect(wing.filter((p) => Math.abs(p[2]) > 3)).toHaveLength(6);
         expect(wing.filter((p) => Math.abs(p[2]) < 3)).toHaveLength(3);
     }
-    for (let i = 0; i < BOMB_MOUNTS.length; i += 2) {
+    const center = BOMB_MOUNTS.filter((p) => Math.abs(p[2]) < 1);
+    expect(center).toHaveLength(6);
+    expect(new Set(center.map((p) => p[0])).size).toBe(2);
+    for (const [x, y, z] of center) {
+        expect(center).toContainEqual([x, y, z === 0 ? 0 : -z]);
+        expect(y - 0.25).toBeGreaterThan(-0.5);
+    }
+    for (let i = 0; i < 18; i += 2) {
         const [x, y, z] = BOMB_MOUNTS[i];
         expect(BOMB_MOUNTS[i + 1]).toEqual([x, y, -z]);
         expect(y - 0.25).toBeGreaterThan(-0.5);

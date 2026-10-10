@@ -6,12 +6,19 @@ const triplet = [
     [-0.34, 0.13],
     [0.34, 0.13]
 ];
-export const BOMB_RACKS = [-1, 1].flatMap((side) => [
+const wingRacks = [-1, 1].flatMap((side) => [
     { x: -2.5, z: side * 3.65, rows: [-3.65, -1.35], name: 'Outer MER' },
     { x: 0.05, z: side * 2.3, rows: [0.05], name: 'Inner TER' }
 ]);
+const centerRack = {
+    x: -1.5,
+    z: 0,
+    rows: [-2.65, -0.35],
+    name: 'Centerline MER'
+};
+export const BOMB_RACKS = [...wingRacks, centerRack];
 // Alternate mirrored stores so each successive pair restores lateral balance.
-export const BOMB_MOUNTS = [-3.65, -1.35, 0.05].flatMap((x) =>
+const wingMounts = [-3.65, -1.35, 0.05].flatMap((x) =>
     triplet.flatMap(([offset, y]) =>
         [-1, 1].map((side) => [
             x,
@@ -20,12 +27,19 @@ export const BOMB_MOUNTS = [-3.65, -1.35, 0.05].flatMap((x) =>
         ])
     )
 );
+// A shallower center triplet clears both the belly and the runway.
+const centerMounts = centerRack.rows.flatMap((x) => [
+    [x, -0.24, 0],
+    [x, -0.1, -0.34],
+    [x, -0.1, 0.34]
+]);
+export const BOMB_MOUNTS = [...wingMounts, ...centerMounts];
 export const BOMB_CAPACITY = BOMB_MOUNTS.length;
 
-/** Fixed pylons, ejector racks and centerline tank; bombs use BOMB_MOUNTS. */
+/** Fixed pylons and ejector racks; bombs use BOMB_MOUNTS. */
 export function createPhantomRacks() {
     const group = new THREE.Group();
-    group.name = 'F-4E MER TER racks and centerline tank';
+    group.name = 'F-4E three MER and two TER racks';
     const material = new THREE.MeshStandardMaterial({
         color: 0xb7bdb3,
         roughness: 0.65
@@ -42,9 +56,10 @@ export function createPhantomRacks() {
         return mesh;
     }
     for (const rack of BOMB_RACKS) {
+        const yOffset = rack.z === 0 ? -0.2 : 0;
         add(
             new THREE.BoxGeometry(1.1, 0.35, 0.13),
-            [rack.x, 0.49, rack.z],
+            [rack.x, 0.49 + yOffset, rack.z],
             `${rack.name} pylon`
         );
         add(
@@ -53,30 +68,22 @@ export function createPhantomRacks() {
                 0.14,
                 0.16
             ),
-            [rack.x, 0.25, rack.z],
+            [rack.x, 0.25 + yOffset, rack.z],
             rack.name
         );
         for (const x of rack.rows) {
             add(
                 new THREE.BoxGeometry(0.4, 0.09, 0.64),
-                [x, 0.28, rack.z],
+                [x, 0.28 + yOffset, rack.z],
                 'Shoulder ejectors'
             );
             add(
                 new THREE.BoxGeometry(0.4, 0.23, 0.1),
-                [x, 0.06, rack.z],
+                [x, 0.06 + yOffset, rack.z],
                 'Lower ejector'
             );
         }
     }
-    add(
-        new THREE.BoxGeometry(2.2, 0.18, 0.16),
-        [-1.5, 0.27, 0],
-        'Tank attachment'
-    );
-    const tank = new THREE.SphereGeometry(1, 24, 12);
-    tank.scale(3.25, 0.38, 0.38);
-    add(tank, [-1.5, -0.02, 0], 'Centerline fuel tank');
     return {
         group,
         dispose() {
