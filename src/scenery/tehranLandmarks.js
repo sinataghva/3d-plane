@@ -1,7 +1,8 @@
+import { azadiContains, createAzadiTowerGeometry } from './azadiTower.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createUniversitySetting } from './universitySetting.js';
-import { createRenderedHeight, clipToTerrain } from './groundDetail.js';
+import { createAzadiSquare } from './azadiSquare.js';
 
 // Positions: retained OSM footprints where present; supplemental monument
 // coordinates and architectural references are documented in data/tehran/README.md.
@@ -118,15 +119,7 @@ export function tehranLandmarks(data) {
 export function landmarkContains(id, x, y, z) {
     const spec = TEHRAN_LANDMARKS.find((l) => l.id === id);
     if (!spec || y < 0 || y > spec.height) return false;
-    if (id === 'azadi') {
-        const section = azadiSection(y);
-        return (
-            Math.abs(x) < section.short &&
-            Math.abs(z) < section.long &&
-            (y >= 28 || Math.abs(z) > section.main) &&
-            (y >= 13 || Math.abs(x) > section.cross)
-        );
-    }
+    if (id === 'azadi') return azadiContains(x, y, z);
     if (id === 'milad')
         return (
             Math.hypot(x, z) < (y > 350 ? 3.2 : y > 280 ? 28 : 16 - y * 0.03)
@@ -174,18 +167,6 @@ export function landmarkContains(id, x, y, z) {
     return Math.abs(x) < spec.width / 2 && Math.abs(z) < spec.depth / 2;
 }
 
-/** Azadi's shared world-aligned envelope and perpendicular arch profiles.
- * X is east–west (large passage); Z is north–south (smaller passage).
- * @param {number} y */
-function azadiSection(y) {
-    return {
-        long: 9 + 22.5 * Math.pow(1 - y / 45, 2.3),
-        short: 5.5 + 6.5 * Math.pow(1 - y / 45, 1.7),
-        main: y < 28 ? 12 * Math.sqrt(1 - y / 28) : 0,
-        cross: y < 13 ? 4.6 * Math.sqrt(1 - y / 13) : 0
-    };
-}
-
 /** Opposing front/rear arches make a saddle-shaped concrete page.
  * @param {number} u @param {number} v */
 function universityPageHeight(u, v) {
@@ -218,6 +199,7 @@ export function tabiatApproachHeight(x, z, base, ground) {
 /** Original stylized meshes; all small parts are baked into one draw per landmark.
  * @param {string} id */
 export function landmarkGeometry(id) {
+    if (id === 'azadi') return createAzadiTowerGeometry();
     /** @type {THREE.BufferGeometry[]} */ const parts = [];
     const transform = new THREE.Matrix4();
     /** @param {THREE.BufferGeometry} geometry @param {number} color @param {number[]} [position] */
@@ -269,160 +251,7 @@ export function landmarkGeometry(id) {
         joint = 0xaca998,
         glass = 0x35575e,
         tile = 0x348b93;
-    if (id === 'azadi') {
-        // Four splayed corner piers: the tall/wide passage runs east–west
-        // (world X), and the smaller crossing passage runs north–south (Z).
-        // These same profiles define collision, including their intersection.
-        const outer = (/** @type {number} */ y) => azadiSection(y).long;
-        const inner = (/** @type {number} */ y) => azadiSection(y).main;
-        const depth = (/** @type {number} */ y) => azadiSection(y).short;
-        const crossing = (/** @type {number} */ y) => azadiSection(y).cross;
-        /** @param {(y:number,u:number)=>number[]} sample @param {number} height @param {number} [steps] */
-        const patch = (sample, height, steps = 90) => {
-            const g = new THREE.PlaneGeometry(1, 1, 1, steps);
-            const p = g.attributes.position;
-            for (let i = 0; i < p.count; i++) {
-                const q = sample((p.getY(i) + 0.5) * height, p.getX(i) + 0.5);
-                p.setXYZ(i, q[0], q[1], q[2]);
-            }
-            g.computeVertexNormals();
-            add(g, stone);
-        };
-        for (const sx of [-1, 1])
-            for (const sz of [-1, 1]) {
-                patch(
-                    (y, u) => [
-                        sx * depth(y),
-                        y,
-                        sz * (inner(y) + (outer(y) - inner(y)) * u)
-                    ],
-                    45
-                );
-                patch(
-                    (y, u) => [
-                        sx * (crossing(y) + (depth(y) - crossing(y)) * u),
-                        y,
-                        sz * outer(y)
-                    ],
-                    45
-                );
-                patch(
-                    (y, u) => [
-                        sx * crossing(y),
-                        y,
-                        sz * (inner(y) + (outer(y) - inner(y)) * u)
-                    ],
-                    13,
-                    52
-                );
-                patch(
-                    (y, u) => [
-                        sx * (crossing(y) + (depth(y) - crossing(y)) * u),
-                        y,
-                        sz * inner(y)
-                    ],
-                    28,
-                    112
-                );
-                for (const y of [0, 45])
-                    patch(
-                        (v, u) => [
-                            sx * (crossing(y) + (depth(y) - crossing(y)) * u),
-                            y,
-                            sz * (inner(y) + (outer(y) - inner(y)) * v)
-                        ],
-                        1,
-                        1
-                    );
-            }
-        // Marble joints and ribs wrap all four elevations, not just two faces.
-        for (const broad of [true, false]) {
-            const outerSpan = broad ? outer : depth;
-            const opening = broad ? inner : crossing;
-            const faceDepth = broad ? depth : outer;
-            /** @param {number} x @param {number} y @param {number} face @param {number} [offset] */
-            const point = (x, y, face, offset = 0.09) =>
-                broad
-                    ? [face * (faceDepth(y) + offset), y, x]
-                    : [x, y, face * (faceDepth(y) + offset)];
-            for (const face of [-1, 1]) {
-                for (let y = 1.5; y < 45; y += 1.5)
-                    for (const side of [-1, 1])
-                        beam(
-                            point(side * opening(y), y, face, 0.04),
-                            point(side * outerSpan(y), y, face, 0.04),
-                            0.035,
-                            joint
-                        );
-                for (const side of [-1, 1])
-                    for (let rib = 0; rib <= (broad ? 9 : 5); rib++)
-                        for (let y = 0; y < 44; y += 2) {
-                            const t = rib / (broad ? 9 : 5);
-                            beam(
-                                point(
-                                    side *
-                                        (opening(y) +
-                                            (outerSpan(y) - opening(y)) * t),
-                                    y,
-                                    face
-                                ),
-                                point(
-                                    side *
-                                        (opening(y + 2) +
-                                            (outerSpan(y + 2) -
-                                                opening(y + 2)) *
-                                                t),
-                                    y + 2,
-                                    face
-                                ),
-                                0.065,
-                                rib === 0 ? tile : joint
-                            );
-                        }
-                for (
-                    let x = -(broad ? 6 : 3.6);
-                    x <= (broad ? 6 : 3.6);
-                    x += 1.5
-                )
-                    box(
-                        broad ? [0.16, 3.4, 0.55] : [0.55, 3.4, 0.16],
-                        point(x, 41.4, face, 0.08),
-                        glass
-                    );
-                if (broad)
-                    for (const side of [-1, 1])
-                        beam(
-                            point(0, 37, face, 0.15),
-                            point(side * 6, 30, face, 0.15),
-                            0.17,
-                            tile
-                        );
-            }
-        }
-        // Vault ribs stop at the perpendicular opening rather than spanning it.
-        for (let i = 0; i < 32; i++) {
-            const z = -11.8 + i * 0.7375,
-                y = 28 * (1 - (z / 12) ** 2);
-            for (const side of [-1, 1])
-                beam(
-                    [side * crossing(y), y - 0.03, z],
-                    [side * depth(y), y - 0.03, z],
-                    0.09,
-                    tile
-                );
-        }
-        for (let i = 0; i < 16; i++) {
-            const x = -4.4 + i * 0.55,
-                y = 13 * (1 - (x / 4.6) ** 2);
-            for (const side of [-1, 1])
-                beam(
-                    [x, y - 0.03, side * inner(y)],
-                    [x, y - 0.03, side * outer(y)],
-                    0.075,
-                    tile
-                );
-        }
-    } else if (id === 'milad') {
+    if (id === 'milad') {
         add(new THREE.CylinderGeometry(7, 16, 300, 8), 0xbdb8aa, [0, 150, 0]);
         add(new THREE.CylinderGeometry(28, 12, 26, 12), stone, [0, 292, 0]);
         add(new THREE.CylinderGeometry(20, 28, 34, 12), glass, [0, 322, 0]);
@@ -578,6 +407,7 @@ export function createTehranLandmarks(world) {
         );
         mesh.castShadow = mesh.receiveShadow = true;
         group.add(mesh);
+        if (landmark.id === 'azadi') group.add(createAzadiSquare(world));
         if (landmark.id === 'university')
             group.add(createUniversitySetting(world, landmark));
         if (landmark.id === 'tabiat') {
@@ -630,61 +460,6 @@ export function createTehranLandmarks(world) {
                 approach.receiveShadow = true;
                 group.add(approach);
             }
-        }
-        if (landmark.id === 'azadi') {
-            // Follow the rendered terrain triangles, not independent DEM samples.
-            // Otherwise the garden intersects the coarse ground and reveals patches
-            // of the differently colored base map through its surface.
-            const source = new THREE.RingGeometry(0, 1, 96, 16);
-            source.rotateX(-Math.PI / 2);
-            const p = source.attributes.position;
-            const height = createRenderedHeight(world);
-            const positions = [],
-                colors = [];
-            const indices = source.index;
-            for (let i = 0; indices && i < indices.count; i += 3) {
-                const corners = [0, 1, 2].map((j) => {
-                    const k = indices.getX(i + j);
-                    return [
-                        landmark.x + p.getX(k) * 190,
-                        landmark.z + p.getZ(k) * 105
-                    ];
-                });
-                for (const [x, z] of clipToTerrain(corners, world)) {
-                    const u = (x - landmark.x) / 190,
-                        v = (z - landmark.z) / 105,
-                        r = Math.hypot(u, v);
-                    positions.push(x, height(x, z) + 0.16, z);
-                    const path =
-                        r < 0.32 ||
-                        r > 0.94 ||
-                        Math.abs(Math.sin(Math.atan2(v, u) * 8)) < 0.18 ||
-                        Math.abs(r - 0.65) < 0.035;
-                    const c = new THREE.Color(path ? 0xd9ceae : 0x718f55);
-                    colors.push(c.r, c.g, c.b);
-                }
-            }
-            source.dispose();
-            const plaza = new THREE.BufferGeometry();
-            plaza.setAttribute(
-                'position',
-                new THREE.Float32BufferAttribute(positions, 3)
-            );
-            plaza.setAttribute(
-                'color',
-                new THREE.Float32BufferAttribute(colors, 3)
-            );
-            plaza.computeVertexNormals();
-            const garden = new THREE.Mesh(
-                plaza,
-                new THREE.MeshLambertMaterial({
-                    vertexColors: true,
-                    side: THREE.DoubleSide
-                })
-            );
-            garden.name = 'Azadi Square · stylized geometric gardens';
-            garden.receiveShadow = true;
-            group.add(garden);
         }
     }
     return group;

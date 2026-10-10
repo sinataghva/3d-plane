@@ -1,5 +1,6 @@
 import { it, expect } from 'vitest';
 import * as THREE from 'three';
+import { azadiGroovePoint } from './azadiTower.js';
 import {
     TEHRAN_LANDMARKS,
     landmarkGeometry,
@@ -126,4 +127,71 @@ it('Azadi has four feet and unequal clear passages on both world axes', () => {
     ).toBeLessThan(25);
     geometry.dispose();
     material.dispose();
+});
+
+it('Azadi vault descends behind the pointed entrance and collision follows its depth', () => {
+    const geometry = landmarkGeometry('azadi');
+    const material = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.updateMatrixWorld(true);
+    for (const side of [-1, 1]) {
+        const hits = new THREE.Raycaster(
+            new THREE.Vector3(side * 20, 28, 0),
+            new THREE.Vector3(-side, 0, 0)
+        ).intersectObject(mesh);
+        expect(hits.length).toBeGreaterThan(0);
+        // A real vaulted opening: its ceiling recedes from the outer facade,
+        // unlike a decorative V on an otherwise flat wall.
+        const x = Math.abs(hits[0].point.x);
+        expect(x).toBeGreaterThan(2);
+        expect(x).toBeLessThan(6.6);
+        expect(landmarkContains('azadi', side * (x + 0.6), 28, 0)).toBe(false);
+        expect(landmarkContains('azadi', side * (x - 0.6), 28, 0)).toBe(true);
+    }
+    expect(landmarkContains('azadi', 0, 44.1, 0)).toBe(true);
+    expect(landmarkContains('azadi', 3.5, 44.1, 0)).toBe(false);
+    expect(landmarkContains('azadi', 6.55, 44.4, 0)).toBe(true);
+    geometry.dispose();
+    material.dispose();
+});
+
+it('Azadi crown has re-entrant corners rather than a rectangular roof cap', () => {
+    const geometry = landmarkGeometry('azadi');
+    const material = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.updateMatrixWorld(true);
+    for (const sx of [-1, 1])
+        for (const sz of [-1, 1]) {
+            const hits = new THREE.Raycaster(
+                new THREE.Vector3(sx * 7, 50, sz * 8),
+                new THREE.Vector3(0, -1, 0)
+            ).intersectObject(mesh);
+            expect(hits.length).toBeGreaterThan(0);
+            expect(hits[0].point.y).toBeLessThan(36);
+            expect(landmarkContains('azadi', sx * 7, 43.8, sz * 8)).toBe(false);
+            expect(landmarkContains('azadi', sx * 3, 43.8, sz * 3)).toBe(true);
+        }
+    geometry.dispose();
+    material.dispose();
+});
+
+// A narrowing cluster can look like a solid dark stripe even when the mesh
+// remains finite. Check physical separation and relative upper-pier direction.
+it('keeps Azadi upper pier grooves separated and nearly parallel', () => {
+    const pointsAt = (/** @type {number} */ y) =>
+        Array.from({ length: 12 }, (_, i) =>
+            azadiGroovePoint(y, (i + 0.5) / 12)
+        );
+    for (const y of [36, 38, 40, 42, 43.65]) {
+        const points = pointsAt(y);
+        const gaps = points.slice(1).map((p, i) => p.distanceTo(points[i]));
+        expect(Math.min(...gaps)).toBeGreaterThan(0.65);
+        expect(Math.max(...gaps) / Math.min(...gaps)).toBeLessThan(1.2);
+    }
+    const lower = pointsAt(36);
+    const directions = pointsAt(43.65).map((p, i) =>
+        p.sub(lower[i]).normalize()
+    );
+    for (let i = 1; i < directions.length; i++)
+        expect(directions[i].dot(directions[i - 1])).toBeGreaterThan(0.999);
 });

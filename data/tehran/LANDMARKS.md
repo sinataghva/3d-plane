@@ -13,7 +13,7 @@ one building within the estate.
 
 | Landmark | Placement/reference | Treatment |
 | --- | --- | --- |
-| Azadi Tower | Approx. 35.69974 N, 51.33803 E | Four splayed piers with unequal crossing arches, marble courses and ribs on all sides, turquoise accents, upper windows and terrain-following square gardens |
+| Azadi Tower | Approx. 35.69974 N, 51.33803 E | Four splayed piers with unequal crossing arches, marble courses and ribs on all sides, turquoise accents, upper windows; detailed square paths, paving and fountain basins follow cached geographic data |
 | Milad Tower | Approx. 35.74484 N, 51.37530 E | Tapered shaft, observation head, horizontal rings and antenna |
 | Golestan Palace | Cached way 312398800 | Main palace facade, window bays, tile-color bands and portico; surrounding cached buildings retained |
 | Tabiat Bridge | Cached relation 6695059 | Stylized two-deck truss with branched supports and planted approaches joining the surrounding landscape |
@@ -30,8 +30,8 @@ Architectural references:
 - [Tabiat Bridge, Diba Tensile Architecture project description](https://www.archdaily.com/566387/tabiat-pedestrian-bridge-diba-tensile-architecture): structural/deck reference. The model follows the cached footprint center but simplifies its curves and circulation.
 - [University gate architectural reference](https://www.caoi.ir/index.php/en/projects/item/210-main-entrance-gate-of-tehran-university) and [geotagged reference view](https://commons.wikimedia.org/wiki/File:Tehran_University_Main_Gate_,2007_Winter_-_panoramio.jpg): approximate placement and silhouette; no image was copied into the game.
 
-Landmarks are batched into one colored mesh each, plus one garden mesh at Azadi
-and two planted approach meshes at Tabiat.
+Landmarks are batched into one colored mesh each, plus two planted approach meshes at Tabiat. Azadi Square adds four batched
+surface meshes and one bounded instanced shrub batch.
 They retain frustum culling and scene fog; small facade parts do not create
 individual draw calls. Selected cached building extrusions are replaced rather
 than drawn twice. Collision envelopes are simplified but leave Azadi's central
@@ -47,14 +47,28 @@ Azadi's broad elevations face east/west along the main approach, with a smaller
 north/south arch crossing the main passage. Four tapered corner piers and
 intersecting vault surfaces form the openings. The 63 m long footprint dimension
 is north/south; the short east/west dimension is 24 m in this stylized model.
-The main 28 m and secondary 13 m opening profiles are game approximations,
-not surveyed dimensions. Marble detailing wraps all four elevations, and
-collision uses the same profiles. The paved center accommodates the footprint.
+The pointed main entrance rises to 31.5 m and blends into a rounded 23.5 m
+vault at mid-depth; the secondary arch rises to 13 m. These are game
+approximations, not surveyed dimensions. `azadiTower.js` shares the curved shell
+profiles with collision. A raised diamond lattice and original geometric
+mosaic details line the vault. Thin turquoise bands, staggered marble seams,
+pointed crown windows, a four-sided indented crown with re-entrant corners,
+a matching roof terrace/parapet and a shallow blue skylight on an octagonal curb
+are merged into the tower’s single vertex-colored mesh, with no image textures.
+The paved center accommodates the footprint.
 `azadi-view=east|west|north|south` on the `azadi-detail` fixture provides
 repeatable compass views; ray tests verify that both passages remain clear.
-The garden surface is split at the terrain mesh's triangle boundaries and follows
-the same interpolated heights, preserving the local slope without intersections.
-`azadi-view=surfaces` provides an overhead garden/road-junction inspection view.
+The separate stylized Azadi garden overlay has been removed. The square's
+landscaping follows the cached perimeter footway and interlocking path network.
+A terrain-conforming lawn surface, crisp two-metre mapped walks and a scalloped
+paved central apron replace the blurred ground treatment within that boundary.
+The paved approaches follow paired cached walks; short joins connect them to the
+central apron. Sixteen mapped fountain parts have horizontal water surfaces,
+stone coping and skirts meeting the sloped ground. At most 24 decorative low
+shrubs sit near the perimeter, clear of mapped footpaths. This is a bounded
+interpretation of surface materials, not a survey of individual plants or curb
+heights. Surrounding road geometry and collision terrain remain unchanged.
+`azadi-view=surfaces` provides an overhead square/road-junction inspection view.
 
 The university gate has four separate thin, warped concrete pages forming two
 mirrored open-book pairs, with quarter-elliptical transitions into solid front
@@ -125,3 +139,7 @@ openings. Lint, type checking and the production build are checked locally.
 See [current map and ground rendering](MAP-DETAIL.md) for zoom levels, low-altitude
 texture detail, data limits and measurements. Native-phone performance remains
 unverified.
+
+Azadi’s four outer garden islands use their cached closed footway contours and internal paths, with the same lawn and paving materials as the central island. Both traffic rings and radial roads remain outside these surfaces. The outer detail shares the existing surface batches.
+
+Twelve Lion and Sun flags are distributed across the four outer gardens, three per island. The poles are 36 m tall and the cloth is 24 × 14.4 m, using the supplied flag artwork. Static folds, shared cloth geometry and instanced poles keep the additional rendering cost bounded.

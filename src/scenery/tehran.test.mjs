@@ -1,3 +1,10 @@
+import { createAzadiSquare } from './azadiSquare.js';
+import {
+    AZADI_FLAGS,
+    createAzadiFlags,
+    azadiFlagGeometry
+} from './azadiFlags.js';
+import { createRenderedHeight } from './groundDetail.js';
 import { readFileSync } from 'node:fs';
 import { URL } from 'node:url';
 import { test, expect } from 'vitest';
@@ -5,11 +12,10 @@ import { createGeography } from './geography.js';
 import { createParkedAircraft, parkedGeometry } from './parkedAircraft.js';
 import { MEHRABAD_CIVIL_APRONS, MEHRABAD_MILITARY_APRONS } from './mehrabad.js';
 import { Vector3 } from 'three';
-import { tehranLandmarks, createTehranLandmarks } from './tehranLandmarks.js';
-import { createRenderedHeight } from './groundDetail.js';
+import { tehranLandmarks } from './tehranLandmarks.js';
 import { createUniversitySetting } from './universitySetting.js';
 import { createBombSurfaces } from './bombSurfaces.js';
-import { inFeature } from './geography.js';
+import { inFeature, inRing } from './geography.js';
 import {
     bombLaunch,
     advanceBomb,
@@ -101,42 +107,6 @@ test('bomb contacts use real Tehran roof, lake and hill surfaces', () => {
     expect(
         Math.abs(hill.position.y - surface.height(15000, -17000))
     ).toBeLessThan(0.1);
-});
-
-test('Azadi garden triangles follow the actual sloped terrain with constant clearance', () => {
-    const world = createGeography({ ...data, airfield: 'OIII' }, dem, {
-        icao: 'OIII',
-        runwayRef: '11R/29L'
-    });
-    const group = createTehranLandmarks(world);
-    const garden = group.getObjectByName(
-        'Azadi Square · stylized geometric gardens'
-    );
-    const positions = garden.geometry.attributes.position;
-    const height = createRenderedHeight(world);
-    for (let i = 0; i < positions.count; i += 3) {
-        const x =
-            (positions.getX(i) +
-                positions.getX(i + 1) +
-                positions.getX(i + 2)) /
-            3;
-        const y =
-            (positions.getY(i) +
-                positions.getY(i + 1) +
-                positions.getY(i + 2)) /
-            3;
-        const z =
-            (positions.getZ(i) +
-                positions.getZ(i + 1) +
-                positions.getZ(i + 2)) /
-            3;
-        expect(Math.abs(y - height(x, z) - 0.16)).toBeLessThan(0.005);
-    }
-    group.traverse((o) => {
-        o.geometry?.dispose();
-        if (Array.isArray(o.material)) o.material.forEach((m) => m.dispose());
-        else o.material?.dispose();
-    });
 });
 
 test('university planting is bounded and keeps the cached Enghelab bus alignment', () => {
@@ -330,4 +300,115 @@ test('Tehran retains Mehrabad runways, dry-land geometry and source credits', ()
     expect(data.license).toBe('ODbL-1.0');
     expect(data.source).toContain('OpenStreetMap');
     expect(dem.sources.length).toBeGreaterThan(0);
+});
+
+test('Azadi landscape follows cached paths and terrain without changing the road network', () => {
+    const world = createGeography({ ...data, airfield: 'OIII' }, dem, {
+        icao: 'OIII',
+        runwayRef: '11R/29L'
+    });
+    const before = JSON.stringify(world.data.features);
+    const setting = createAzadiSquare(world);
+    const height = createRenderedHeight(world);
+    expect(setting.userData.summary.outerGardens).toBe(4);
+    expect(setting.userData.summary.fountains).toBe(16);
+    expect(setting.userData.summary.paths).toBeGreaterThan(100);
+    expect(setting.userData.summary.shrubs).toBeLessThanOrEqual(24);
+    expect(
+        setting.children.filter((c) => c.name !== 'Azadi outer garden flags')
+            .length
+    ).toBeLessThanOrEqual(5);
+    for (const [name, offset] of [
+        ['Azadi lawn', 0.12],
+        ['Azadi paving', 0.15]
+    ]) {
+        const mesh = setting.getObjectByName(name);
+        const p = mesh.geometry.attributes.position;
+        expect(p.count).toBeGreaterThan(0);
+        for (let i = 0; i < p.count; i += 3) {
+            const x = (p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3;
+            const z = (p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2)) / 3;
+            const y = (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3;
+            expect(Math.abs(y - height(x, z) - offset)).toBeLessThan(0.006);
+        }
+    }
+    // Lawn triangles must stay on the five mapped islands, leaving the
+    // intervening roads unpainted. Every outer garden must receive geometry.
+    const gardenIds = [
+        'w544306451-0',
+        'w545300305-0',
+        'w545300307-0',
+        'w545300123-0',
+        'w545300308-0'
+    ];
+    const gardens = gardenIds.map((id) =>
+        world.data.features.find((f) => f.id === id)
+    );
+    const covered = new Set();
+    const lawn =
+        setting.getObjectByName('Azadi lawn').geometry.attributes.position;
+    for (let i = 0; i < lawn.count; i += 3) {
+        const x = (lawn.getX(i) + lawn.getX(i + 1) + lawn.getX(i + 2)) / 3;
+        const z = (lawn.getZ(i) + lawn.getZ(i + 1) + lawn.getZ(i + 2)) / 3;
+        const garden = gardens.findIndex((f) => inRing(x, z, f.points));
+        expect(garden).toBeGreaterThanOrEqual(0);
+        covered.add(garden);
+    }
+    expect(covered.size).toBe(5);
+    const water =
+        setting.getObjectByName('Azadi water').geometry.attributes.position;
+    for (let i = 0; i < water.count; i += 3) {
+        expect(water.getY(i)).toBe(water.getY(i + 1));
+        expect(water.getY(i)).toBe(water.getY(i + 2));
+    }
+    expect(JSON.stringify(world.data.features)).toBe(before);
+    expect(
+        createAzadiSquare({
+            ...world,
+            data: { ...world.data, airfield: 'LFPZ' }
+        }).children
+    ).toHaveLength(0);
+    setting.traverse((o) => {
+        o.geometry?.dispose();
+        o.material?.dispose();
+    });
+});
+
+test('Azadi flags occupy four separate outer gardens and keep the center clear', () => {
+    const world = createGeography({ ...data, airfield: 'OIII' }, dem, {
+        icao: 'OIII',
+        runwayRef: '11R/29L'
+    });
+    const tower = tehranLandmarks(world.data)[0];
+    const height = createRenderedHeight(world);
+    expect(new Set(AZADI_FLAGS.map((p) => p.garden)).size).toBe(4);
+    for (const garden of new Set(AZADI_FLAGS.map((p) => p.garden)))
+        expect(AZADI_FLAGS.filter((p) => p.garden === garden)).toHaveLength(3);
+    for (const pole of AZADI_FLAGS) {
+        const garden = world.data.features.find((f) => f.id === pole.garden);
+        expect(garden).toBeDefined();
+        expect(inRing(pole.x, pole.z, garden.points)).toBe(true);
+        expect(Math.hypot(pole.x - tower.x, pole.z - tower.z)).toBeGreaterThan(
+            175
+        );
+        for (const other of AZADI_FLAGS)
+            if (other !== pole)
+                expect(
+                    Math.hypot(pole.x - other.x, pole.z - other.z)
+                ).toBeGreaterThan(85);
+    }
+    const group = createAzadiFlags(world);
+    expect(group.children.length).toBe(15);
+    const flags = group.children.filter((c) => c.name.startsWith('Azadi Lion'));
+    expect(flags).toHaveLength(12);
+    for (const flag of flags)
+        expect(
+            flag.position.y - height(flag.position.x, flag.position.z)
+        ).toBeCloseTo(28.13);
+    const geometry = azadiFlagGeometry();
+    const p = geometry.attributes.position;
+    expect(Array.from(p.array).every(Number.isFinite)).toBe(true);
+    for (let i = 0; i < p.count; i++)
+        if (p.getX(i) < 0.3) expect(Math.abs(p.getZ(i))).toBeLessThan(1e-6);
+    geometry.dispose();
 });
