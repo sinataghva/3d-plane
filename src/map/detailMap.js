@@ -242,7 +242,9 @@ export function paintFeature(ctx, f, scale, minX, minZ, ground = false) {
                   ? '#4b8d9b'
                   : f.kind === 'rail'
                     ? '#756e63'
-                    : '#c3baa4';
+                    : f.kind === 'road'
+                      ? '#60676a'
+                      : '#c3baa4';
     }
     if (f.tunnel === 'yes') {
         ctx.setLineDash([4, 3]);

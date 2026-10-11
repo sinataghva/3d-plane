@@ -22,6 +22,9 @@ export const GROUND_DETAIL_PRESETS = {
     balanced: { radius: 850, tiles: 20, fine: false },
     high: { radius: 1700, tiles: 48, fine: true }
 };
+// Tehran keeps a small road-only foreground on Low; no fine ground atlas,
+// surface decoration or bump maps are needed to read the local street network.
+export const TEHRAN_LOW_ROADS = { radius: 1100, tiles: 12, fine: false };
 const TILE = 500;
 const CACHE_LIMIT = 80;
 /** @typedef {'road'|'asphalt'|'grass'|'taxiPaint'|'paint'|'wear'|'number0'|'number1'|'ballast'|'rail'|'water'|'bank'} SurfaceKind */
@@ -158,11 +161,11 @@ export function roadRibbon(source, width) {
     }));
 }
 
-/** Fill shared endpoints across separate OSM ways. Interior bends already share
+/** Fill endpoint joins, including branches meeting an interior node or roundabout. Interior bends already share
  * mitered ribbon vertices. Keep separate elevation layers and bridges isolated.
  * @param {import('./geography.js').GeoFeature[]} features */
 export function roadJunctionPatches(features) {
-    /** @type {Map<string,{point:number[],radius:number,count:number}>} */
+    /** @type {Map<string,{point:number[],radius:number,count:number,endpoint:boolean}>} */
     const ends = new Map();
     for (const f of features) {
         if (
@@ -177,17 +180,26 @@ export function roadJunctionPatches(features) {
             continue;
         const a = f.points[0],
             b = f.points[f.points.length - 1];
-        if (Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.01) continue;
-        for (const point of [a, b]) {
+        const closed = Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.01;
+        const visited = new Set();
+        for (const [i, point] of f.points.entries()) {
             const key = `${point[0].toFixed(1)},${point[1].toFixed(1)},${f.layer || '0'}`;
-            const end = ends.get(key) || { point, radius: 0, count: 0 };
+            if (visited.has(key)) continue;
+            visited.add(key);
+            const end = ends.get(key) || {
+                point,
+                radius: 0,
+                count: 0,
+                endpoint: false
+            };
             end.radius = Math.max(end.radius, (f.width || 5) / 2);
             end.count++;
+            end.endpoint ||= !closed && (i === 0 || i === f.points.length - 1);
             ends.set(key, end);
         }
     }
     return [...ends.values()]
-        .filter((e) => e.count > 1)
+        .filter((e) => e.count > 1 && e.endpoint)
         .map(({ point: [x, z], radius }) =>
             Array.from({ length: 16 }, (_, i) => {
                 const angle = (i * Math.PI) / 8;
@@ -644,6 +656,21 @@ export function createGroundDetail(world) {
                           : -2,
                 polygonOffsetUnits: -2
             });
+            if (kind === 'road' && world.data.airfield?.includes('OIII')) {
+                // Road overlays can sit centimetres below a structure approach.
+                // Offset only their shadow lookup to avoid striped contact shadows;
+                // actual surface depth and the rest of the scene's bias stay intact.
+                material.onBeforeCompile = (shader) => {
+                    shader.vertexShader = shader.vertexShader.replace(
+                        '#include <shadowmap_vertex>',
+                        THREE.ShaderChunk.shadowmap_vertex.replace(
+                            'directionalLightShadows[ i ].shadowNormalBias',
+                            'max(0.5, directionalLightShadows[ i ].shadowNormalBias)'
+                        )
+                    );
+                };
+                material.customProgramCacheKey = () => 'road-contact-shadow-v1';
+            }
             if (kind === 'water') waterEffects.attach(material);
             material.userData.kind = kind;
             material.userData.maximum = wear ? 0.23 : 1;
@@ -676,10 +703,15 @@ export function createGroundDetail(world) {
             waterEffects.update(animationDelta, quality);
             clock += delta;
             scan -= delta;
-            const settings =
-                GROUND_DETAIL_PRESETS[
-                    /** @type {keyof typeof GROUND_DETAIL_PRESETS} */ (quality)
-                ] ?? GROUND_DETAIL_PRESETS.high;
+            const lowRoads =
+                quality === 'low' && world.data.airfield?.includes('OIII');
+            const settings = lowRoads
+                ? TEHRAN_LOW_ROADS
+                : (GROUND_DETAIL_PRESETS[
+                      /** @type {keyof typeof GROUND_DETAIL_PRESETS} */ (
+                          quality
+                      )
+                  ] ?? GROUND_DETAIL_PRESETS.high);
             if (scan <= 0 || quality !== lastQuality) {
                 wanted = [];
                 if (settings.radius)
@@ -748,6 +780,7 @@ export function createGroundDetail(world) {
                 if (distance !== undefined) tile.last = clock;
                 for (const material of tile.materials) {
                     const kind = material.userData.kind;
+                    material.visible = !lowRoads || kind === 'road';
                     if (kind === 'ballast') {
                         const map = settings.fine ? ballast : coarse;
                         if (material.map !== map) {

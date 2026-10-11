@@ -751,8 +751,9 @@ export function* prepareRoadStructureTile(world, cell, shared) {
             }
         }
         /** Slope-following rectangular beam with exact shared end elevations.
-         * @param {number[]} a @param {number[]} b @param {number} width @param {number} thickness @param {THREE.Color} color */
-        function beam(a, b, width, thickness, color) {
+         * @param {number[]} a @param {number[]} b @param {number} width @param {number} thickness @param {THREE.Color} color
+         * @param {number[][]} [normals] Shared bounded miter vectors at the two stations. */
+        function beam(a, b, width, thickness, color, normals) {
             const key =
                 forcedKey ||
                 `${Math.floor((a[0] + b[0]) / 1000)},${Math.floor((a[2] + b[2]) / 1000)}`;
@@ -766,11 +767,17 @@ export function* prepareRoadStructureTile(world, cell, shared) {
                 len = Math.hypot(dx, dz) || 1,
                 nx = ((-dz / len) * width) / 2,
                 nz = ((dx / len) * width) / 2;
+            const offsets = normals
+                ? normals.map(([x, z]) => [(x * width) / 2, (z * width) / 2])
+                : [
+                      [nx, nz],
+                      [nx, nz]
+                  ];
             const vs = [
-                [a[0] + nx, a[1], a[2] + nz],
-                [a[0] - nx, a[1], a[2] - nz],
-                [b[0] - nx, b[1], b[2] - nz],
-                [b[0] + nx, b[1], b[2] + nz]
+                [a[0] + offsets[0][0], a[1], a[2] + offsets[0][1]],
+                [a[0] - offsets[0][0], a[1], a[2] - offsets[0][1]],
+                [b[0] - offsets[1][0], b[1], b[2] - offsets[1][1]],
+                [b[0] + offsets[1][0], b[1], b[2] + offsets[1][1]]
             ];
             if (color === asphalt)
                 for (let i = 0; i < 4; i++) {
@@ -843,6 +850,12 @@ export function* prepareRoadStructureTile(world, cell, shared) {
                 p[0],
                 p[2]
             ]);
+            // Compute joins from the complete profile, including stations outside
+            // this tile, so adjacent batches use exactly the same deck edges.
+            const joins = offsetLine(points, 1).map((p, i) => [
+                p[0] - points[i][0],
+                p[1] - points[i][1]
+            ]);
             let previousSupport = -100,
                 travelled = 0;
             for (let i = 1; i < points.length; i++) {
@@ -866,10 +879,8 @@ export function* prepareRoadStructureTile(world, cell, shared) {
                     };
                     const p = at(j / steps),
                         q = at((j + 1) / steps);
-                    beam(p, q, width, 0.65, asphalt);
-                    const dx = q[0] - p[0],
-                        dz = q[2] - p[2],
-                        l = Math.hypot(dx, dz) || 1;
+                    const normals = [joins[i - 1], joins[i]];
+                    beam(p, q, width, 0.65, asphalt, normals);
                     for (const sign of active(f.bridge) ||
                     Math.min(
                         p[1] - data.height(p[0], p[2]),
@@ -877,14 +888,18 @@ export function* prepareRoadStructureTile(world, cell, shared) {
                     ) > 0.6
                         ? [-1, 1]
                         : []) {
-                        const ox = (-dz / l) * (width / 2 - 0.15) * sign,
-                            oz = (dx / l) * (width / 2 - 0.15) * sign;
+                        const offset = (width / 2 - 0.15) * sign;
+                        const [start, end] = normals.map(([x, z]) => [
+                            x * offset,
+                            z * offset
+                        ]);
                         beam(
-                            [p[0] + ox, p[1] + 0.8, p[2] + oz],
-                            [q[0] + ox, q[1] + 0.8, q[2] + oz],
+                            [p[0] + start[0], p[1] + 0.8, p[2] + start[1]],
+                            [q[0] + end[0], q[1] + 0.8, q[2] + end[1]],
                             0.3,
                             0.8,
-                            edgeColor
+                            edgeColor,
+                            normals
                         );
                     }
                     const d = travelled;

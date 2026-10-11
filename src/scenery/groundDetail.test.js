@@ -163,3 +163,35 @@ test('road bends and closed loops share identical edge vertices without gaps', a
         Math.hypot(sharp[0].corners[1][0] - 30, sharp[0].corners[1][1])
     ).toBeLessThanOrEqual(6.001);
 });
+
+test('surface branches join interior nodes and closed loops without filling isolated ends', () => {
+    const road = (/** @type {number[][]} */ points) => ({
+        id: 'r',
+        name: '',
+        kind: 'road',
+        line: true,
+        points,
+        holes: [],
+        width: 8
+    });
+    const through = road([
+        [-20, 0],
+        [0, 0],
+        [20, 0]
+    ]);
+    const branch = road([
+        [0, -20],
+        [0, 0]
+    ]);
+    expect(roadJunctionPatches([through, branch])).toHaveLength(1);
+    const loop = road([
+        [0, 0],
+        [20, 0],
+        [20, 20],
+        [0, 20],
+        [0, 0]
+    ]);
+    expect(roadJunctionPatches([loop, branch])).toHaveLength(1);
+    expect(roadJunctionPatches([loop])).toHaveLength(0);
+    expect(roadJunctionPatches([branch])).toHaveLength(0);
+});

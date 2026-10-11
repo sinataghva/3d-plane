@@ -105,7 +105,7 @@ the current world. No external services or background network requests are used.
 ## Low-altitude 3D ground
 
 Balanced and High blend two local texture levels over the 4,096 regional
-texture. Low keeps the regional texture alone. These thresholds are independent
+texture. Low keeps the regional texture without these atlases, plus at most 12 nearby road-only geometry tiles within a 1.1 km distance budget. These thresholds are independent
 of the 2D map zoom; all distances below are horizontal from the aircraft to the
 ground fragment, and AGL is the aircraft altitude above local terrain.
 

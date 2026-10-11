@@ -14,7 +14,7 @@ async function prepare(page) {
                 'Object.assign(window, { planeAutomation: automation });',
                 `Object.assign(window, { planeAutomation: automation });
         window.structureTest={world,roadStructures,roadTraffic,airbase,config:null,
-        place(){if(!this.config)return;const {x,z,agl,heading=0}=this.config;planeState.position={x,z,y:world.height(x,z)+agl};airplane.visible=false;camera.position.set(x+Math.sin(heading)*110,world.height(x,z)+agl,z+Math.cos(heading)*110);camera.lookAt(x,world.height(x,z),z)}};`
+        place(){if(!this.config)return;const {x,z,agl,heading=0}=this.config;planeState.position={x,z,y:world.height(x,z)+agl};airplane.position.set(x,world.height(x,z)+agl,z);airplane.visible=false;camera.position.set(x+Math.sin(heading)*110,world.height(x,z)+agl,z+Math.cos(heading)*110);camera.lookAt(x,world.height(x,z),z)}};`
             )
             .replace(
                 'if (trafficBench) trafficBench.position();',
@@ -112,13 +112,15 @@ test('nearby structure cache streams on approach and restores the original dista
     await page.evaluate(() => {
         window.structureTest.config = { x: -100, z: -2000, agl: 10000 };
     });
-    await page.waitForTimeout(500);
-    expect(
-        await page.evaluate(
-            () =>
-                window.structureTest.roadStructures.stats().structureActiveTiles
+    await expect
+        .poll(() =>
+            page.evaluate(
+                () =>
+                    window.structureTest.roadStructures.stats()
+                        .structureActiveTiles
+            )
         )
-    ).toBe(0);
+        .toBe(0);
     expect(
         await page.evaluate(
             () =>
@@ -164,5 +166,47 @@ test('nearby structure cache streams on approach and restores the original dista
     expect(bounded.peak.structureActiveTiles).toBeLessThanOrEqual(48);
     expect(bounded.far.structureTerrainPatches).toBe(0);
     expect(bounded.far.structureActiveTiles).toBe(0);
+    expect(errors).toEqual([]);
+});
+
+test('curved interchange decks and road quality transitions remain reviewable', async ({
+    page
+}, info) => {
+    const errors = await prepare(page);
+    for (const quality of ['high', 'balanced', 'low']) {
+        await page
+            .locator('#graphics-quality')
+            .selectOption(quality, { force: true });
+        await page.evaluate(() => {
+            window.structureTest.config = { x: -4500, z: -4200, agl: 220 };
+        });
+        if (quality !== 'low')
+            await page.waitForFunction(() => {
+                const s = JSON.parse(
+                    document.documentElement.dataset.sceneryStats || '{}'
+                );
+                return (
+                    s.groundTextureReady &&
+                    s.groundTexturePending === 0 &&
+                    s.structurePending === 0
+                );
+            });
+        await page.waitForTimeout(1800);
+        if (quality === 'low') {
+            await page.waitForFunction(() => {
+                const s = JSON.parse(
+                    document.documentElement.dataset.sceneryStats || '{}'
+                );
+                return (
+                    s.groundDetailVisible > 0 &&
+                    s.groundDetailVisible <= 12 &&
+                    s.groundTextureBytes === 0
+                );
+            });
+        }
+        await page.screenshot({
+            path: info.outputPath(`interchange-${quality}.png`)
+        });
+    }
     expect(errors).toEqual([]);
 });

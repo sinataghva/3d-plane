@@ -720,3 +720,52 @@ test('a raised bridge approach can also descend into a tunnel without covering i
         data.elevation(tunnel, 200, 0)
     );
 });
+
+test('curved bridge deck shares full cross sections at bends across tile boundaries', () => {
+    const f = road(
+        'bend',
+        [
+            [400, 100],
+            [500, 100],
+            [500, 220]
+        ],
+        { bridge: 'yes', width: 12 }
+    );
+    const w = world([f]);
+    const shared = getRoadStructures(w);
+    const tiles = ['0,0', '1,0'].map((key) =>
+        buildRoadStructureTile(
+            w,
+            {
+                key,
+                features: new Set([f.id]),
+                portals: [],
+                roads: [f]
+            },
+            shared
+        )
+    );
+    // Outside and inside miter corners must be present in BOTH adjacent batches.
+    // Independent rectangular beams end at (500,106)/(500,94) and leave a wedge.
+    for (const tile of tiles) {
+        const mesh =
+            /** @type {THREE.Mesh<THREE.BufferGeometry,THREE.MeshLambertMaterial>} */ (
+                tile.group.children[0]
+            );
+        const p = mesh.geometry.attributes.position;
+        for (const [x, z] of [
+            [494, 106],
+            [506, 94]
+        ]) {
+            let found = false;
+            for (let i = 0; i < p.count; i++)
+                if (
+                    Math.abs(p.getX(i) - x) < 0.001 &&
+                    Math.abs(p.getZ(i) - z) < 0.001
+                )
+                    found = true;
+            expect(found).toBe(true);
+        }
+        tile.dispose();
+    }
+});

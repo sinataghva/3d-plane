@@ -93,7 +93,11 @@ export function createGeographicCanvas(
                                 : '#a2ac79'
                             : kind === 'rail'
                               ? '#756e63'
-                              : '#c3baa4';
+                              : kind === 'road' &&
+                                  !map &&
+                                  world.data.airfield?.includes('OIII')
+                                ? '#60676a'
+                                : '#c3baa4';
                 ctx.stroke();
                 if (kind === 'runway') {
                     ctx.strokeStyle = '#f4f3d5';

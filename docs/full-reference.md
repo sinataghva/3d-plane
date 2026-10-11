@@ -124,7 +124,7 @@ beneath it. Distance and altitude fades multiply; these are smooth blends,
 not whole-world switches. Near, intermediate and far detail can coexist in one
 view. Tiles fade in over half a second; missing close tiles reveal intermediate
 or regional detail. Tile-edge blending also softens the level near seams.
-Low retains the regional texture. No extra terrain elevation or satellite
+Low retains the regional texture and at most 12 nearby road-only geometry tiles, fading within a 1.1 km distance budget. Fine ground atlases, bump detail and other surface overlays remain disabled on Low. No extra terrain elevation or satellite
 imagery is introduced. See [data and rendering notes](../data/tehran/MAP-DETAIL.md).
 
 Tehran's decorative road traffic supports surface highways and one-way routes,
