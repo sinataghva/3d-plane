@@ -27,7 +27,7 @@ export const GROUND_DETAIL_PRESETS = {
 export const TEHRAN_LOW_ROADS = { radius: 1100, tiles: 12, fine: false };
 const TILE = 500;
 const CACHE_LIMIT = 80;
-/** @typedef {'road'|'asphalt'|'grass'|'taxiPaint'|'paint'|'wear'|'number0'|'number1'|'ballast'|'rail'|'water'|'bank'} SurfaceKind */
+/** @typedef {'road'|'path'|'asphalt'|'grass'|'taxiPaint'|'paint'|'wear'|'number0'|'number1'|'ballast'|'rail'|'water'|'bank'} SurfaceKind */
 /** @typedef {{ax:number,az:number,bx:number,bz:number,width:number,kind:SurfaceKind,bridge?:number[],corners?:number[][]}} Strip */
 /** @typedef {{x:number,z:number,y:number,strips:Strip[],patches?:import('./scenerySurfaces.js').SurfacePatch[],priority:number}} Tile */
 /** Interpolate the same triangles as the existing 256×256 terrain mesh. */
@@ -278,11 +278,14 @@ export function createGroundDetail(world) {
                     z: (z + 0.5) * TILE,
                     y: height((x + 0.5) * TILE, (z + 0.5) * TILE),
                     strips: [],
-                    priority: kind === 'road' ? 1 : 0
+                    priority: kind === 'path' ? 2 : kind === 'road' ? 1 : 0
                 };
                 index.set(key, tile);
             }
-            tile.priority = Math.min(tile.priority, kind === 'road' ? 1 : 0);
+            tile.priority = Math.min(
+                tile.priority,
+                kind === 'path' ? 2 : kind === 'road' ? 1 : 0
+            );
             tile.strips.push({
                 ax: x1,
                 az: z1,
@@ -328,15 +331,19 @@ export function createGroundDetail(world) {
             !['road', 'runway', 'taxiway'].includes(f.kind)
         )
             continue;
-        // Pedestrian paths remain in the distant base map.
-        if (
+        const pedestrian =
             f.kind === 'road' &&
-            ['footway', 'path', 'steps', 'cycleway'].includes(f.class || '')
+            ['footway', 'path', 'steps', 'cycleway'].includes(f.class || '');
+        if (
+            pedestrian &&
+            (!world.data.airfield?.includes('OIII') || f.class === 'steps')
         )
             continue;
         const kind =
             f.kind === 'road'
-                ? 'road'
+                ? pedestrian
+                    ? 'path'
+                    : 'road'
                 : pavedAirfieldSurface(f, defaultPaved)
                   ? 'asphalt'
                   : 'grass';
@@ -540,7 +547,7 @@ export function createGroundDetail(world) {
                 bucket.p.push(
                     x,
                     surfaceElevation(strip.bridge, x, z, height(x, z)) +
-                        (overlay ? 0.08 : 0.04),
+                        (overlay ? 0.08 : strip.kind === 'path' ? 0.025 : 0.04),
                     z
                 );
                 if (strip.kind.startsWith('number')) {
@@ -620,25 +627,27 @@ export function createGroundDetail(world) {
                 wear = kind === 'wear';
             const material = new THREE.MeshStandardMaterial({
                 color:
-                    kind === 'taxiPaint'
-                        ? 0xe9c650
-                        : kind === 'water'
-                          ? 0x4b8d9b
-                          : kind === 'bank'
-                            ? 0x797a58
-                            : kind === 'rail'
-                              ? 0xaab0b4
-                              : kind === 'ballast'
-                                ? 0xb8b2a7
-                                : paint
-                                  ? 0xf0edce
-                                  : wear
-                                    ? 0x33363a
-                                    : kind === 'grass'
-                                      ? 0x94ab70
-                                      : kind === 'road'
-                                        ? 0x929798
-                                        : 0x939ca3,
+                    kind === 'path'
+                        ? 0xbdb59f
+                        : kind === 'taxiPaint'
+                          ? 0xe9c650
+                          : kind === 'water'
+                            ? 0x4b8d9b
+                            : kind === 'bank'
+                              ? 0x797a58
+                              : kind === 'rail'
+                                ? 0xaab0b4
+                                : kind === 'ballast'
+                                  ? 0xb8b2a7
+                                  : paint
+                                    ? 0xf0edce
+                                    : wear
+                                      ? 0x33363a
+                                      : kind === 'grass'
+                                        ? 0x94ab70
+                                        : kind === 'road'
+                                          ? 0x929798
+                                          : 0x939ca3,
                 roughness: kind === 'rail' ? 0.45 : 1,
                 metalness: kind === 'rail' ? 0.35 : 0,
                 transparent: true,
@@ -716,6 +725,12 @@ export function createGroundDetail(world) {
                 wanted = [];
                 if (settings.radius)
                     for (const [key, tile] of index) {
+                        if (
+                            lowRoads &&
+                            !tile.strips.some((s) => s.kind === 'road') &&
+                            !tile.patches?.some((p) => p.kind === 'road')
+                        )
+                            continue;
                         const dx = Math.max(
                                 0,
                                 Math.abs(position.x - tile.x) - TILE / 2

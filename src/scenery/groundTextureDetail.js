@@ -1,3 +1,4 @@
+import { TEHRAN_SOIL } from '../map/tehranGroundStyle.js';
 import * as THREE from 'three';
 import {
     createDetailIndex,
@@ -295,7 +296,7 @@ function createGroundLayer(world, material, baseRelief, close = false) {
                         (id) => !slots.some((s) => s.id === id && !s.stale)
                     );
                     if (id === undefined) break;
-                    ctx.fillStyle = '#b6a482';
+                    ctx.fillStyle = TEHRAN_SOIL;
                     ctx.fillRect(0, 0, PADDED, PADDED);
                     pending = { id, layer: 0, item: 0 };
                 }

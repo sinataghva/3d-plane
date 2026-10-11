@@ -1,4 +1,9 @@
 import {
+    TEHRAN_SOIL,
+    tehranGroundColor,
+    paintRoadVerge
+} from './tehranGroundStyle.js';
+import {
     isSurfaceFeature,
     pavedAirfieldSurface,
     pavedAirfieldDefault
@@ -32,7 +37,12 @@ export function createGeographicCanvas(
     if (!ctx) throw new Error('Map drawing unavailable');
     const sx = canvas.width / world.width,
         sy = canvas.height / world.depth;
-    ctx.fillStyle = world.data.landscape === 'arid' ? '#b6a482' : '#859467';
+    const tehranGround = !map && world.data.airfield?.includes('OIII');
+    ctx.fillStyle = tehranGround
+        ? TEHRAN_SOIL
+        : world.data.landscape === 'arid'
+          ? '#b6a482'
+          : '#859467';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     /** @param {number[][]} points */
     const path = (points) => {
@@ -98,6 +108,7 @@ export function createGeographicCanvas(
                                   world.data.airfield?.includes('OIII')
                                 ? '#60676a'
                                 : '#c3baa4';
+                if (tehranGround) paintRoadVerge(ctx, f, sx);
                 ctx.stroke();
                 if (kind === 'runway') {
                     ctx.strokeStyle = '#f4f3d5';
@@ -112,6 +123,8 @@ export function createGeographicCanvas(
                     LAND_COLORS[
                         /** @type {keyof typeof LAND_COLORS} */ (kind)
                     ] || '#879469';
+                if (tehranGround)
+                    ctx.fillStyle = tehranGroundColor(f, ctx.fillStyle);
                 if (f.palace) ctx.fillStyle = '#edc979';
                 ctx.fill('evenodd');
             }

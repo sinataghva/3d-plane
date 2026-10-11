@@ -1,3 +1,4 @@
+import { woodlandSchedule, vegetationClearance } from './vegetationLayout.js';
 import {
     addCloseBuildingDetail,
     roofBoundaryEdges,
@@ -325,7 +326,11 @@ export function createTerrain(world) {
         seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
         return seed / 4294967296;
     };
-    const canopy = new THREE.ConeGeometry(0.4, 0.8, 6);
+    const tehranVegetation = isMehrabad(world.data);
+    const canopy = tehranVegetation
+        ? new THREE.SphereGeometry(0.4, 6, 4)
+        : new THREE.ConeGeometry(0.4, 0.8, 6);
+    if (tehranVegetation) canopy.scale(1, 0.85, 0.9);
     canopy.translate(0, 0.6, 0);
     const trunk = new THREE.CylinderGeometry(0.025, 0.035, 0.6, 5);
     trunk.translate(0, 0.3, 0);
@@ -350,33 +355,79 @@ export function createTerrain(world) {
     trunk.dispose();
     const treeMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
     const trees = [];
-    for (const f of world.data.features.filter((f) => f.kind === 'forest')) {
-        const xs = f.points.map((p) => p[0]),
-            zs = f.points.map((p) => p[1]);
-        const minX = Math.max(world.minX, Math.min(...xs)),
-            maxX = Math.min(world.maxX, Math.max(...xs)),
-            minZ = Math.max(world.minZ, Math.min(...zs)),
-            maxZ = Math.min(world.maxZ, Math.max(...zs));
-        const count = Math.min(
-            900,
-            Math.floor(((maxX - minX) * (maxZ - minZ)) / 1400)
-        );
-        for (let i = 0; i < count && trees.length < 9000; i++) {
-            const x = minX + random() * (maxX - minX),
-                z = minZ + random() * (maxZ - minZ);
-            if (
-                !inFeature(x, z, f) ||
-                world.onRunway(x, z) ||
-                world.obstacle(x, z, world.height(x, z) + 1)
-            )
-                continue;
-            const h = 8 + random() * 10,
-                y = world.height(x, z);
-            const tree = new THREE.Mesh(treeGeometry, treeMaterial);
-            tree.position.set(x, y, z);
-            tree.scale.setScalar(h);
-            group.add(tree);
-            trees.push(tree);
+    if (tehranVegetation) {
+        const cells = woodlandSchedule(world);
+        const clear = vegetationClearance(world.data.features);
+        // Spread each polygon's area-weighted candidate budget across all passes.
+        // Stable phases give small polygons a chance before the global cap too.
+        for (let pass = 0; pass < 900 && trees.length < 9000; pass++)
+            for (const features of cells)
+                for (const {
+                    f,
+                    minX,
+                    maxX,
+                    minZ,
+                    maxZ,
+                    count,
+                    phase
+                } of features) {
+                    if (
+                        (pass * count + phase) % 900 < 900 - count ||
+                        trees.length >= 9000
+                    )
+                        continue;
+                    const x = minX + random() * (maxX - minX),
+                        z = minZ + random() * (maxZ - minZ);
+                    if (
+                        !inFeature(x, z, f) ||
+                        !clear(x, z) ||
+                        world.onRunway(x, z) ||
+                        world.obstacle(x, z, world.height(x, z) + 1)
+                    )
+                        continue;
+                    const h = 7 + random() * 10;
+                    const tree = new THREE.Mesh(treeGeometry, treeMaterial);
+                    tree.position.set(x, world.height(x, z), z);
+                    tree.scale.set(
+                        h * (0.8 + random() * 0.4),
+                        h,
+                        h * (0.8 + random() * 0.4)
+                    );
+                    tree.rotation.y = random() * Math.PI * 2;
+                    group.add(tree);
+                    trees.push(tree);
+                }
+    } else {
+        for (const f of world.data.features.filter(
+            (f) => f.kind === 'forest'
+        )) {
+            const xs = f.points.map((p) => p[0]),
+                zs = f.points.map((p) => p[1]);
+            const minX = Math.max(world.minX, Math.min(...xs)),
+                maxX = Math.min(world.maxX, Math.max(...xs)),
+                minZ = Math.max(world.minZ, Math.min(...zs)),
+                maxZ = Math.min(world.maxZ, Math.max(...zs));
+            const count = Math.min(
+                900,
+                Math.floor(((maxX - minX) * (maxZ - minZ)) / 1400)
+            );
+            for (let i = 0; i < count && trees.length < 9000; i++) {
+                const x = minX + random() * (maxX - minX),
+                    z = minZ + random() * (maxZ - minZ);
+                if (
+                    !inFeature(x, z, f) ||
+                    world.onRunway(x, z) ||
+                    world.obstacle(x, z, world.height(x, z) + 1)
+                )
+                    continue;
+                const h = 8 + random() * 10,
+                    y = world.height(x, z);
+                const tree = new THREE.Mesh(treeGeometry, treeMaterial);
+                tree.position.set(x, y, z);
+                tree.scale.setScalar(h);
+                group.add(tree);
+                trees.push(tree);
+            }
         }
     }
     instanceStaticScenery(group, trees, 750);

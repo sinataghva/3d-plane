@@ -1,3 +1,4 @@
+import { tehranGroundColor, paintRoadVerge } from './tehranGroundStyle.js';
 import { isStructuredBridge } from '../scenery/roadStructures.js';
 import { structureSurfaceReady } from '../scenery/roadStructureStream.js';
 import { paintCloseFeature } from './closeMapStyle.js';
@@ -207,6 +208,7 @@ export function paintFeature(ctx, f, scale, minX, minZ, ground = false) {
         ctx.fillStyle =
             LAND_COLORS[/** @type {keyof typeof LAND_COLORS} */ (f.kind)] ||
             '#899e67';
+        if (ground) ctx.fillStyle = tehranGroundColor(f, ctx.fillStyle);
         ctx.fill('evenodd');
         return;
     }
@@ -250,6 +252,7 @@ export function paintFeature(ctx, f, scale, minX, minZ, ground = false) {
         ctx.setLineDash([4, 3]);
         ctx.strokeStyle = '#8b8981';
     }
+    if (ground) paintRoadVerge(ctx, f, scale);
     ctx.stroke();
     ctx.setLineDash([]);
     if (f.kind === 'runway') {

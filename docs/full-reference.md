@@ -95,6 +95,14 @@ Tehran selection card shows the F-4 flying over it. Distant Alborz ridges and a
 snow-topped Damavand extend the horizon without expanding the playable map.
 See [landmark references and modeling limits](../data/tehran/LANDMARKS.md).
 
+Tehran's 3D ground uses muted soil and planted-area colours with subtle,
+deterministic variation between mapped polygons. The base terrain and local
+tiles share this palette. Narrow mineral verges soften ordinary road edges;
+nearby mapped pedestrian paths gain terrain-following surfaces on Balanced and
+High. Low retains its road-only surface budget. Woodland sampling is spread
+across the region within the existing 9,000-tree cap, using varied broadleaf
+crowns and road, rail and airfield clearances. Navigation-map colours are unchanged.
+
 Tehran's full map uses a **2,048-pixel overview through 400%**, locally rendered
 **4,096-pixel-equivalent detail above 400–800%**, **8,192-pixel-equivalent
 detail above 800–1,200%**, and **16,384-pixel-equivalent detail above 1,200–1,600%**.
