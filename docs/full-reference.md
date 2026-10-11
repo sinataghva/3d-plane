@@ -103,6 +103,14 @@ High. Low retains its road-only surface budget. Woodland sampling is spread
 across the region within the existing 9,000-tree cap, using varied broadleaf
 crowns and road, rail and airfield clearances. Navigation-map colours are unchanged.
 
+Ordinary Tehran buildings use optional type/material/colour tags recovered from
+preserved local OpenStreetMap caches, with deterministic neutral finishes where
+tags are absent. Existing footprints, heights, 500 m batches and close facade
+shading are retained. The decorative Alborz skyline uses irregular spurs,
+slope-dependent snow and distance tinting; it remains approximate and separate
+from collision terrain. On Tehran's map, landmarks have stronger labels while
+street names use lighter plates, with Persian text drawn as complete shaped runs.
+
 Tehran's full map uses a **2,048-pixel overview through 400%**, locally rendered
 **4,096-pixel-equivalent detail above 400–800%**, **8,192-pixel-equivalent
 detail above 800–1,200%**, and **16,384-pixel-equivalent detail above 1,200–1,600%**.

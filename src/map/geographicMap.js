@@ -173,6 +173,7 @@ export function drawOverview(
         : [];
     ctx.font = `${height < 400 ? 11 : 13}px system-ui`;
     const rich = detail?.metrics.style === 'rich';
+    const tehranLabels = world.data.airfield?.includes('OIII');
     let streetCount = 0;
     const streetLimit = Math.max(
         6,
@@ -184,6 +185,9 @@ export function drawOverview(
     for (const label of labels) {
         const street = label.priority >= 6;
         if (street && streetCount >= streetLimit) continue;
+        if (tehranLabels)
+            ctx.font = `${label.priority < 2 ? '600 ' : ''}${height < 400 ? (street ? 10 : 12) : street ? 12 : 14}px system-ui`;
+        ctx.direction = /[\u0600-\u06ff]/.test(label.name) ? 'rtl' : 'ltr';
         const [x, y] = project(label.point),
             textWidth =
                 ctx.measureText(label.name).width + (label.icon ? 16 : 0);
@@ -191,7 +195,12 @@ export function drawOverview(
         const tx = Math.max(4, Math.min(width - textWidth - 8, x + 7));
         for (const offset of [-10, 18, 34]) {
             const ty = y + offset,
-                box = [tx - 3, ty - 13, tx + textWidth + 3, ty + 4];
+                box = [
+                    tx - 4,
+                    ty - (tehranLabels && !street ? 15 : 13),
+                    tx + textWidth + 4,
+                    ty + 5
+                ];
             if (
                 ty < 15 ||
                 ty > height - 10 ||
@@ -204,14 +213,26 @@ export function drawOverview(
                 )
             )
                 continue;
-            ctx.fillStyle = '#10242ddd';
+            ctx.fillStyle = tehranLabels && street ? '#eee8dbeb' : '#10242de8';
             ctx.fillRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
+            if (tehranLabels) {
+                ctx.strokeStyle = street ? '#817d7044' : '#dce8e544';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(
+                    box[0],
+                    box[1],
+                    box[2] - box[0],
+                    box[3] - box[1]
+                );
+            }
             ctx.fillStyle =
-                label.priority < 2
-                    ? '#ffe3a0'
-                    : label.icon
-                      ? '#bfe8ff'
-                      : '#fff';
+                tehranLabels && street
+                    ? '#24383d'
+                    : label.priority < 2
+                      ? '#ffe3a0'
+                      : label.icon
+                        ? '#bfe8ff'
+                        : '#fff';
             ctx.textAlign = 'left';
             ctx.direction = /[\u0600-\u06ff]/.test(label.name) ? 'rtl' : 'ltr';
             ctx.fillText(label.name, tx + (label.icon ? 16 : 0), ty);
@@ -234,6 +255,7 @@ export function drawOverview(
             break;
         }
     }
+    ctx.direction = 'ltr';
     for (const contact of contacts) {
         const p = project([contact.position.x, contact.position.z]);
         drawAircraft(ctx, p[0], p[1], contact.yawAngle, 0.38, '#69d2ff');

@@ -24,7 +24,7 @@ export function createTehranHorizon(world) {
     geometry.translate(20000, 0, world.minZ - 31000);
     const positions = geometry.attributes.position,
         colors = [],
-        rockColor = new THREE.Color(0xaebfc5),
+        rockColor = new THREE.Color(0x9ca6a9),
         snowColor = new THREE.Color(0xdce5e7),
         vertexColor = new THREE.Color();
     for (let i = 0; i < positions.count; i++) {
@@ -32,22 +32,54 @@ export function createTehranHorizon(world) {
             z = positions.getZ(i);
         let y = -100;
         for (const peak of peaks) {
-            const r = Math.hypot(x - peak.p[0], z - peak.p[1]) / peak.radius;
+            const angle = Math.atan2(z - peak.p[1], x - peak.p[0]);
+            // Preserve Damavand's volcanic profile; give the western range
+            // asymmetric ridges rather than four similarly circular cones.
+            const radius =
+                peak.radius *
+                (peak.height > 4000
+                    ? 1
+                    : 0.9 +
+                      0.16 * Math.sin(angle * 5) +
+                      0.08 * Math.cos(angle * 9));
+            const r = Math.hypot(x - peak.p[0], z - peak.p[1]) / radius;
             const h = peak.height * Math.pow(Math.max(0, 1 - r), 1.15);
             y = Math.max(y, h);
         }
-        y +=
-            Math.max(0, y) *
-            0.025 *
-            Math.sin(x * 0.00035) *
-            Math.cos(z * 0.00028);
+        // Multi-scale spurs break the smooth cone profiles without changing the
+        // mapped collision surface or the distant mesh resolution.
+        const relief =
+            Math.sin(x * 0.00073 + Math.sin(z * 0.00031)) *
+                Math.cos(z * 0.00057) +
+            0.4 * Math.sin(x * 0.0019 + z * 0.0013);
+        y += Math.max(0, y) * 0.085 * relief;
         positions.setY(i, y - 30);
+    }
+    geometry.computeVertexNormals();
+    const normals = geometry.getAttribute('normal');
+    const haze = new THREE.Color(0xc4d5df);
+    for (let i = 0; i < positions.count; i++) {
+        const x = positions.getX(i),
+            z = positions.getZ(i),
+            y = positions.getY(i);
+        const slope = Math.abs(normals.getY(i));
         const snow = THREE.MathUtils.smoothstep(
-            y - 100 * Math.sin(x * 0.0004),
-            2300,
-            3100
+            y + 140 * Math.sin(x * 0.0011 + z * 0.0008) - (1 - slope) * 1700,
+            2150,
+            3200
         );
         vertexColor.copy(rockColor).lerp(snowColor, snow);
+        const aspect =
+            0.88 +
+            0.12 *
+                (normals.getX(i) * 0.6 +
+                    normals.getY(i) * 0.7 +
+                    normals.getZ(i) * 0.3);
+        vertexColor.multiplyScalar(aspect);
+        vertexColor.lerp(
+            haze,
+            THREE.MathUtils.smoothstep(Math.hypot(x, z), 18000, 80000) * 0.48
+        );
         const edgeFade = THREE.MathUtils.smoothstep(world.minZ - z, 1500, 7500);
         const baseFade = THREE.MathUtils.smoothstep(y, 50, 1100);
         colors.push(

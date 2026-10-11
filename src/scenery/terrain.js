@@ -1,3 +1,4 @@
+import { tehranBuildingStyle } from './tehranBuildingStyle.js';
 import { woodlandSchedule, vegetationClearance } from './vegetationLayout.js';
 import {
     addCloseBuildingDetail,
@@ -139,10 +140,12 @@ export function createTerrain(world) {
             detailedBuildings++;
             continue;
         }
+        const style =
+            closeBuildings && !f.palace ? tehranBuildingStyle(f) : null;
         const lightSeed =
             f.palace || boundaries.some((b) => inFeature(x, z, b))
                 ? 0
-                : buildingLightSeed(f.id, f.buildingType);
+                : buildingLightSeed(f.id, style?.type || f.buildingType);
         const contour = ring.map((p) => new THREE.Vector2(p[0], p[1]));
         const holes = f.holes.map((h) =>
             h.slice(0, -1).map((p) => new THREE.Vector2(p[0], p[1]))
@@ -175,18 +178,22 @@ export function createTerrain(world) {
                 'shed',
                 'garage',
                 'garages'
-            ].includes(f.buildingType || '')
+            ].includes(style?.type || f.buildingType || '')
                 ? unlitFacadeSeed(f.id)
                 : 0);
         const base = world.height(ring[0][0], ring[0][1]),
             top = base + (f.height || 8);
-        const wall = new THREE.Color(f.palace ? 0xe8d1a1 : 0xc6bc9f);
+        const wall = new THREE.Color(
+            f.palace ? 0xe8d1a1 : (style?.wall ?? 0xc6bc9f)
+        );
         const roof = new THREE.Color(
             f.palace
                 ? 0x696e79
-                : f.id.charCodeAt(2) % 3 === 0
-                  ? 0x8f6652
-                  : 0x777d79
+                : style
+                  ? style.roof
+                  : f.id.charCodeAt(2) % 3 === 0
+                    ? 0x8f6652
+                    : 0x777d79
         );
         /** @param {number[]} a @param {number[]} b @param {number[]} c @param {THREE.Color} color @param {number[]} [windows] */
         const tri = (a, b, c, color, windows = [0, 0, 0, 0, 0, 0, 0, 0, 0]) => {

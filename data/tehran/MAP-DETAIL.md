@@ -292,3 +292,16 @@ is a derived geographic database under those terms, separate from application
 code. Original sources, queries and attribution are preserved in the cache and
 [region documentation](README.md). No third-party map tiles or external imagery
 are bundled.
+
+### Building style metadata
+
+`building-style.json` contains optional style tags for 21,762 existing building
+source IDs, extracted from the preserved `*buildings*.json.gz` caches. Regenerate
+with `python3 scripts/scenery/extract-tehran-building-style.py` from the repository
+root. This does not fetch data or change footprints or heights. Source:
+[OpenStreetMap contributors, ODbL](https://www.openstreetmap.org/copyright).
+
+The renderer uses building type and available wall/roof colour or material tags.
+Untagged finishes are deterministic stylistic choices, not surveyed materials.
+Roof-shape tags are retained as metadata; this pass does not reconstruct individual
+roof geometry. Special airfield buildings and landmark models retain their styles.
