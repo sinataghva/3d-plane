@@ -105,3 +105,45 @@ test('light aircraft photo mode restores cockpit view', async ({
     await page.locator('#settings-button').click();
     await expect(page.locator('#camera-select')).toHaveValue('cockpit');
 });
+
+for (const mobile of [false, true]) {
+    test(`F-4 photo mode hides aiming marker and restores it on ${mobile ? 'mobile' : 'desktop'}`, async ({
+        browser
+    }, info) => {
+        test.setTimeout(90000);
+        const context = await browser.newContext({
+            viewport: mobile
+                ? { width: 852, height: 393 }
+                : { width: 1280, height: 720 },
+            isMobile: mobile,
+            hasTouch: mobile
+        });
+        const page = await context.newPage();
+        await page.goto('/3d-plane/?mission=tehran');
+        await page.waitForFunction(() => window.goldenCrownTest);
+        await page.evaluate(() => {
+            const { planeState } = window.goldenCrownTest;
+            planeState.position.y += 700;
+            planeState.isAirborne = true;
+            planeState.speed = 2;
+            planeState.verticalSpeed = 0;
+        });
+        const visible = () =>
+            page.evaluate(
+                () =>
+                    JSON.parse(
+                        document.documentElement.dataset.sceneryStats || '{}'
+                    ).bombMarkerVisible
+            );
+        await expect.poll(visible).toBe(true);
+        await page.locator('#photo-button').click();
+        await expect.poll(visible).toBe(false);
+        await page.locator('#photo-hide').click();
+        await page.screenshot({
+            path: info.outputPath('f4-photo-no-aiming-marker.png')
+        });
+        await page.keyboard.press('Escape');
+        await expect.poll(visible).toBe(true);
+        await context.close();
+    });
+}

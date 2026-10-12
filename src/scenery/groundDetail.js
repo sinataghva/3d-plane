@@ -1,3 +1,5 @@
+import { indexRibbon, ribbonStrips } from './groundRibbons.js';
+export { roadRibbon } from './groundRibbons.js';
 import { isStructuredBridge } from './roadStructures.js';
 import {
     pavedAirfieldSurface,
@@ -6,7 +8,6 @@ import {
 import {
     indexScenerySurfaces,
     createBallastTexture,
-    offsetLine,
     clipRectangle
 } from './scenerySurfaces.js';
 import {
@@ -29,9 +30,9 @@ const TILE = 500;
 const CACHE_LIMIT = 80;
 /** @typedef {'road'|'path'|'asphalt'|'grass'|'taxiPaint'|'paint'|'wear'|'number0'|'number1'|'ballast'|'rail'|'water'|'bank'} SurfaceKind */
 /** @typedef {{ax:number,az:number,bx:number,bz:number,width:number,kind:SurfaceKind,bridge?:number[],corners?:number[][]}} Strip */
-/** @typedef {{x:number,z:number,y:number,strips:Strip[],patches?:import('./scenerySurfaces.js').SurfacePatch[],priority:number}} Tile */
+/** @typedef {{x:number,z:number,y:number,strips:Strip[],junctions?:{x:number,z:number,radius:number}[],ribbons?:import('./groundRibbons.js').RibbonTile[],patches?:import('./scenerySurfaces.js').SurfacePatch[],priority:number}} Tile */
 /** Interpolate the same triangles as the existing 256×256 terrain mesh. */
-/** @param {import('./geography.js').Geography} world */
+/** @param {{width:number,depth:number,minX:number,minZ:number,height:(x:number,z:number)=>number}} world */
 export function createRenderedHeight(world) {
     const stepX = world.width / 256,
         stepZ = world.depth / 256;
@@ -130,41 +131,10 @@ export function clipToTerrain(corners, world) {
         }
     return result;
 }
-/** Joined road edges, including the seam of closed loops; repeated nodes are ignored.
- * @param {number[][]} source @param {number} width */
-export function roadRibbon(source, width) {
-    const points = source.filter(
-        (p, i) =>
-            !i ||
-            Math.hypot(p[0] - source[i - 1][0], p[1] - source[i - 1][1]) > 0.01
-    );
-    if (points.length < 2) return [];
-    const closed =
-        points.length > 3 &&
-        Math.hypot(
-            points[0][0] - points[points.length - 1][0],
-            points[0][1] - points[points.length - 1][1]
-        ) < 0.01;
-    const extended = closed
-        ? [points[points.length - 2], ...points, points[1]]
-        : points;
-    let left = offsetLine(extended, width / 2),
-        right = offsetLine(extended, -width / 2);
-    if (closed) {
-        left = left.slice(1, -1);
-        right = right.slice(1, -1);
-    }
-    return points.slice(1).map((p, i) => ({
-        a: points[i],
-        b: p,
-        corners: [left[i], left[i + 1], right[i + 1], right[i]]
-    }));
-}
-
 /** Fill endpoint joins, including branches meeting an interior node or roundabout. Interior bends already share
  * mitered ribbon vertices. Keep separate elevation layers and bridges isolated.
  * @param {import('./geography.js').GeoFeature[]} features */
-export function roadJunctionPatches(features) {
+function roadJunctions(features) {
     /** @type {Map<string,{point:number[],radius:number,count:number,endpoint:boolean}>} */
     const ends = new Map();
     for (const f of features) {
@@ -200,15 +170,18 @@ export function roadJunctionPatches(features) {
     }
     return [...ends.values()]
         .filter((e) => e.count > 1 && e.endpoint)
-        .map(({ point: [x, z], radius }) =>
-            Array.from({ length: 16 }, (_, i) => {
-                const angle = (i * Math.PI) / 8;
-                return [
-                    x + Math.cos(angle) * radius,
-                    z + Math.sin(angle) * radius
-                ];
-            })
-        );
+        .map(({ point: [x, z], radius }) => ({ x, z, radius }));
+}
+/** @param {{x:number,z:number,radius:number}} junction */
+function junctionPoints({ x, z, radius }) {
+    return Array.from({ length: 16 }, (_, i) => {
+        const angle = (i * Math.PI) / 8;
+        return [x + Math.cos(angle) * radius, z + Math.sin(angle) * radius];
+    });
+}
+/** @param {import('./geography.js').GeoFeature[]} features */
+export function roadJunctionPatches(features) {
+    return roadJunctions(features).map(junctionPoints);
 }
 /** @param {number} size @param {boolean} grass */
 function noiseTexture(size, grass) {
@@ -349,30 +322,42 @@ export function createGroundDetail(world) {
                   : 'grass';
         const width = f.width || (f.kind === 'road' ? 5 : 20);
         const bridge = bridgeProfile(f, height);
-        for (const segment of roadRibbon(f.points, width))
-            add(
-                segment.a[0],
-                segment.a[1],
-                segment.b[0],
-                segment.b[1],
-                width,
-                kind,
-                bridge,
-                segment.corners
+        /** @param {number} ribbonWidth @param {SurfaceKind} ribbonKind */
+        const addRibbon = (ribbonWidth, ribbonKind) =>
+            indexRibbon(
+                {
+                    points: f.points,
+                    width: ribbonWidth,
+                    kind: ribbonKind,
+                    bridge: ribbonKind === 'taxiPaint' ? undefined : bridge
+                },
+                TILE,
+                (x, z, ribbon) => {
+                    const key = x + ',' + z;
+                    let tile = index.get(key);
+                    const priority =
+                        ribbonKind === 'path'
+                            ? 2
+                            : ribbonKind === 'road'
+                              ? 1
+                              : 0;
+                    if (!tile) {
+                        tile = {
+                            x: (x + 0.5) * TILE,
+                            z: (z + 0.5) * TILE,
+                            y: height((x + 0.5) * TILE, (z + 0.5) * TILE),
+                            strips: [],
+                            priority
+                        };
+                        index.set(key, tile);
+                    }
+                    tile.priority = Math.min(tile.priority, priority);
+                    (tile.ribbons ??= []).push(ribbon);
+                }
             );
-        if (f.kind === 'taxiway' && kind === 'asphalt') {
-            for (const segment of roadRibbon(f.points, 0.25))
-                add(
-                    segment.a[0],
-                    segment.a[1],
-                    segment.b[0],
-                    segment.b[1],
-                    0.25,
-                    'taxiPaint',
-                    undefined,
-                    segment.corners
-                );
-        }
+        addRibbon(width, kind);
+        if (f.kind === 'taxiway' && kind === 'asphalt')
+            addRibbon(0.25, 'taxiPaint');
         if (f.kind !== 'runway') continue;
         const a = f.points[0],
             b = f.points[f.points.length - 1],
@@ -458,7 +443,8 @@ export function createGroundDetail(world) {
             tile.priority = 0;
         (tile.patches ??= []).push(patch);
     };
-    for (const points of roadJunctionPatches(world.data.features)) {
+    for (const junction of roadJunctions(world.data.features)) {
+        const points = junctionPoints(junction);
         const xs = points.map((p) => p[0]),
             zs = points.map((p) => p[1]);
         for (
@@ -478,12 +464,21 @@ export function createGroundDetail(world) {
                     (x + 1) * TILE,
                     (z + 1) * TILE
                 );
-                if (clipped.length >= 3)
-                    addPatch(x, z, {
-                        points: clipped,
-                        kind: 'road',
-                        offset: 0.04
-                    });
+                if (clipped.length >= 3) {
+                    const key = x + ',' + z;
+                    let tile = index.get(key);
+                    if (!tile) {
+                        tile = {
+                            x: (x + 0.5) * TILE,
+                            z: (z + 0.5) * TILE,
+                            y: height((x + 0.5) * TILE, (z + 0.5) * TILE),
+                            strips: [],
+                            priority: 1
+                        };
+                        index.set(key, tile);
+                    }
+                    (tile.junctions ??= []).push(junction);
+                }
             }
     }
     indexScenerySurfaces(world, TILE, addPatch);
@@ -515,7 +510,10 @@ export function createGroundDetail(world) {
         const materials = [];
         /** @type {Map<SurfaceKind,{p:number[],uv:number[],water:number[]}>} */ const buckets =
             new Map();
-        for (const strip of tile.strips) {
+        for (const strip of (function* () {
+            yield* ribbonStrips(tile.ribbons || []);
+            yield* tile.strips;
+        })()) {
             let bucket = buckets.get(strip.kind);
             if (!bucket) {
                 bucket = { p: [], uv: [], water: [] };
@@ -562,7 +560,22 @@ export function createGroundDetail(world) {
                 } else bucket.uv.push(x / 4, z / 4);
             }
         }
-        for (const patch of tile.patches || []) {
+        /** @returns {Generator<import('./scenerySurfaces.js').SurfacePatch>} */
+        function* patches() {
+            for (const junction of tile.junctions || []) {
+                const points = clipRectangle(
+                    junctionPoints(junction),
+                    tile.x - TILE / 2,
+                    tile.z - TILE / 2,
+                    tile.x + TILE / 2,
+                    tile.z + TILE / 2
+                );
+                if (points.length >= 3)
+                    yield { points, kind: 'road', offset: 0.04 };
+            }
+            yield* tile.patches || [];
+        }
+        for (const patch of patches()) {
             let bucket = buckets.get(patch.kind);
             if (!bucket) {
                 bucket = { p: [], uv: [], water: [] };
@@ -728,6 +741,10 @@ export function createGroundDetail(world) {
                         if (
                             lowRoads &&
                             !tile.strips.some((s) => s.kind === 'road') &&
+                            !tile.ribbons?.some(
+                                (s) => s.ribbon.kind === 'road'
+                            ) &&
+                            !tile.junctions?.length &&
                             !tile.patches?.some((p) => p.kind === 'road')
                         )
                             continue;

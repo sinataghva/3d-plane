@@ -1,3 +1,4 @@
+import { buildingBase } from './buildingFoundation.js';
 import * as THREE from 'three';
 import { inFeature } from './geography.js';
 import { clipRectangle } from './scenerySurfaces.js';
@@ -38,7 +39,7 @@ export function appendAirfieldBuilding(f, world, chunk, military) {
     const min = Math.min(...outer.map((p) => p[1])),
         max = Math.max(...outer.map((p) => p[1]));
     const span = max - min || 1;
-    const base = world.height(.../** @type {[number,number]} */ (origin));
+    const base = buildingBase(f, world);
     const height = f.height || 8,
         top = base + height;
     const tower = f.aeroway === 'tower',
@@ -125,10 +126,6 @@ export function appendAirfieldBuilding(f, world, chunk, military) {
         return distance(a) - distance(b);
     })[0];
     for (const r of [ring, ...f.holes.map((h) => h.slice(0, -1))]) {
-        const area = r.reduce((s, a, i) => {
-            const b = r[(i + 1) % r.length];
-            return s + a[0] * b[1] - b[0] * a[1];
-        }, 0);
         for (let i = 0; i < r.length; i++) {
             const a = r[i],
                 b = r[(i + 1) % r.length],
@@ -151,19 +148,8 @@ export function appendAirfieldBuilding(f, world, chunk, military) {
                     if (t > 0 && t < 1) cuts.push(t);
                 }
             cuts.sort((a, b) => a - b);
-            for (let k = 1; k < cuts.length; k++) {
-                const s = cuts[k - 1],
-                    t = cuts[k],
-                    p = [a[0] + dx * s, bottom, a[1] + dz * s],
-                    q = [a[0] + dx * t, bottom, a[1] + dz * t];
-                const hiP = [p[0], roofHeight(va + (vb - va) * s), p[2]],
-                    hiQ = [q[0], roofHeight(va + (vb - va) * t), q[2]];
-                tri(p, q, hiQ, wall);
-                tri(p, hiQ, hiP, wall);
-            }
-            const sign = area >= 0 ? 1 : -1,
-                nx = (dz / len) * 0.045 * sign,
-                nz = (-dx / len) * 0.045 * sign;
+            /** @type {{from:number,to:number,y:number,h:number,color:THREE.Color}[]} */
+            const panels = [];
             const quad = (
                 /** @type {number} */ from,
                 /** @type {number} */ to,
@@ -171,10 +157,7 @@ export function appendAirfieldBuilding(f, world, chunk, military) {
                 /** @type {number} */ h,
                 /** @type {THREE.Color} */ color
             ) => {
-                const p = [a[0] + dx * from + nx, y, a[1] + dz * from + nz],
-                    q = [a[0] + dx * to + nx, y, a[1] + dz * to + nz];
-                tri(p, q, [q[0], y + h, q[2]], color);
-                tri(p, [q[0], y + h, q[2]], [p[0], y + h, p[2]], color);
+                panels.push({ from, to, y, h, color });
             };
             if (tower) {
                 quad(0.06, 0.94, top - height * 0.28, height * 0.18, glass);
@@ -206,6 +189,59 @@ export function appendAirfieldBuilding(f, world, chunk, military) {
                         Math.min(1.2, height * 0.15),
                         glass
                     );
+            }
+            // Doors and windows replace wall faces instead of hovering over them.
+            // Disjoint facade cells remain stable even at runway viewing distances.
+            panels.reverse();
+            const xs = [
+                ...new Set([
+                    0,
+                    1,
+                    ...cuts,
+                    ...panels.flatMap((p) => [p.from, p.to])
+                ])
+            ].sort((a, b) => a - b);
+            const ys = [
+                ...new Set([
+                    bottom,
+                    top,
+                    ...panels.flatMap((p) => [p.y, p.y + p.h])
+                ])
+            ].sort((a, b) => a - b);
+            for (let k = 1; k < xs.length; k++) {
+                const s = xs[k - 1],
+                    t = xs[k];
+                const wallShape = [
+                    [s, bottom],
+                    [t, bottom],
+                    [t, roofHeight(va + (vb - va) * t)],
+                    [s, roofHeight(va + (vb - va) * s)]
+                ];
+                for (let j = 1; j < ys.length; j++) {
+                    const low = ys[j - 1],
+                        high = ys[j];
+                    if (high <= low || t <= s) continue;
+                    const polygon = clipRectangle(wallShape, s, low, t, high);
+                    const panel = panels.find(
+                        (p) =>
+                            (s + t) / 2 >= p.from &&
+                            (s + t) / 2 <= p.to &&
+                            (low + high) / 2 >= p.y &&
+                            (low + high) / 2 <= p.y + p.h
+                    );
+                    const vertices = polygon.map(([u, y]) => [
+                        a[0] + dx * u,
+                        y,
+                        a[1] + dz * u
+                    ]);
+                    for (let v = 1; v < vertices.length - 1; v++)
+                        tri(
+                            vertices[0],
+                            vertices[v],
+                            vertices[v + 1],
+                            panel?.color || wall
+                        );
+                }
             }
         }
     }

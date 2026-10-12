@@ -15,6 +15,7 @@ import {
 import { createInputController } from './input.js';
 import { describeTouchdown } from '../ui/experience.js';
 import { missionFor } from '../ui/missions.js';
+import { buildingBase } from '../scenery/buildingFoundation.js';
 import { createRenderedHeight } from '../scenery/groundDetail.js';
 
 const data = JSON.parse(
@@ -90,9 +91,10 @@ test('Tehran selects an intact Mehrabad runway without modifying source data', (
         q = other.points.at(-1),
         x = (p[0] + q[0]) / 2,
         z = (p[1] + q[1]) / 2;
-    expect(world.height(x, z) + world.baseElevation).toBeCloseTo(
-        world.sample(x, z)
-    );
+    // Unselected runways retain the DEM slope, subject to terrain-grid interpolation.
+    expect(
+        Math.abs(world.height(x, z) + world.baseElevation - world.sample(x, z))
+    ).toBeLessThan(0.5);
 });
 
 test('F-4 takes off from Mehrabad, retracts gear, turns and resets', () => {
@@ -249,4 +251,51 @@ test('fast F-4 cannot skip a terrain ridge between simulation endpoints', () => 
     tick(s, createInputController('phantom').state);
     expect(s.isCrashed).toBe(true);
     expect(s.crashReason).toBe('terrain');
+});
+
+test('wheel contact matches visible terrain on both sides of Mehrabad runways', () => {
+    const rendered = createRenderedHeight(world);
+    const [a, b] = [world.runway.points[0], world.runway.points.at(-1)];
+    const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    for (let t = 0.05; t < 1; t += 0.1)
+        for (const offset of [-1200, -700, -350, -150, 150, 350, 700, 1200]) {
+            const x =
+                a[0] + (b[0] - a[0]) * t - ((b[1] - a[1]) / length) * offset;
+            const z =
+                a[1] + (b[1] - a[1]) * t + ((b[0] - a[0]) / length) * offset;
+            expect(world.height(x, z)).toBeCloseTo(rendered(x, z), 5);
+        }
+});
+
+test('reported Mehrabad hangars clear the terrain and share collision roof heights', () => {
+    const rendered = createRenderedHeight(world);
+    for (const id of ['w1289592809-0', 'w1289592810-0', 'w530406866-0']) {
+        const f = world.data.features.find((f) => f.id === id);
+        const base = buildingBase(f, world);
+        for (let i = 1; i < f.points.length; i++)
+            for (let t = 0; t <= 1; t += 0.1) {
+                const a = f.points[i - 1],
+                    b = f.points[i];
+                expect(base + 0.00001).toBeGreaterThanOrEqual(
+                    rendered(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
+                );
+            }
+        const p = f.points[0],
+            q = f.points[1];
+        const x = (p[0] + q[0]) / 2,
+            z = (p[1] + q[1]) / 2;
+        // A point inside the footprint is needed for obstacle testing.
+        const inside = f.points
+            .slice(0, -1)
+            .find((p) => inFeature((p[0] + x) / 2, (p[1] + z) / 2, f));
+        expect(inside).toBeTruthy();
+        expect(
+            world.obstacle(
+                (inside[0] + x) / 2,
+                (inside[1] + z) / 2,
+                base + (f.height || 8) - 0.1,
+                0
+            )
+        ).toBe('building');
+    }
 });

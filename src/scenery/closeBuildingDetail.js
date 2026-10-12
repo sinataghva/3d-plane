@@ -89,7 +89,7 @@ export function addCloseBuildingDetail(material) {
                     float aa = max(fwidth(edgeDistance), 0.05);
                     float boundary = 1.0 - smoothstep(0.25 - aa, 0.25 + aa, edgeDistance);
                     diffuseColor.rgb *= 1.0 - 0.30 * boundary * closeBuildingFade;
-                } else if (${variant}.0 > 1.5 && abs(vBuildingWindow.z) > 0.5) {
+                } else if (${variant}.0 > 1.5 && abs(vBuildingWindow.z) > 0.5 && vBuildingWindow.y >= 0.0) {
                     float seed = abs(vBuildingWindow.z);
                     float tint = mix(0.94, 1.06, fract(seed * 0.137));
                     vec2 grid = vBuildingWindow.xy / vec2(3.8, 3.2);

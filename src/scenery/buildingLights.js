@@ -41,7 +41,7 @@ export function addBuildingWindowShader(material) {
         shader.fragmentShader = shader.fragmentShader.replace(
             '#include <emissivemap_fragment>',
             `#include <emissivemap_fragment>
-            if (townNightIntensity > 0.0 && vBuildingWindow.z > 0.5) {
+            if (townNightIntensity > 0.0 && vBuildingWindow.z > 0.5 && vBuildingWindow.y >= 0.0) {
                 float seed = floor(vBuildingWindow.z + 0.5);
                 vec2 grid = vBuildingWindow.xy / vec2(3.8, 3.2);
                 vec2 cell = floor(grid);
@@ -57,5 +57,5 @@ export function addBuildingWindowShader(material) {
             }`
         );
     };
-    material.customProgramCacheKey = () => 'civilian-window-lights-v1';
+    material.customProgramCacheKey = () => 'civilian-window-lights-v2';
 }

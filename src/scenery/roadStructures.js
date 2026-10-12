@@ -4,8 +4,54 @@ import { tehranLandmarks } from './tehranLandmarks.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { subtractConvex, offsetLine } from './scenerySurfaces.js';
 import * as THREE from 'three';
-import { createRenderedHeight } from './groundDetail.js';
+import { clipToTerrain, createRenderedHeight } from './groundDetail.js';
 import { distanceToLine } from './surfaceFeatures.js';
+
+/** Split road tops at terrain triangle boundaries while preserving deck clearance.
+ * Elevated decks keep their plane; ground-following ends inherit terrain curvature.
+ * @param {number[][]} corners @param {number[]} follow
+ * @param {{width:number,depth:number,minX:number,minZ:number}} world
+ * @param {(x:number,z:number)=>number} height
+ * @returns {number[][]} */
+export function conformRoadTop(corners, follow, world, height) {
+    const result = [];
+    for (const ids of [
+        [0, 2, 1],
+        [0, 3, 2]
+    ]) {
+        const [a, b, c] = ids.map((i) => corners[i]);
+        if (ids.every((i) => follow[i] === 0)) {
+            result.push(a.slice(0, 3), b.slice(0, 3), c.slice(0, 3));
+            continue;
+        }
+        const denominator =
+            (b[2] - c[2]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[2] - c[2]);
+        if (Math.abs(denominator) < 1e-10) continue;
+        const ground = ids.map((i) => height(corners[i][0], corners[i][2]));
+        for (const [x, z] of clipToTerrain(
+            [a, b, c].map((p) => [p[0], p[2]]),
+            world
+        )) {
+            const u =
+                ((b[2] - c[2]) * (x - c[0]) + (c[0] - b[0]) * (z - c[2])) /
+                denominator;
+            const v =
+                ((c[2] - a[2]) * (x - c[0]) + (a[0] - c[0]) * (z - c[2])) /
+                denominator;
+            const weights = [u, v, 1 - u - v];
+            const interpolate = (/** @type {number[]} */ values) =>
+                weights.reduce((sum, w, i) => sum + w * values[i], 0);
+            result.push([
+                x,
+                interpolate([a[1], b[1], c[1]]) +
+                    (height(x, z) - interpolate(ground)) *
+                        interpolate(ids.map((i) => follow[i])),
+                z
+            ]);
+        }
+    }
+    return result;
+}
 
 /** @typedef {import('./geography.js').GeoFeature} Feature */
 /** @typedef {{feature:Feature,distances:number[],length:number,lift:number,start:number,end:number,samples?:number[][]}} Profile */
@@ -779,6 +825,19 @@ export function* prepareRoadStructureTile(world, cell, shared) {
                 [b[0] - offsets[1][0], b[1], b[2] - offsets[1][1]],
                 [b[0] + offsets[1][0], b[1], b[2] + offsets[1][1]]
             ];
+            const follow = [a, a, b, b].map((center) =>
+                Math.max(
+                    0,
+                    Math.min(
+                        1,
+                        1 -
+                            (center[1] -
+                                data.height(center[0], center[2]) -
+                                0.12) /
+                                2
+                    )
+                )
+            );
             if (color === asphalt)
                 for (let i = 0; i < 4; i++) {
                     const center = i < 2 ? a : b,
@@ -795,6 +854,18 @@ export function* prepareRoadStructureTile(world, cell, shared) {
                     : color === edgeColor
                       ? [1, 5, 6, 1, 6, 2]
                       : [0, 2, 1, 0, 3, 2, 1, 5, 6, 1, 6, 2, 3, 7, 4, 3, 4, 0];
+            if (color === asphalt) {
+                for (const p of conformRoadTop(
+                    vs,
+                    follow,
+                    world,
+                    data.height
+                )) {
+                    chunk.positions.push(...p);
+                    chunk.colors.push(color.r, color.g, color.b);
+                }
+                faces.splice(0, 6);
+            }
             for (const i of faces) {
                 chunk.positions.push(...vs[i]);
                 chunk.colors.push(color.r, color.g, color.b);
@@ -966,7 +1037,8 @@ export function* prepareRoadStructureTile(world, cell, shared) {
                         return [
                             px,
                             y + 0.12 + (data.height(px, pz) - base) * crossfall,
-                            pz
+                            pz,
+                            crossfall
                         ];
                     });
                 };
@@ -994,8 +1066,13 @@ export function* prepareRoadStructureTile(world, cell, shared) {
                         bSection[1],
                         bSection[0]
                     ];
-                    for (const k of [0, 2, 1, 0, 3, 2]) {
-                        chunk.positions.push(...corners[k]);
+                    for (const p of conformRoadTop(
+                        corners,
+                        corners.map((p) => p[3]),
+                        world,
+                        data.height
+                    )) {
+                        chunk.positions.push(...p);
                         chunk.colors.push(asphalt.r, asphalt.g, asphalt.b);
                     }
                 }
@@ -1169,8 +1246,12 @@ export function* prepareRoadStructureTile(world, cell, shared) {
             }
         }
         yield;
+        // Match ground-overlay depth separation without changing camera clipping.
         material = new THREE.MeshLambertMaterial({
             vertexColors: true,
+            polygonOffset: true,
+            polygonOffsetFactor: -1,
+            polygonOffsetUnits: -1,
             side: THREE.DoubleSide
         });
         let bytes = 0,

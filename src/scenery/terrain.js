@@ -1,3 +1,4 @@
+import { buildingBase } from './buildingFoundation.js';
 import { tehranBuildingStyle } from './tehranBuildingStyle.js';
 import { woodlandSchedule, vegetationClearance } from './vegetationLayout.js';
 import {
@@ -181,7 +182,7 @@ export function createTerrain(world) {
             ].includes(style?.type || f.buildingType || '')
                 ? unlitFacadeSeed(f.id)
                 : 0);
-        const base = world.height(ring[0][0], ring[0][1]),
+        const base = buildingBase(f, world),
             top = base + (f.height || 8);
         const wall = new THREE.Color(
             f.palace ? 0xe8d1a1 : (style?.wall ?? 0xc6bc9f)

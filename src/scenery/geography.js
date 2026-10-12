@@ -1,3 +1,5 @@
+import { createRenderedHeight } from './groundDetail.js';
+import { buildingBase } from './buildingFoundation.js';
 import {
     isSurfaceFeature,
     isFlowingWater,
@@ -192,7 +194,7 @@ export function createGeography(data, dem, departure) {
         ? Math.hypot(width / 256, depth / 256) + 2
         : 20;
     /** @param {number} x @param {number} z */
-    const height = (x, z) => {
+    const sourceHeight = (x, z) => {
         let h = sample(x, z) - baseElevation;
         const beyond = Math.max(minX - x, x - maxX, minZ - z, z - maxZ, 0);
         if (beyond > 0) {
@@ -238,6 +240,24 @@ export function createGeography(data, dem, departure) {
         }
         return h;
     };
+    // Tehran flight contact must use the same triangles as the visible ground,
+    // including both sides of the runway flattening transition.
+    const terrainHeight = data.features.some(
+        (f) => f.kind === 'airfield' && f.icao === 'OIII'
+    )
+        ? createRenderedHeight({
+              width,
+              depth,
+              minX,
+              minZ,
+              height: sourceHeight
+          })
+        : sourceHeight;
+    /** @param {number} x @param {number} z */
+    const height = (x, z) =>
+        x < minX || x > maxX || z < minZ || z > maxZ
+            ? sourceHeight(x, z)
+            : terrainHeight(x, z);
     spawn.y = height(spawn.x, spawn.z) + 0.5;
     /** @param {number} x @param {number} z */
     const onRunway = (x, z) =>
@@ -295,13 +315,18 @@ export function createGeography(data, dem, departure) {
             if (!inFeature(x, z, f)) continue;
             if (f.kind === 'water' && y <= height(x, z) + 0.7) return 'water';
             if (f.kind === 'building') {
-                const p = f.points[0];
-                if (y < height(p[0], p[1]) + (f.height || 8) + clearance)
+                if (
+                    y <
+                    buildingBase(f, foundationGround) +
+                        (f.height || 8) +
+                        clearance
+                )
                     return 'building';
             }
         }
         return '';
     };
+    const foundationGround = { width, depth, minX, minZ, height };
     return {
         data,
         dem,

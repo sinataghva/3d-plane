@@ -386,7 +386,9 @@ test('surface road and tunnel ramp keep the same width and upward road normals',
     for (let i = 0; i < 30; i++) stream.update({ x: 0, y: 20, z: 0 }, 'high');
     const asphalt = new THREE.Color(0x60676a);
     let surface = 0,
-        ramp = 0;
+        ramp = 0,
+        surfaceEdge = 0,
+        rampEdge = 0;
     stream.group.traverse((object) => {
         if (!(object instanceof THREE.Mesh)) return;
         const positions = object.geometry.getAttribute('position');
@@ -404,7 +406,14 @@ test('surface road and tunnel ramp keep the same width and upward road normals',
             if (halfWidth > 4.00001) {
                 expect(halfWidth).toBeCloseTo(4.6, 5);
                 expect(x).toBeGreaterThanOrEqual(-40);
-            } else expect(halfWidth).toBeCloseTo(4, 5);
+            } else {
+                // Terrain triangle boundaries add interior vertices as well as edges.
+                expect(halfWidth).toBeLessThanOrEqual(4.00001);
+                if (Math.abs(halfWidth - 4) < 1e-5) {
+                    if (x < -40) surfaceEdge++;
+                    else rampEdge++;
+                }
+            }
             expect(normals.getY(i)).toBeGreaterThan(0.9);
             if (x < -40) surface++;
             else ramp++;
@@ -412,6 +421,8 @@ test('surface road and tunnel ramp keep the same width and upward road normals',
     });
     expect(surface).toBeGreaterThan(0);
     expect(ramp).toBeGreaterThan(0);
+    expect(surfaceEdge).toBeGreaterThan(0);
+    expect(rampEdge).toBeGreaterThan(0);
     stream.dispose();
 });
 

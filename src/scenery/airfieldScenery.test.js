@@ -110,3 +110,20 @@ test('apron detail preserves source footprint holes', () => {
     );
     expect(area).toBeCloseTo(700);
 });
+
+test('hangar facade panels replace wall area without overlapping it', () => {
+    /** @type {{positions:number[],colors:number[]}} */
+    const chunk = { positions: [], colors: [] };
+    appendAirfieldBuilding(building, world, chunk, true);
+    let area = 0;
+    for (let i = 0; i < chunk.positions.length; i += 9) {
+        const p = chunk.positions.slice(i, i + 9);
+        if (![p[2], p[5], p[8]].every((z) => z <= 0.00001)) continue;
+        const twiceArea = Math.abs(
+            (p[3] - p[0]) * (p[7] - p[1]) - (p[6] - p[0]) * (p[4] - p[1])
+        );
+        area += twiceArea / 2;
+    }
+    // 40 m facade, from the -1 m foundation bottom to the 7.5 m eaves.
+    expect(area).toBeCloseTo(40 * 8.5, 5);
+});
