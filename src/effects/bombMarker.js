@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 /** Ground-draped geometry scaled for readability, never turned toward the camera.
  * @param {THREE.Scene} scene
- * @param {ReturnType<import('../scenery/bombSurfaces.js').createBombSurfaces>} surfaces */
+ * @param {Pick<ReturnType<import('../scenery/bombSurfaces.js').createBombSurfaces>, 'height' | 'markerHeight'>} surfaces */
 export function createBombMarker(scene, surfaces) {
     /** @type {number[]} */ const base = [];
     /** @param {number} ax @param {number} az @param {number} bx @param {number} bz */
@@ -74,8 +74,20 @@ export function createBombMarker(scene, surfaces) {
     mesh.visible = false;
     scene.add(mesh);
     const projected = new THREE.Vector3();
-    const roofTop = new THREE.Vector3(),
-        roofBottom = new THREE.Vector3();
+    // Share 81 samples across all 624 ribbon vertices, including duplicates.
+    // Only the final sizing pass samples surfaces: at most 81 per update.
+    const gridSize = 9,
+        extent = 1.04;
+    const heights = new Float64Array(gridSize * gridSize);
+    const cachedPoint = new THREE.Vector3(Infinity, Infinity, Infinity);
+    const cachedCamera = new THREE.Matrix4();
+    const cachedProjection = new THREE.Matrix4();
+    let cachedHeading = NaN,
+        cachedKind = '',
+        cachedWidth = 0,
+        cachedHeight = 0;
+    let samples = 0,
+        workMs = 0;
     let width = 0,
         height = 0,
         footprint = 0;
@@ -85,6 +97,8 @@ export function createBombMarker(scene, surfaces) {
          * @param {number} [heading] Aircraft yaw, with forward along local +X. */
         update(point, camera, dimmed, blocked, kind, heading = 0) {
             mesh.visible = false;
+            samples = 0;
+            workMs = 0;
             if (!point) return;
             camera.updateMatrixWorld();
             projected.copy(point).project(camera);
@@ -95,50 +109,106 @@ export function createBombMarker(scene, surfaces) {
                 projected.z > 1
             )
                 return;
-            // Normalize the longest screen dimension, retaining foreshortening.
-            let radius = Math.max(1, camera.position.distanceTo(point) * 0.1);
-            const cos = Math.cos(heading),
-                sin = Math.sin(heading);
-            for (let pass = 0; pass < 3; pass++) {
-                let minX = Infinity,
-                    maxX = -Infinity,
-                    minY = Infinity,
-                    maxY = -Infinity;
-                for (let i = 0; i < base.length / 2; i++) {
-                    // Rotate in the ground plane before sampling height:
-                    // the long axes follow aircraft heading, never its bank.
-                    const forward = base[i * 2],
-                        side = base[i * 2 + 1];
-                    const x = point.x + (forward * cos + side * sin) * radius;
-                    const z = point.z + (-forward * sin + side * cos) * radius;
-                    const roof =
-                        kind === 'building'
-                            ? surfaces.sweep(
-                                  roofTop.set(x, point.y + 1, z),
-                                  roofBottom.set(x, point.y - 2, z)
-                              )
-                            : null;
-                    const y =
-                        (roof?.position.y ?? surfaces.height(x, z)) + 0.25;
-                    positions.setXYZ(i, x, y, z);
-                    projected.set(x, y, z).project(camera);
-                    minX = Math.min(minX, projected.x);
-                    maxX = Math.max(maxX, projected.x);
-                    minY = Math.min(minY, projected.y);
-                    maxY = Math.max(maxY, projected.y);
+            const sameGeometry =
+                cachedPoint.equals(point) &&
+                cachedHeading === heading &&
+                cachedKind === kind &&
+                cachedCamera.equals(camera.matrixWorld) &&
+                cachedProjection.equals(camera.projectionMatrix) &&
+                cachedWidth === innerWidth &&
+                cachedHeight === innerHeight;
+            samples = 0;
+            const start = performance.now();
+            if (!sameGeometry) {
+                // Normalize the longest screen dimension, retaining foreshortening.
+                let radius = Math.max(
+                    1,
+                    camera.position.distanceTo(point) * 0.1
+                );
+                const cos = Math.cos(heading),
+                    sin = Math.sin(heading);
+                for (let pass = 0; pass < 3; pass++) {
+                    for (let gz = 0; gz < gridSize; gz++) {
+                        for (let gx = 0; gx < gridSize; gx++) {
+                            const forward =
+                                ((gx / (gridSize - 1)) * 2 - 1) * extent;
+                            const side =
+                                ((gz / (gridSize - 1)) * 2 - 1) * extent;
+                            const x =
+                                point.x + (forward * cos + side * sin) * radius;
+                            const z =
+                                point.z +
+                                (-forward * sin + side * cos) * radius;
+                            heights[gz * gridSize + gx] =
+                                (pass < 2
+                                    ? point.y
+                                    : kind === 'building'
+                                      ? surfaces.markerHeight(
+                                            x,
+                                            z,
+                                            point.y + Math.max(4, radius)
+                                        )
+                                      : surfaces.height(x, z)) + 0.25;
+                            if (pass === 2) samples++;
+                        }
+                    }
+                    let minX = Infinity,
+                        maxX = -Infinity,
+                        minY = Infinity,
+                        maxY = -Infinity;
+                    for (let i = 0; i < base.length / 2; i++) {
+                        // Rotate in the ground plane before sampling height:
+                        // the long axes follow aircraft heading, never its bank.
+                        const forward = base[i * 2],
+                            side = base[i * 2 + 1];
+                        const x =
+                            point.x + (forward * cos + side * sin) * radius;
+                        const z =
+                            point.z + (-forward * sin + side * cos) * radius;
+                        const gx =
+                            ((forward / extent + 1) * (gridSize - 1)) / 2;
+                        const gz = ((side / extent + 1) * (gridSize - 1)) / 2;
+                        const ix = Math.min(gridSize - 2, Math.floor(gx));
+                        const iz = Math.min(gridSize - 2, Math.floor(gz));
+                        const tx = gx - ix,
+                            tz = gz - iz;
+                        const a = heights[iz * gridSize + ix];
+                        const b = heights[iz * gridSize + ix + 1];
+                        const c = heights[(iz + 1) * gridSize + ix];
+                        const d = heights[(iz + 1) * gridSize + ix + 1];
+                        const y =
+                            (a + (b - a) * tx) * (1 - tz) +
+                            (c + (d - c) * tx) * tz;
+                        positions.setXYZ(i, x, y, z);
+                        projected.set(x, y, z).project(camera);
+                        minX = Math.min(minX, projected.x);
+                        maxX = Math.max(maxX, projected.x);
+                        minY = Math.min(minY, projected.y);
+                        maxY = Math.max(maxY, projected.y);
+                    }
+                    width = ((maxX - minX) * innerWidth) / 2;
+                    height = ((maxY - minY) * innerHeight) / 2;
+                    footprint = radius * 2;
+                    radius *= 160 / Math.max(1, width, height);
                 }
-                width = ((maxX - minX) * innerWidth) / 2;
-                height = ((maxY - minY) * innerHeight) / 2;
-                footprint = radius * 2;
-                radius *= 160 / Math.max(1, width, height);
+                positions.needsUpdate = true;
+                cachedPoint.copy(point);
+                cachedCamera.copy(camera.matrixWorld);
+                cachedProjection.copy(camera.projectionMatrix);
+                cachedHeading = heading;
+                cachedKind = kind;
+                cachedWidth = innerWidth;
+                cachedHeight = innerHeight;
             }
-            positions.needsUpdate = true;
+            workMs = performance.now() - start;
             material.color.setHex(blocked ? 0xffbb71 : 0xffca55);
             material.opacity = dimmed ? 0.4 : 1;
             mesh.visible = true;
         },
         stats() {
             return {
+                bombMarkerSamples: samples,
+                bombMarkerMs: workMs,
                 bombMarkerVisible: mesh.visible,
                 bombMarkerWidth: width,
                 bombMarkerHeight: height,
@@ -147,6 +217,8 @@ export function createBombMarker(scene, surfaces) {
         },
         hide() {
             mesh.visible = false;
+            samples = 0;
+            workMs = 0;
         },
         dispose() {
             scene.remove(mesh);

@@ -287,9 +287,7 @@ export function createBombing(scene, airplane, world, sound) {
                     : null,
                 camera,
                 sim.reload > 0,
-                state.position.y -
-                    surfaces.height(state.position.x, state.position.z) <
-                    BOMB_CONFIG.minimumReleaseHeight,
+                belowReleaseHeight,
                 prediction?.kind ?? 'ground',
                 state.yawAngle
             );

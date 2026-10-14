@@ -36,3 +36,20 @@ test('no intersection outside supported bounds', () => {
         s.sweep(new Vector3(1000, 5, 0), new Vector3(1000, -5, 0))
     ).toBeNull();
 });
+
+test('drawing samples follow roofs and terrain with a bounded query count', () => {
+    let queries = 0;
+    const s = createBombSurfaces({
+        ...world,
+        obstacle: (...args) => {
+            queries++;
+            return world.obstacle(...args);
+        }
+    });
+    for (const x of [29, 31, 35, 39, 41]) {
+        queries = 0;
+        const y = s.markerHeight(x, 0, 60);
+        expect(y).toBeCloseTo(x > 30 && x < 40 ? 20 : s.height(x, 0), 1);
+        expect(queries).toBeLessThanOrEqual(21);
+    }
+});

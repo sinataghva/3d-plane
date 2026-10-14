@@ -46,5 +46,26 @@ export function createBombSurfaces(world) {
         }
         return null;
     }
-    return { height, inside, sweep };
+    /** Approximate surface for drawing only. Bounded vertical probes deliberately
+     * ignore tiny architectural details; live collision still uses sweep().
+     * @param {number} x @param {number} z @param {number} ceiling */
+    function markerHeight(x, z, ceiling) {
+        const ground = height(x, z);
+        const top = Math.max(ground + 1, ceiling);
+        let high = top;
+        for (let i = 0; i <= 12; i++) {
+            let low = top + ((ground - top) * i) / 12;
+            if (world.obstacle(x, z, low, 0) === 'building') {
+                for (let j = 0; j < 8; j++) {
+                    const mid = (low + high) / 2;
+                    if (world.obstacle(x, z, mid, 0) === 'building') low = mid;
+                    else high = mid;
+                }
+                return Math.max(ground, high);
+            }
+            high = low;
+        }
+        return ground;
+    }
+    return { height, inside, sweep, markerHeight };
 }
