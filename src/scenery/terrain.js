@@ -30,7 +30,10 @@ import {
 } from './mehrabad.js';
 import { instanceStaticScenery } from '../rendering/instancing.js';
 import { addRegionDistanceFade } from './regionDetail.js';
-import { createTehranLandmarks, tehranLandmarks } from './tehranLandmarks.js';
+import {
+    createTehranLandmarks,
+    replacedLandmarkSources
+} from './tehranLandmarks.js';
 
 /** @param {import('./geography.js').Geography} world */
 export function createTerrain(world) {
@@ -114,9 +117,7 @@ export function createTerrain(world) {
         : [];
     const closeBuildings = isMehrabad(world.data);
     let detailedBuildings = 0;
-    const landmarkSources = new Set(
-        tehranLandmarks(world.data).map((l) => l.source)
-    );
+    const landmarkSources = replacedLandmarkSources(world.data);
     for (const f of world.data.features.filter((f) => f.kind === 'building')) {
         if (landmarkSources.has(f.id)) continue;
         const ring = f.points.slice(0, -1);

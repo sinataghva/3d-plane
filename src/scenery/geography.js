@@ -1,3 +1,4 @@
+import { miladBaseHeight } from './miladTower.js';
 import { createRenderedHeight } from './groundDetail.js';
 import { buildingBase } from './buildingFoundation.js';
 import {
@@ -8,6 +9,7 @@ import {
 import { joinAirportRunways } from './runwayLayout.js';
 import {
     tehranLandmarks,
+    replacedLandmarkSources,
     landmarkContains,
     tabiatApproachHeight
 } from './tehranLandmarks.js';
@@ -57,6 +59,21 @@ export function segmentDistance(x, z, a, b) {
 /** @param {GeoData} data @param {ElevationData} dem
  * @param {{icao:string,runwayRef:string}} [departure] */
 export function createGeography(data, dem, departure) {
+    // Local presentation correction from the helicopter-facility reference.
+    // Preserve the cached OSM runway tag and its elevation/strip footprint.
+    if (data.airfield?.includes('OIII'))
+        data = {
+            ...data,
+            features: data.features.map((f) =>
+                f.id === 'w175770956-0'
+                    ? {
+                          ...f,
+                          aeroway: 'helipad',
+                          name: 'Helicopter landing site'
+                      }
+                    : f
+            )
+        };
     if (departure) data = joinAirportRunways(data, departure.icao);
     const [south, west, north, east] = data.bounds;
     const mx = 111320 * Math.cos((data.origin[0] * Math.PI) / 180);
@@ -147,7 +164,7 @@ export function createGeography(data, dem, departure) {
     /** @type {Map<string,GeoFeature[]>} */
     const cells = new Map();
     const landmarks = tehranLandmarks(data);
-    const replacedLandmarks = new Set(landmarks.map((l) => l.source));
+    const replacedLandmarks = replacedLandmarkSources(data);
     for (const f of data.features.filter(
         (f) =>
             ['building', 'water', 'waterway'].includes(f.kind) &&
@@ -258,6 +275,14 @@ export function createGeography(data, dem, departure) {
         x < minX || x > maxX || z < minZ || z > maxZ
             ? sourceHeight(x, z)
             : terrainHeight(x, z);
+    const landmarkBases = new Map(
+        landmarks.map((l) => [
+            l.id,
+            l.id === 'milad'
+                ? miladBaseHeight(height, l.x, l.z)
+                : height(l.x, l.z)
+        ])
+    );
     spawn.y = height(spawn.x, spawn.z) + 0.5;
     /** @param {number} x @param {number} z */
     const onRunway = (x, z) =>
@@ -291,7 +316,12 @@ export function createGeography(data, dem, departure) {
             if (
                 Math.abs(x - l.x) < 160 &&
                 Math.abs(z - l.z) < 160 &&
-                landmarkContains(l.id, x - l.x, y - height(l.x, l.z), z - l.z)
+                landmarkContains(
+                    l.id,
+                    x - l.x,
+                    y - (landmarkBases.get(l.id) ?? 0),
+                    z - l.z
+                )
             )
                 return 'building';
         }

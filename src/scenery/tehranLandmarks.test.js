@@ -195,3 +195,51 @@ it('keeps Azadi upper pier grooves separated and nearly parallel', () => {
     for (let i = 1; i < directions.length; i++)
         expect(directions[i].dot(directions[i - 1])).toBeGreaterThan(0.999);
 });
+
+it('Milad has a broad lower head, clear upper mast and grounded podium', () => {
+    expect(landmarkContains('milad', 30, 281, 0)).toBe(true);
+    expect(landmarkContains('milad', 24, 300, 0)).toBe(false);
+    expect(landmarkContains('milad', 5, 330, 0)).toBe(false);
+    expect(landmarkContains('milad', 50, 5, 0)).toBe(true);
+    expect(landmarkContains('milad', 50, 15, 0)).toBe(false);
+    const geometry = landmarkGeometry('milad');
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
+    mesh.updateMatrixWorld(true);
+    for (const direction of [
+        new THREE.Vector3(1, 0, 0),
+        new THREE.Vector3(0, 0, 1)
+    ]) {
+        const origin = direction.clone().multiplyScalar(100).setY(100);
+        const hits = new THREE.Raycaster(
+            origin,
+            direction.clone().negate()
+        ).intersectObject(mesh);
+        expect(hits.length).toBeGreaterThan(0);
+        expect(hits[0].distance).toBeGreaterThan(88);
+        expect(hits[0].distance).toBeLessThan(91);
+    }
+    geometry.dispose();
+    mesh.material.dispose();
+});
+
+it('Milad glass dome has a curved shoulder beneath the mast collar', () => {
+    const geometry = landmarkGeometry('milad');
+    const material = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.updateMatrixWorld(true);
+    const radius = (/** @type {number} */ y) => {
+        const hits = new THREE.Raycaster(
+            new THREE.Vector3(40, y, 0),
+            new THREE.Vector3(-1, 0, 0)
+        ).intersectObject(mesh);
+        expect(hits.length).toBeGreaterThan(0);
+        return hits[0].point.x;
+    };
+    expect(radius(300)).toBeGreaterThan(15);
+    expect(radius(308)).toBeGreaterThan(11);
+    expect(radius(308)).toBeLessThan(12);
+    expect(radius(312)).toBeLessThan(7.2);
+    expect(landmarkContains('milad', 2, 360, 0)).toBe(true);
+    geometry.dispose();
+    material.dispose();
+});

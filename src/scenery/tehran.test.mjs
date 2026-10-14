@@ -12,10 +12,10 @@ import { createGeography } from './geography.js';
 import { createParkedAircraft, parkedGeometry } from './parkedAircraft.js';
 import { MEHRABAD_CIVIL_APRONS, MEHRABAD_MILITARY_APRONS } from './mehrabad.js';
 import { Vector3 } from 'three';
-import { tehranLandmarks } from './tehranLandmarks.js';
+import { tehranLandmarks, createTehranLandmarks } from './tehranLandmarks.js';
 import { createUniversitySetting } from './universitySetting.js';
 import { createBombSurfaces } from './bombSurfaces.js';
-import { inFeature, inRing } from './geography.js';
+import { inFeature, inRing, segmentDistance } from './geography.js';
 import {
     bombLaunch,
     advanceBomb,
@@ -355,6 +355,84 @@ test('Azadi landscape follows cached paths and terrain without changing the road
         covered.add(garden);
     }
     expect(covered.size).toBe(5);
+    // No lawn triangle may occupy the interior of a paving triangle.
+    const paving =
+        setting.getObjectByName('Azadi paving').geometry.attributes.position;
+    const masks = [];
+    for (let i = 0; i < paving.count; i += 3) {
+        const points = [0, 1, 2].map((j) => [
+            paving.getX(i + j),
+            paving.getZ(i + j)
+        ]);
+        masks.push({
+            points,
+            minX: Math.min(...points.map((p) => p[0])),
+            maxX: Math.max(...points.map((p) => p[0])),
+            minZ: Math.min(...points.map((p) => p[1])),
+            maxZ: Math.max(...points.map((p) => p[1]))
+        });
+    }
+    let overlaps = 0;
+    for (let i = 0; i < lawn.count; i += 3) {
+        const x = (lawn.getX(i) + lawn.getX(i + 1) + lawn.getX(i + 2)) / 3;
+        const z = (lawn.getZ(i) + lawn.getZ(i + 1) + lawn.getZ(i + 2)) / 3;
+        if (
+            masks.some(
+                (m) =>
+                    x > m.minX + 0.001 &&
+                    x < m.maxX - 0.001 &&
+                    z > m.minZ + 0.001 &&
+                    z < m.maxZ - 0.001 &&
+                    inRing(x, z, m.points) &&
+                    // Float32 world coordinates can round shared boundaries
+                    // by fractions of a millimetre; test strict interiors.
+                    m.points.every((p, j) => {
+                        const q = m.points[(j + 1) % 3];
+                        return (
+                            Math.abs(
+                                (q[0] - p[0]) * (z - p[1]) -
+                                    (q[1] - p[1]) * (x - p[0])
+                            ) /
+                                Math.hypot(q[0] - p[0], q[1] - p[1]) >
+                            0.001
+                        );
+                    })
+            )
+        )
+            overlaps++;
+    }
+    expect(overlaps).toBe(0);
+
+    const basins = world.data.features.filter(
+        (f) => f.kind === 'water' && f.id.startsWith('r7787479-')
+    );
+    for (const attribute of [lawn, paving])
+        for (let i = 0; i < attribute.count; i += 3) {
+            const x =
+                (attribute.getX(i) +
+                    attribute.getX(i + 1) +
+                    attribute.getX(i + 2)) /
+                3;
+            const z =
+                (attribute.getZ(i) +
+                    attribute.getZ(i + 1) +
+                    attribute.getZ(i + 2)) /
+                3;
+            // Allow only sub-millimetre Float32 rounding at shared edges.
+            expect(
+                basins.some(
+                    (f) =>
+                        inRing(x, z, f.points) &&
+                        f.points
+                            .slice(1)
+                            .every(
+                                (p, j) =>
+                                    segmentDistance(x, z, f.points[j], p) >
+                                    0.001
+                            )
+                )
+            ).toBe(false);
+        }
     const water =
         setting.getObjectByName('Azadi water').geometry.attributes.position;
     for (let i = 0; i < water.count; i += 3) {
@@ -411,4 +489,49 @@ test('Azadi flags occupy four separate outer gardens and keep the center clear',
     for (let i = 0; i < p.count; i++)
         if (p.getX(i) < 0.3) expect(Math.abs(p.getZ(i))).toBeLessThan(1e-6);
     geometry.dispose();
+});
+
+test('Azadi helicopter strip uses local helicopter markings without altering the source cache', () => {
+    const id = 'w175770956-0';
+    const source = data.features.find((f) => f.id === id);
+    const world = createGeography({ ...data, airfield: 'OIII' }, dem);
+    const strip = world.data.features.find((f) => f.id === id);
+    expect(strip.aeroway).toBe('helipad');
+    expect(strip.points).toEqual(source.points);
+    expect(source.aeroway).toBe('runway');
+    expect(
+        world.data.features.find((f) => f.id === 'w528505517-0').aeroway
+    ).toBe('runway');
+});
+
+test('both Tabiat hills face upward after mirroring, including shadow normals', () => {
+    const world = createGeography({ ...data, airfield: 'OIII' }, dem);
+    const group = createTehranLandmarks(world);
+    for (const side of [-1, 1]) {
+        const bank = group.getObjectByName(
+            `Tabiat planted park approach ${side}`
+        ).geometry;
+        const p = bank.attributes.position,
+            n = bank.attributes.normal,
+            indices = bank.index;
+        let minFaceY = Infinity,
+            minNormalY = Infinity;
+        for (let i = 0; i < n.count; i++)
+            minNormalY = Math.min(minNormalY, n.getY(i));
+        for (let i = 0; i < indices.count; i += 3) {
+            const a = indices.getX(i),
+                b = indices.getX(i + 1),
+                c = indices.getX(i + 2);
+            const faceY =
+                (p.getZ(b) - p.getZ(a)) * (p.getX(c) - p.getX(a)) -
+                (p.getX(b) - p.getX(a)) * (p.getZ(c) - p.getZ(a));
+            minFaceY = Math.min(minFaceY, faceY);
+        }
+        expect(minFaceY).toBeGreaterThan(0);
+        expect(minNormalY).toBeGreaterThan(0);
+    }
+    group.traverse((o) => {
+        o.geometry?.dispose();
+        o.material?.dispose();
+    });
 });

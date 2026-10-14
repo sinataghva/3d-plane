@@ -1,3 +1,4 @@
+import { azadiLayout } from './azadiLayout.js';
 import { indexRibbon, ribbonStrips } from './groundRibbons.js';
 export { roadRibbon } from './groundRibbons.js';
 import { isStructuredBridge } from './roadStructures.js';
@@ -294,12 +295,16 @@ export function createGroundDetail(world) {
             });
         }
     }
+    const azadi = azadiLayout(world);
+    const azadiPaths = new Set(azadi?.paths || []);
+    const azadiWater = new Set(azadi?.fountains || []);
     const defaultPaved = pavedAirfieldDefault(world.data);
     let numbers = ['11', '29'];
     for (const f of world.data.features) {
         if (
             !isSurfaceFeature(f) ||
             isStructuredBridge(f) ||
+            azadiPaths.has(f) ||
             !f.line ||
             !['road', 'runway', 'taxiway'].includes(f.kind)
         )
@@ -374,6 +379,39 @@ export function createGroundDetail(world) {
                 w,
                 kind
             );
+        if (f.aeroway === 'helipad') {
+            // Helicopter landing strip: outline, H marks and landing circle.
+            // No fixed-wing threshold bars, tyre streaks or dashed centreline.
+            line(20, length - 20, -width * 0.4, 0.5, 'paint');
+            line(20, length - 20, width * 0.4, 0.5, 'paint');
+            for (const t of [85, length - 85]) {
+                line(t - 6, t + 6, -4, 1.2, 'paint');
+                line(t - 6, t + 6, 4, 1.2, 'paint');
+                add(
+                    a[0] + dx * t + dz * 4,
+                    a[1] + dz * t - dx * 4,
+                    a[0] + dx * t - dz * 4,
+                    a[1] + dz * t + dx * 4,
+                    1.2,
+                    'paint'
+                );
+            }
+            const cx = (a[0] + b[0]) / 2,
+                cz = (a[1] + b[1]) / 2;
+            for (let i = 0; i < 48; i++) {
+                const u = (i * Math.PI) / 24,
+                    v = ((i + 1) * Math.PI) / 24;
+                add(
+                    cx + Math.cos(u) * 10,
+                    cz + Math.sin(u) * 10,
+                    cx + Math.cos(v) * 10,
+                    cz + Math.sin(v) * 10,
+                    0.5,
+                    'paint'
+                );
+            }
+            continue;
+        }
         if (kind === 'asphalt') {
             for (let t = 160; t < length - 160; t += 60)
                 line(t, Math.min(t + 30, length - 160), 0, 0.9, 'paint');
@@ -481,7 +519,17 @@ export function createGroundDetail(world) {
                 }
             }
     }
-    indexScenerySurfaces(world, TILE, addPatch);
+    indexScenerySurfaces(
+        {
+            ...world,
+            data: {
+                ...world.data,
+                features: world.data.features.filter((f) => !azadiWater.has(f))
+            }
+        },
+        TILE,
+        addPatch
+    );
     const waterEffects = createWaterEffects();
     const ballast = createBallastTexture();
     const grain = noiseTexture(512, false),

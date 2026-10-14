@@ -255,7 +255,22 @@ export function paintFeature(ctx, f, scale, minX, minZ, ground = false) {
     if (ground) paintRoadVerge(ctx, f, scale);
     ctx.stroke();
     ctx.setLineDash([]);
-    if (f.kind === 'runway') {
+    if (!ground && f.aeroway === 'helipad') {
+        const a = f.points[0],
+            b = f.points.at(-1) || a;
+        ctx.save();
+        ctx.fillStyle = '#f4f3d5';
+        ctx.font = `bold ${Math.max(5, 18 * scale)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(
+            'H',
+            ((a[0] + b[0]) / 2 - minX) * scale + 2,
+            ((a[1] + b[1]) / 2 - minZ) * scale + 2
+        );
+        ctx.restore();
+    }
+    if (f.kind === 'runway' && f.aeroway !== 'helipad') {
         ctx.strokeStyle = '#f4f3d5';
         ctx.lineWidth = ground ? Math.max(0.8, scale * 1.5) : 0.6;
         ctx.setLineDash([15 * scale, 15 * scale]);

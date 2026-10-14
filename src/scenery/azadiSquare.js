@@ -1,6 +1,8 @@
+import { azadiLayout } from './azadiLayout.js';
+import { subtractConvex } from './scenerySurfaces.js';
 import * as THREE from 'three';
 import { createAzadiFlags } from './azadiFlags.js';
-import { inRing, segmentDistance } from './geography.js';
+import { segmentDistance } from './geography.js';
 import {
     clipToTerrain,
     createRenderedHeight,
@@ -13,78 +15,43 @@ export function createAzadiSquare(world) {
     const group = new THREE.Group();
     group.name = 'Azadi Square · mapped landscape';
     if (!world.data.airfield?.includes('OIII')) return group;
-    const ids = new Set([
-        'w544306451-0',
-        'w545099122-0',
-        'w545099229-0',
-        'w545099230-0',
-        'w545098816-0',
-        'w545098817-0',
-        'w545300305-0',
-        'w545300307-0',
-        'w545300123-0',
-        'w545300308-0'
-    ]);
-    const features = new Map(
-        world.data.features.filter((f) => ids.has(f.id)).map((f) => [f.id, f])
-    );
-    const boundary = features.get('w544306451-0');
-    if (!boundary) return group;
+    const layout = azadiLayout(world);
+    if (!layout) return group;
+    const { features, ring, rings, outerRings, paths, fountains } = layout;
     const height = createRenderedHeight(world);
-    const ring = boundary.points;
-    // Four separate mapped garden islands form the outer square. Keeping
-    // their contours separate leaves both traffic rings and radial roads open.
-    const outerRings = [
-        'w545300305-0',
-        'w545300307-0',
-        'w545300123-0',
-        'w545300308-0'
-    ].flatMap((id) => {
-        const feature = features.get(id);
-        return feature ? [feature.points] : [];
-    });
-    const rings = [ring, ...outerRings];
-    // Independently simplified cached ways can miss the outer boundary by
-    // up to three metres. Allow those joins without extending the lawn contour.
-    const regions = rings.map((points, i) => ({
-        tolerance: i === 0 ? 0.2 : 3,
-        points,
-        minX: Math.min(...points.map((p) => p[0])) - (i === 0 ? 0.2 : 3),
-        maxX: Math.max(...points.map((p) => p[0])) + (i === 0 ? 0.2 : 3),
-        minZ: Math.min(...points.map((p) => p[1])) - (i === 0 ? 0.2 : 3),
-        maxZ: Math.max(...points.map((p) => p[1])) + (i === 0 ? 0.2 : 3)
-    }));
-    const contains = regions.map(
-        ({ points, minX, maxX, minZ, maxZ, tolerance }) =>
-            (/** @type {number[]} */ p) =>
-                p[0] >= minX &&
-                p[0] <= maxX &&
-                p[1] >= minZ &&
-                p[1] <= maxZ &&
-                (inRing(p[0], p[1], points) ||
-                    points
-                        .slice(1)
-                        .some(
-                            (b, i) =>
-                                segmentDistance(p[0], p[1], points[i], b) <
-                                tolerance
-                        ))
-    );
-    const paths = world.data.features.filter(
-        (f) =>
-            f.kind === 'road' &&
-            f.class === 'footway' &&
-            f.points.length > 1 &&
-            contains.some((inside) => f.points.every(inside))
-    );
-    const fountains = world.data.features.filter(
-        (f) =>
-            f.kind === 'water' &&
-            f.id.startsWith('r7787479-') &&
-            contains.some((inside) => f.points.every(inside))
+    // Cut basin footprints out of paving and grass rather than stacking water
+    // centimetres above solid surfaces (unstable at distant camera angles).
+    const waterMasks = fountains.flatMap((f) =>
+        THREE.ShapeUtils.triangulateShape(
+            f.points.map(([x, z]) => new THREE.Vector2(x, z)),
+            []
+        ).map((tri) => tri.map((i) => f.points[i]))
     );
     /** @type {Record<string, number[]>} */
     const buffers = { lawn: [], paving: [], coping: [], water: [] };
+    /** Ignore touching/disjoint convex pieces before subtraction, avoiding
+     * fragmentation along extended edges of paths outside the lawn piece.
+     * @param {number[][]} a @param {number[][]} b */
+    function overlaps(a, b) {
+        for (const poly of [a, b])
+            for (let i = 0; i < poly.length; i++) {
+                const p = poly[i],
+                    q = poly[(i + 1) % poly.length];
+                const nx = -(q[1] - p[1]),
+                    nz = q[0] - p[0];
+                if (Math.hypot(nx, nz) < 1e-8) continue;
+                const pa = a.map((v) => v[0] * nx + v[1] * nz),
+                    pb = b.map((v) => v[0] * nx + v[1] * nz);
+                if (
+                    Math.max(...pa) <= Math.min(...pb) + 1e-7 ||
+                    Math.max(...pb) <= Math.min(...pa) + 1e-7
+                )
+                    return false;
+            }
+        return true;
+    }
+    /** @type {number[][][]} */
+    const pavingMasks = [];
     /** Triangulate concave mapped contours before splitting at terrain edges.
      * @param {string} kind @param {number[][]} points @param {number} offset
      * @param {number|undefined} [level] */
@@ -100,14 +67,58 @@ export function createAzadiSquare(world) {
             contour.map(([x, z]) => new THREE.Vector2(x, z)),
             []
         );
-        for (const triangle of triangles)
-            for (const [x, z] of clipToTerrain(
+        for (const triangle of triangles) {
+            const clipped = clipToTerrain(
                 triangle.map((i) => contour[i]),
                 world
-            ))
-                buffers[kind].push(x, (level ?? height(x, z)) + offset, z);
+            );
+            for (let i = 0; i < clipped.length; i += 3) {
+                const tri = clipped.slice(i, i + 3);
+                if (kind === 'paving') pavingMasks.push(tri);
+                let pieces = [tri];
+                if (kind === 'lawn' || kind === 'paving') {
+                    const xs = tri.map((p) => p[0]),
+                        zs = tri.map((p) => p[1]);
+                    const minX = Math.min(...xs),
+                        maxX = Math.max(...xs),
+                        minZ = Math.min(...zs),
+                        maxZ = Math.max(...zs);
+                    for (const mask of kind === 'lawn'
+                        ? [...pavingMasks, ...waterMasks]
+                        : waterMasks) {
+                        if (
+                            mask.every((p) => p[0] <= minX) ||
+                            mask.every((p) => p[0] >= maxX) ||
+                            mask.every((p) => p[1] <= minZ) ||
+                            mask.every((p) => p[1] >= maxZ)
+                        )
+                            continue;
+                        pieces = pieces.flatMap((piece) =>
+                            overlaps(piece, mask)
+                                ? subtractConvex(piece, mask)
+                                : [piece]
+                        );
+                    }
+                }
+                for (const piece of pieces.filter(
+                    (poly) =>
+                        Math.abs(
+                            poly.reduce((sum, p, i) => {
+                                const q = poly[(i + 1) % poly.length];
+                                return sum + p[0] * q[1] - q[0] * p[1];
+                            }, 0)
+                        ) > 0.0001
+                ))
+                    for (let j = 1; j < piece.length - 1; j++)
+                        for (const [x, z] of [piece[0], piece[j], piece[j + 1]])
+                            buffers[kind].push(
+                                x,
+                                (level ?? height(x, z)) + offset,
+                                z
+                            );
+            }
+        }
     }
-    for (const contour of rings) surface('lawn', contour, 0.12);
     // The mapped scalloped central walk bounds the paved apron. Closing its
     // eastern gap joins the two mapped sides of the east approach.
     const apron = features.get('w545099122-0');
@@ -157,6 +168,7 @@ export function createAzadiSquare(world) {
             ]),
             0.15
         );
+    for (const contour of rings) surface('lawn', contour, 0.12);
     for (const fountain of fountains) {
         // Each basin has a horizontal water plane, a raised stone coping, and
         // skirts down to the sloped ground. They do not flatten the terrain.

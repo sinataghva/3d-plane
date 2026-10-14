@@ -1,3 +1,9 @@
+import {
+    createMiladTowerGeometry,
+    miladContains,
+    miladBaseHeight,
+    MILAD_REPLACED_SOURCES
+} from './miladTower.js';
 import { azadiContains, createAzadiTowerGeometry } from './azadiTower.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -114,16 +120,24 @@ export function tehranLandmarks(data) {
     return result;
 }
 
+/** @param {import('./geography.js').GeoData} data */
+export function replacedLandmarkSources(data) {
+    const landmarks = tehranLandmarks(data);
+    return new Set([
+        ...landmarks.flatMap((l) => (l.source ? [l.source] : [])),
+        ...(landmarks.some((l) => l.id === 'milad')
+            ? MILAD_REPLACED_SOURCES
+            : [])
+    ]);
+}
+
 /** Simplified collision envelopes preserve the large arch and bridge openings.
  * @param {string} id @param {number} x @param {number} y @param {number} z */
 export function landmarkContains(id, x, y, z) {
+    if (id === 'milad') return miladContains(x, y, z);
     const spec = TEHRAN_LANDMARKS.find((l) => l.id === id);
     if (!spec || y < 0 || y > spec.height) return false;
     if (id === 'azadi') return azadiContains(x, y, z);
-    if (id === 'milad')
-        return (
-            Math.hypot(x, z) < (y > 350 ? 3.2 : y > 280 ? 28 : 16 - y * 0.03)
-        );
     if (id === 'stadium') {
         const r = Math.hypot(x, z / 1.18);
         return r > 72 && r < 112 && y < (r - 72) * 1.06 + 2;
@@ -200,6 +214,7 @@ export function tabiatApproachHeight(x, z, base, ground) {
  * @param {string} id */
 export function landmarkGeometry(id) {
     if (id === 'azadi') return createAzadiTowerGeometry();
+    if (id === 'milad') return createMiladTowerGeometry();
     /** @type {THREE.BufferGeometry[]} */ const parts = [];
     const transform = new THREE.Matrix4();
     /** @param {THREE.BufferGeometry} geometry @param {number} color @param {number[]} [position] */
@@ -251,28 +266,7 @@ export function landmarkGeometry(id) {
         joint = 0xaca998,
         glass = 0x35575e,
         tile = 0x348b93;
-    if (id === 'milad') {
-        add(new THREE.CylinderGeometry(7, 16, 300, 8), 0xbdb8aa, [0, 150, 0]);
-        add(new THREE.CylinderGeometry(28, 12, 26, 12), stone, [0, 292, 0]);
-        add(new THREE.CylinderGeometry(20, 28, 34, 12), glass, [0, 322, 0]);
-        for (let y = 307; y <= 339; y += 5)
-            add(
-                new THREE.CylinderGeometry(
-                    27 - (y - 307) * 0.2,
-                    27 - (y - 307) * 0.2,
-                    1.2,
-                    24
-                ),
-                stone,
-                [0, y, 0]
-            );
-        add(new THREE.CylinderGeometry(7, 20, 12, 12), stone, [0, 345, 0]);
-        add(
-            new THREE.CylinderGeometry(0.5, 3.2, 84, 12),
-            0xc2c7c8,
-            [0, 393, 0]
-        );
-    } else if (id === 'tabiat') {
+    if (id === 'tabiat') {
         for (const y of [27, 34]) box([280, 1.3, 17], [0, y, 0], 0xa6926b);
         for (const z of [-9, 9]) {
             for (const y of [26, 35, 40])
@@ -402,7 +396,9 @@ export function createTehranLandmarks(world) {
         mesh.name = landmark.name;
         mesh.position.set(
             landmark.x,
-            world.height(landmark.x, landmark.z) + 0.1,
+            landmark.id === 'milad'
+                ? miladBaseHeight(world.height, landmark.x, landmark.z)
+                : world.height(landmark.x, landmark.z) + 0.1,
             landmark.z
         );
         mesh.castShadow = mesh.receiveShadow = true;
@@ -446,6 +442,16 @@ export function createTehranLandmarks(world) {
                     'color',
                     new THREE.Float32BufferAttribute(colors, 4)
                 );
+                // Mirroring X reverses winding. Restore upward-facing triangles
+                // before computing normals so lighting and shadow bias agree.
+                if (side < 0 && bank.index) {
+                    const index = bank.index;
+                    for (let i = 0; i < index.count; i += 3) {
+                        const b = index.getX(i + 1);
+                        index.setX(i + 1, index.getX(i + 2));
+                        index.setX(i + 2, b);
+                    }
+                }
                 bank.computeVertexNormals();
                 const approach = new THREE.Mesh(
                     bank,

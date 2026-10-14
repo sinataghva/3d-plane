@@ -173,6 +173,17 @@ export function indexScenerySurfaces(world, tileSize, emit) {
     }
     // Build water masks first so centreline strips cannot paint banks across lakes.
     const features = world.data.features;
+    // The helicopter strip owns its asphalt; adjoining apron triangles must
+    // not draw the same surface underneath it.
+    const helipadMasks = features
+        .filter((f) => f.aeroway === 'helipad' && f.line)
+        .flatMap((f) => {
+            const left = offsetLine(f.points, (f.width || 50) / 2);
+            const right = offsetLine(f.points, -(f.width || 50) / 2);
+            return left
+                .slice(1)
+                .map((p, i) => [left[i], p, right[i + 1], right[i]]);
+        });
     for (const f of [
         ...features.filter((f) => f.kind === 'water'),
         ...features.filter((f) => f.kind !== 'water')
@@ -186,22 +197,40 @@ export function indexScenerySurfaces(world, tileSize, emit) {
                 holes.map((h) => h.map((p) => new THREE.Vector2(...p)))
             );
             const points = [...outer, ...holes.flat()];
-            for (const tri of triangles)
-                add({
-                    points: tri.map((i) => points[i]),
-                    kind:
-                        f.kind === 'water'
-                            ? 'water'
-                            : pavedAirfieldSurface(
-                                    f,
-                                    pavedAirfieldDefault(world.data)
-                                )
-                              ? 'asphalt'
-                              : 'grass',
-                    offset: f.kind === 'water' ? 0.035 : 0.04,
-                    waterCharacter:
-                        f.kind === 'water' ? waterCharacter(f) : undefined
-                });
+            for (const tri of triangles) {
+                let pieces = [tri.map((i) => points[i])];
+                if (f.kind === 'taxiway')
+                    for (const mask of helipadMasks) {
+                        const minX = Math.min(...mask.map((p) => p[0])),
+                            maxX = Math.max(...mask.map((p) => p[0])),
+                            minZ = Math.min(...mask.map((p) => p[1])),
+                            maxZ = Math.max(...mask.map((p) => p[1]));
+                        pieces = pieces.flatMap((piece) =>
+                            piece.every((p) => p[0] < minX) ||
+                            piece.every((p) => p[0] > maxX) ||
+                            piece.every((p) => p[1] < minZ) ||
+                            piece.every((p) => p[1] > maxZ)
+                                ? [piece]
+                                : subtractConvex(piece, mask)
+                        );
+                    }
+                for (const piece of pieces)
+                    add({
+                        points: piece,
+                        kind:
+                            f.kind === 'water'
+                                ? 'water'
+                                : pavedAirfieldSurface(
+                                        f,
+                                        pavedAirfieldDefault(world.data)
+                                    )
+                                  ? 'asphalt'
+                                  : 'grass',
+                        offset: f.kind === 'water' ? 0.035 : 0.04,
+                        waterCharacter:
+                            f.kind === 'water' ? waterCharacter(f) : undefined
+                    });
+            }
             continue;
         }
         if (

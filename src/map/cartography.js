@@ -110,7 +110,22 @@ export function createGeographicCanvas(
                                 : '#c3baa4';
                 if (tehranGround) paintRoadVerge(ctx, f, sx);
                 ctx.stroke();
-                if (kind === 'runway') {
+                if (map && f.aeroway === 'helipad') {
+                    const a = f.points[0],
+                        b = f.points.at(-1) || a;
+                    ctx.save();
+                    ctx.fillStyle = '#f4f3d5';
+                    ctx.font = `bold ${Math.max(5, 18 * sx)}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(
+                        'H',
+                        ((a[0] + b[0]) / 2 - world.minX) * sx,
+                        ((a[1] + b[1]) / 2 - world.minZ) * sy
+                    );
+                    ctx.restore();
+                }
+                if (kind === 'runway' && f.aeroway !== 'helipad') {
                     ctx.strokeStyle = '#f4f3d5';
                     ctx.lineWidth = Math.max(0.8, sx * 1.5);
                     ctx.setLineDash([15 * sx, 15 * sx]);

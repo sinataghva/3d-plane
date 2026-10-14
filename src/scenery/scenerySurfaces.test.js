@@ -200,3 +200,38 @@ test('partial polygon overlap clips waterway banks at the shoreline', () => {
         expect(cx <= 0 || cx >= 20).toBe(true);
     }
 });
+
+test('apron surfaces leave an opening for the helicopter landing strip', () => {
+    const patches = collect([
+        {
+            ...base,
+            kind: 'taxiway',
+            aeroway: 'apron',
+            surface: 'concrete',
+            line: false,
+            points: [
+                [-50, -50],
+                [50, -50],
+                [50, 50],
+                [-50, 50],
+                [-50, -50]
+            ]
+        },
+        {
+            ...base,
+            kind: 'runway',
+            aeroway: 'helipad',
+            width: 20,
+            points: [
+                [-60, 0],
+                [60, 0]
+            ]
+        }
+    ]);
+    expect(patches.length).toBeGreaterThan(0);
+    for (const patch of patches) {
+        const z =
+            patch.points.reduce((s, p) => s + p[1], 0) / patch.points.length;
+        expect(Math.abs(z)).toBeGreaterThanOrEqual(10);
+    }
+});
