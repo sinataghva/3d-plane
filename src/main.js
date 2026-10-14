@@ -325,7 +325,8 @@ async function startApp() {
         /** @type {THREE.Mesh<THREE.BufferGeometry, THREE.MeshLambertMaterial>} */ (
             airbase.children[0]
         ).material,
-        airbase.children[0].userData.groundRelief
+        airbase.children[0].userData.groundRelief,
+        renderer
     );
     scene.add(createTehranHorizon(world));
     scene.add(airbase);
@@ -1383,9 +1384,10 @@ async function startApp() {
         // Render at most once per browser frame, including automation substeps.
         // The F-4 stays parked during display review; stream visible detail
         // around the spectator camera instead of the player aircraft.
-        const detailPosition = goldenReview?.active
-            ? camera.position
-            : viewedState.position;
+        const detailPosition =
+            goldenReview?.active || photoMode.active
+                ? camera.position
+                : viewedState.position;
         groundTexture.update(
             detailPosition,
             scene.userData.quality,

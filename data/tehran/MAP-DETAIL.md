@@ -113,7 +113,7 @@ ground fragment, and AGL is the aircraft altitude above local terrain.
 | --- | --- | --- | --- | --- |
 | Regional | 4,096 (~12.4 m/pixel) | Underlying fallback everywhere | Underlying fallback everywhere | All |
 | Intermediate | 8,192 (~6.2 m/pixel) | 1,200 / 2,400 m | 1,500 / 3,000 m | 550 / 950 m |
-| Close | 16,384 (~3.1 m/pixel) | 400 / 800 m | 600 / 1,200 m | 250 / 500 m |
+| Close | 32,768 (~1.55 m/pixel) | 400 / 800 m | 600 / 1,180 m | 250 / 500 m |
 
 Between each full/fade-end pair, smoothstep reduces that level's strength.
 Distance and altitude strengths multiply. The shader first blends intermediate
@@ -123,26 +123,41 @@ change to collision geometry. Labels, POIs and building footprints are omitted.
 The existing ground palette, solid paths and relief shading are retained;
 Phase 1's geographic indexing and finer resolution are reused without map ink.
 
-Each local level has a separate nine-slot atlas and a 3 × 3 aircraft-centered
-neighborhood: intermediate cells span about 3.17 km; close cells about 1.58 km.
-Padded tiles use linear filtering, a 55 m edge blend and a half-second load fade.
-The close footprint fits within the finer neighborhood even near a cell edge.
-Generation across both levels shares a **2 ms CPU target and at most one atlas
-upload per frame**, with intermediate fallback prepared first. Individual
-features, allocation and GPU upload may overrun the target. Low, restart and
-mission disposal release both atlases. Altitude fades stop preparation for a
-level once its target strength is zero; retained tiles can be reused on descent.
+The intermediate level retains a nine-slot atlas with 3.17 km cells. Its
+55 m fallback blend is removed between fully ready neighboring tiles; while a
+neighbor loads, both sides use the lower fade weight for a continuous seam.
+The close level uses the same 1,548 × 1,548 pixel allocation as a world-aligned
+rolling window spanning about 2.39 km, without internal tile edges. It advances
+in 16-texel steps (about 25 m). Entering strips and changed road-surface rectangles
+are painted incrementally and uploaded in pieces no larger than 512 × 512.
+The shader samples only completed coverage, fading over the outer 16 m to
+intermediate detail; lagging or teleported views retain that fallback until
+preparation finishes. New windows fade in over half a second. Texture sampling
+stays fixed in world coordinates during scrolling and turns.
+
+Both levels retain a **2 ms CPU target and at most one upload per frame**;
+individual features, allocation and GPU upload may overrun the cooperative
+target. A normal intermediate update transfers a single padded 516 × 516 tile
+(1.02 MiB of logical RGBA8 pixels) instead of the entire atlas (9.14 MiB).
+Close updates transfer only the dirty strip/rectangle. CPU atlas mirrors are
+retained so context restoration can rebuild full GPU textures. Low, restart and
+mission disposal release both allocations. Altitude fades stop preparation for
+a level once its target strength is zero; retained content is reused on descent.
+Ordinary flight follows the controlled aircraft; photo mode and scripted Golden
+Crown review follow the camera, including camera altitude above local terrain.
 
 Each atlas is 1,548 × 1,548 with a matching GPU texture, no mipmaps, and a
-516 × 516 staging canvas. The main world shares one 256 × 256 relief canvas.
+staging canvas bounded by 516 × 516. The main world shares one 256 × 256 relief canvas.
 Together the two levels use approximately **38.8 MiB** of backing/texture
 storage; adding the map's maximum 24 backing tiles gives approximately
-**63.2 MiB**. The new level adds approximately **19.3 MiB** within the agreed
-nine-slot allowance. These totals exclude indexes, driver overhead, the existing
+**63.2 MiB**. The close level retains its approximately **19.3 MiB** maximum allocation. These totals exclude indexes, driver overhead, the existing
 regional texture, visible map canvas and the rest of the scene. They are not
 total process-memory measurements.
 
-### Close-level validation and scheduling
+### Historical 16,384 close-level validation and scheduling
+
+The measurements below describe the earlier tiled close level, before the
+32,768 scrolling-window update. They are retained as historical evidence.
 
 Three alternating runs compared the previous two-level renderer, close detail
 with all-direction preparation, and close detail with camera-prioritized

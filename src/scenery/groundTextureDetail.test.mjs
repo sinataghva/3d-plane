@@ -106,9 +106,9 @@ test('bounded terrain atlas reuses tiles, evicts across travel, falls back at al
             }
             expect(detail.stats().groundTexturePending).toBe(0);
             expect(detail.stats().groundTextureTiles).toBe(9);
-            expect(detail.stats().groundCloseTiles).toBe(9);
+            expect(detail.stats().groundCloseTiles).toBe(1);
             expect(shader.uniforms.fineGroundFlight.value.w).toBe(3000);
-            expect(shader.uniforms.closeGroundFlight.value.w).toBe(1200);
+            expect(shader.uniforms.closeGroundFlight.value.w).toBe(1180);
             expect(detail.stats().groundTextureBytes).toBe(
                 2 * (GROUND_TEXTURE_BYTES + 4)
             );
@@ -125,7 +125,7 @@ test('bounded terrain atlas reuses tiles, evicts across travel, falls back at al
         detail.invalidate([[4100, 4100, 4110, 4110]]);
         for (let n = 0; n < 30; n++)
             detail.update({ x: 4000, y: 100, z: 4000 }, 'high', 0.1);
-        // One intersecting tile in each atlas, not all eighteen slots.
+        // One intersecting intermediate tile and one close rectangle.
         expect(detail.stats().groundTextureUploads - settledUploads).toBe(2);
         for (let n = 0; n < 30; n++)
             detail.update({ x: 4000, y: 525, z: 4000 }, 'high', 0.1);

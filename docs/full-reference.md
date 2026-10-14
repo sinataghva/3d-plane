@@ -132,14 +132,19 @@ land-cover edges; existing 3D buildings and nearby road meshes remain separate.
 | --- | --- | --- | --- | --- | --- | --- |
 | Far / minimum | Regional land cover and relief | 4,096 (~12.4 m/pixel) | Always available underneath | Fallback beyond the local levels | All altitudes | Low, Balanced, High |
 | Intermediate / level 2 | Sharper local surface boundaries and paths | 8,192 (~6.2 m/pixel) | Balanced: 0–1.2 km; High: 0–1.5 km | Balanced: 1.2–2.4 km; High: 1.5–3 km → far | Full below 550 m; fades from 550–950 m | Balanced, High |
-| Close / level 3 | Finer cached paths and narrow land-cover shapes | 16,384 (~3.1 m/pixel) | Balanced: 0–400 m; High: 0–600 m | Balanced: 400–800 m; High: 600–1,200 m → intermediate | Full below 250 m; fades from 250–500 m | Balanced, High |
+| Close / level 3 | Finer cached paths and narrow land-cover shapes | 32,768 (~1.55 m/pixel) | Balanced: 0–400 m; High: 0–600 m | Balanced: 400–800 m; High: 600–1,180 m → intermediate | Full below 250 m; fades from 250–500 m | Balanced, High |
 
 Distances are horizontal from the aircraft to each ground point, independent of
-camera direction. Altitude is the aircraft's height above the terrain directly
-beneath it. Distance and altitude fades multiply; these are smooth blends,
+camera direction during flight. Photo mode and scripted Golden Crown review
+use the camera position instead. Altitude is measured above the terrain directly
+beneath that detail anchor. Distance and altitude fades multiply; these are smooth blends,
 not whole-world switches. Near, intermediate and far detail can coexist in one
-view. Tiles fade in over half a second; missing close tiles reveal intermediate
-or regional detail. Tile-edge blending also softens the level near seams.
+view. New detail fades in over half a second; missing close coverage reveals
+intermediate or regional detail. The close texture scrolls in world coordinates
+and updates only entering strips, without internal tile seams. Intermediate
+edges blend to fallback only while an adjoining tile is unavailable or fading
+in. Both levels retain the shared 2 ms preparation target and one upload per
+frame; dirty rectangles replace whole-atlas uploads.
 Low retains the regional texture and at most 12 nearby road-only geometry tiles, fading within a 1.1 km distance budget. Fine ground atlases, bump detail and other surface overlays remain disabled on Low. No extra terrain elevation or satellite
 imagery is introduced. See [data and rendering notes](../data/tehran/MAP-DETAIL.md).
 
@@ -810,7 +815,7 @@ two per frame. Recently used tiles remain available beyond the activation
 range to avoid rebuilding when crossing a boundary. The original physics and
 collision terrain remain authoritative. Distant fields and forests use the
 regional texture. Tehran also refines nearby land-cover textures on Balanced/High
-with independent 8,192 and 16,384 ground-texture levels; see
+with independent 8,192 and 32,768 ground-texture levels; see
 [ground-texture budgets and transitions](../data/tehran/MAP-DETAIL.md#low-altitude-3d-ground).
 Neither system uses satellite imagery.
 

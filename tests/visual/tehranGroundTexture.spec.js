@@ -126,7 +126,7 @@ for (const mobile of [false, true])
         await page.waitForTimeout(600);
         const runway = await stats(page);
         expect(runway.groundTextureResolution).toBe(8192);
-        expect(runway.groundCloseResolution).toBe(16384);
+        expect(runway.groundCloseResolution).toBe(32768);
         expect(runway.groundCloseTiles).toBeGreaterThan(0);
         expect(runway.groundCloseTiles).toBeLessThanOrEqual(9);
         expect(runway.groundCloseStrength).toBeGreaterThan(0.99);
