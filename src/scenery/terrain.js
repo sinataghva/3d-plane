@@ -1,3 +1,4 @@
+import { STADIUM_BOUNDARIES } from './azadiStadium.js';
 import { buildingBase } from './buildingFoundation.js';
 import { tehranBuildingStyle } from './tehranBuildingStyle.js';
 import { woodlandSchedule, vegetationClearance } from './vegetationLayout.js';
@@ -53,7 +54,10 @@ export function createTerrain(world) {
     ground.translate(centerX, 0, centerZ);
     const positions = ground.getAttribute('position');
     for (let i = 0; i < positions.count; i++)
-        positions.setY(i, world.height(positions.getX(i), positions.getZ(i)));
+        positions.setY(
+            i,
+            world.terrainHeight(positions.getX(i), positions.getZ(i))
+        );
     ground.computeVertexNormals();
     const terrain = new THREE.Mesh(
         ground,
@@ -142,10 +146,16 @@ export function createTerrain(world) {
             detailedBuildings++;
             continue;
         }
+        const stadiumBoundary =
+            world.stadium && STADIUM_BOUNDARIES.includes(f.id);
         const style =
-            closeBuildings && !f.palace ? tehranBuildingStyle(f) : null;
+            !stadiumBoundary && closeBuildings && !f.palace
+                ? tehranBuildingStyle(f)
+                : null;
         const lightSeed =
-            f.palace || boundaries.some((b) => inFeature(x, z, b))
+            stadiumBoundary ||
+            f.palace ||
+            boundaries.some((b) => inFeature(x, z, b))
                 ? 0
                 : buildingLightSeed(f.id, style?.type || f.buildingType);
         const contour = ring.map((p) => new THREE.Vector2(p[0], p[1]));
@@ -170,7 +180,8 @@ export function createTerrain(world) {
             ) / 2;
         const facadeSeed =
             lightSeed ||
-            (closeBuildings &&
+            (!stadiumBoundary &&
+            closeBuildings &&
             !f.palace &&
             area < 1500 &&
             ![

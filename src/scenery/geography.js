@@ -1,3 +1,8 @@
+import {
+    stadiumBaseHeight,
+    stadiumInside,
+    STADIUM_BOUNDARIES
+} from './azadiStadium.js';
 import { miladBaseHeight } from './miladTower.js';
 import { createRenderedHeight } from './groundDetail.js';
 import { buildingBase } from './buildingFoundation.js';
@@ -71,7 +76,9 @@ export function createGeography(data, dem, departure) {
                           aeroway: 'helipad',
                           name: 'Helicopter landing site'
                       }
-                    : f
+                    : STADIUM_BOUNDARIES.includes(f.id)
+                      ? { ...f, height: 2.8 }
+                      : f
             )
         };
     if (departure) data = joinAirportRunways(data, departure.icao);
@@ -271,10 +278,29 @@ export function createGeography(data, dem, departure) {
           })
         : sourceHeight;
     /** @param {number} x @param {number} z */
-    const height = (x, z) =>
+    const groundHeight = (x, z) =>
         x < minX || x > maxX || z < minZ || z > maxZ
             ? sourceHeight(x, z)
             : terrainHeight(x, z);
+    const stadiumLandmark = landmarks.find((l) => l.id === 'stadium');
+    const stadium = stadiumLandmark
+        ? {
+              x: stadiumLandmark.x,
+              z: stadiumLandmark.z,
+              base: stadiumBaseHeight(
+                  groundHeight,
+                  stadiumLandmark.x,
+                  stadiumLandmark.z
+              )
+          }
+        : null;
+    /** Flight contact includes the level stadium platform; the underlying terrain
+     * remains below it and uses its own unchanged triangles.
+     * @param {number} x @param {number} z */
+    const height = (x, z) =>
+        stadium && stadiumInside(x - stadium.x, z - stadium.z)
+            ? stadium.base
+            : groundHeight(x, z);
     const landmarkBases = new Map(
         landmarks.map((l) => [
             l.id,
@@ -371,6 +397,8 @@ export function createGeography(data, dem, departure) {
         runways,
         runway,
         height,
+        terrainHeight: groundHeight,
+        stadium,
         onRunway,
         obstacle,
         sample

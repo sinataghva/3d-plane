@@ -33,14 +33,14 @@ const CACHE_LIMIT = 80;
 /** @typedef {{ax:number,az:number,bx:number,bz:number,width:number,kind:SurfaceKind,bridge?:number[],corners?:number[][]}} Strip */
 /** @typedef {{x:number,z:number,y:number,strips:Strip[],junctions?:{x:number,z:number,radius:number}[],ribbons?:import('./groundRibbons.js').RibbonTile[],patches?:import('./scenerySurfaces.js').SurfacePatch[],priority:number}} Tile */
 /** Interpolate the same triangles as the existing 256×256 terrain mesh. */
-/** @param {{width:number,depth:number,minX:number,minZ:number,height:(x:number,z:number)=>number}} world */
+/** @param {{width:number,depth:number,minX:number,minZ:number,height:(x:number,z:number)=>number,terrainHeight?:(x:number,z:number)=>number}} world */
 export function createRenderedHeight(world) {
     const stepX = world.width / 256,
         stepZ = world.depth / 256;
     const heights = new Float32Array(257 * 257);
     for (let z = 0; z <= 256; z++)
         for (let x = 0; x <= 256; x++)
-            heights[z * 257 + x] = world.height(
+            heights[z * 257 + x] = (world.terrainHeight ?? world.height)(
                 world.minX + x * stepX,
                 world.minZ + z * stepZ
             );

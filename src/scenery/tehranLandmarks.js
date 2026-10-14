@@ -1,4 +1,9 @@
 import {
+    createAzadiStadiumGeometry,
+    stadiumContains,
+    STADIUM_SOURCES
+} from './azadiStadium.js';
+import {
     createMiladTowerGeometry,
     miladContains,
     miladBaseHeight,
@@ -124,6 +129,7 @@ export function tehranLandmarks(data) {
 export function replacedLandmarkSources(data) {
     const landmarks = tehranLandmarks(data);
     return new Set([
+        ...(landmarks.some((l) => l.id === 'stadium') ? STADIUM_SOURCES : []),
         ...landmarks.flatMap((l) => (l.source ? [l.source] : [])),
         ...(landmarks.some((l) => l.id === 'milad')
             ? MILAD_REPLACED_SOURCES
@@ -135,13 +141,10 @@ export function replacedLandmarkSources(data) {
  * @param {string} id @param {number} x @param {number} y @param {number} z */
 export function landmarkContains(id, x, y, z) {
     if (id === 'milad') return miladContains(x, y, z);
+    if (id === 'stadium') return stadiumContains(x, y, z);
     const spec = TEHRAN_LANDMARKS.find((l) => l.id === id);
     if (!spec || y < 0 || y > spec.height) return false;
     if (id === 'azadi') return azadiContains(x, y, z);
-    if (id === 'stadium') {
-        const r = Math.hypot(x, z / 1.18);
-        return r > 72 && r < 112 && y < (r - 72) * 1.06 + 2;
-    }
     if (id === 'tabiat')
         return (
             Math.abs(x) < 140 &&
@@ -215,6 +218,7 @@ export function tabiatApproachHeight(x, z, base, ground) {
 export function landmarkGeometry(id) {
     if (id === 'azadi') return createAzadiTowerGeometry();
     if (id === 'milad') return createMiladTowerGeometry();
+    if (id === 'stadium') return createAzadiStadiumGeometry();
     /** @type {THREE.BufferGeometry[]} */ const parts = [];
     const transform = new THREE.Matrix4();
     /** @param {THREE.BufferGeometry} geometry @param {number} color @param {number[]} [position] */
@@ -279,25 +283,6 @@ export function landmarkGeometry(id) {
         for (const x of [-92, 0, 92])
             for (const side of [-1, 1])
                 beam([x, 0, 0], [x + side * 19, 27, side * 7], 1.4, 0x8b9588);
-    } else if (id === 'stadium') {
-        for (let tier = 0; tier < 10; tier++) {
-            const ring = new THREE.RingGeometry(
-                72 + tier * 3.6,
-                76 + tier * 3.6,
-                96
-            );
-            ring.rotateX(-Math.PI / 2);
-            ring.scale(1, 1, 1.18);
-            add(ring, tier % 2 ? 0xc4c1b2 : 0x97a9ab, [0, tier * 3.8 + 1, 0]);
-        }
-        box([70, 0.25, 108], [0, 0.2, 0], 0x547746);
-        for (const x of [-35, 35]) box([0.45, 0.3, 108], [x, 0.4, 0], stone);
-        for (const z of [-54, 0, 54]) box([70, 0.3, 0.45], [0, 0.4, z], stone);
-        for (const x of [-108, 108])
-            for (const z of [-110, 110]) {
-                beam([x, 0, z], [x, 48, z], 0.8, joint);
-                box([12, 4, 2], [x, 48, z], stone);
-            }
     } else if (id === 'university') {
         // Two open books, each with independently mirrored thin concrete pages.
         // Warping across depth avoids the solid extruded pointed-arch silhouette.
@@ -390,15 +375,20 @@ export function createTehranLandmarks(world) {
             landmarkGeometry(landmark.id),
             new THREE.MeshLambertMaterial({
                 vertexColors: true,
-                side: THREE.DoubleSide
+                side: THREE.DoubleSide,
+                // Back-face shadow casting avoids self-shadow acne on the broad
+                // stadium surfaces while retaining their received shadows.
+                shadowSide: landmark.id === 'stadium' ? THREE.BackSide : null
             })
         );
         mesh.name = landmark.name;
         mesh.position.set(
             landmark.x,
-            landmark.id === 'milad'
-                ? miladBaseHeight(world.height, landmark.x, landmark.z)
-                : world.height(landmark.x, landmark.z) + 0.1,
+            landmark.id === 'stadium' && world.stadium
+                ? world.stadium.base
+                : landmark.id === 'milad'
+                  ? miladBaseHeight(world.height, landmark.x, landmark.z)
+                  : world.height(landmark.x, landmark.z) + 0.1,
             landmark.z
         );
         mesh.castShadow = mesh.receiveShadow = true;

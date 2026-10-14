@@ -117,6 +117,16 @@ test('bounded terrain atlas reuses tiles, evicts across travel, falls back at al
             detail.update({ x, y: 100, z }, 'high', 0.1);
             expect(detail.stats().groundTextureGenerated).toBe(count);
         }
+        const settledUploads = detail.stats().groundTextureUploads;
+        detail.invalidate([[14000, 10000, 14500, 10500]]);
+        for (let n = 0; n < 30; n++)
+            detail.update({ x: 4000, y: 100, z: 4000 }, 'high', 0.1);
+        expect(detail.stats().groundTextureUploads).toBe(settledUploads);
+        detail.invalidate([[4100, 4100, 4110, 4110]]);
+        for (let n = 0; n < 30; n++)
+            detail.update({ x: 4000, y: 100, z: 4000 }, 'high', 0.1);
+        // One intersecting tile in each atlas, not all eighteen slots.
+        expect(detail.stats().groundTextureUploads - settledUploads).toBe(2);
         for (let n = 0; n < 30; n++)
             detail.update({ x: 4000, y: 525, z: 4000 }, 'high', 0.1);
         expect(detail.stats().groundCloseStrength).toBeLessThan(0.001);

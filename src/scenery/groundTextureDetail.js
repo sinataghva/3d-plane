@@ -178,10 +178,27 @@ function createGroundLayer(world, material, baseRelief, close = false) {
     }
     return {
         reset,
-        invalidate() {
-            // Keep the visible atlas and fades while bounded redraws replace it.
-            pending = null;
-            for (const slot of slots) slot.stale = slot.id >= 0;
+        /** @param {number[][]} [bounds] Changed world rectangles; omitted means all. */
+        invalidate(bounds) {
+            if (!index) return;
+            const affected = (/** @type {number} */ id) => {
+                if (!bounds) return true;
+                const x = world.minX + (id % index.columns) * index.span;
+                const z =
+                    world.minZ + Math.floor(id / index.columns) * index.span;
+                return bounds.some(
+                    ([x0, z0, x1, z1]) =>
+                        x <= x1 &&
+                        x + index.span >= x0 &&
+                        z <= z1 &&
+                        z + index.span >= z0
+                );
+            };
+            // Keep unaffected tiles and in-progress work. Road streaming must not
+            // repeatedly upload both entire neighborhoods for a distant bridge.
+            if (pending && affected(pending.id)) pending = null;
+            for (const slot of slots)
+                if (slot.id >= 0 && affected(slot.id)) slot.stale = true;
         },
         dispose() {
             reset();
@@ -388,9 +405,10 @@ export function createGroundTextureDetail(world, material, baseRelief) {
     const close = createGroundLayer(world, material, baseRelief, true);
     let maxWork = 0;
     return {
-        invalidate() {
-            intermediate.invalidate();
-            close.invalidate();
+        /** @param {number[][]} [bounds] */
+        invalidate(bounds) {
+            intermediate.invalidate(bounds);
+            close.invalidate(bounds);
         },
         reset() {
             intermediate.reset();

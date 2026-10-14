@@ -968,7 +968,8 @@ async function startApp() {
         parkedAircraft.update(camera.position, scene.userData.quality);
         updateRegionDetail(airbase, camera.position, scene.userData.quality);
         roadStructures.update(camera.position, scene.userData.quality);
-        if (roadStructures.consumeSurfaceChange()) groundTexture.invalidate();
+        const surfaceChanges = roadStructures.consumeSurfaceChange();
+        if (surfaceChanges) groundTexture.invalidate(surfaceChanges);
         serviceVehicles.update(camera.position, scene.userData.quality);
         roadTraffic.update(camera.position, scene.userData.quality, 0, camera);
         if (bombing) {
@@ -1415,7 +1416,8 @@ async function startApp() {
         parkedAircraft.update(camera.position, scene.userData.quality);
         updateRegionDetail(airbase, camera.position, scene.userData.quality);
         roadStructures.update(camera.position, scene.userData.quality);
-        if (roadStructures.consumeSurfaceChange()) groundTexture.invalidate();
+        const surfaceChanges = roadStructures.consumeSurfaceChange();
+        if (surfaceChanges) groundTexture.invalidate(surfaceChanges);
         serviceVehicles.update(camera.position, scene.userData.quality);
         const trafficStarted = performance.now();
         roadTraffic.update(

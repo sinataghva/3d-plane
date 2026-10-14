@@ -240,6 +240,8 @@ export function createRoadStructures(world) {
     /** @type {Map<string,{built:ReturnType<typeof import('./roadStructures.js').buildRoadStructureTile>,last:number}>} */ const cache =
         new Map();
     /** @type {ReturnType<typeof terrainCuts>|undefined} */ let cuts;
+    /** Cells whose road-surface ownership changed since the last atlas refresh. */
+    const changedCells = new Set();
     let tick = 0,
         dirty = false,
         disposed = false,
@@ -271,9 +273,20 @@ export function createRoadStructures(world) {
         consumeSurfaceChange() {
             if (dirty && wanted.every((k) => active.has(k))) {
                 dirty = false;
-                return true;
+                // Include road width and the painter's 100 m segment sampling.
+                const bounds = [...changedCells].map((key) => {
+                    const cell = cells.get(key);
+                    return [
+                        cell.x - 400,
+                        cell.z - 400,
+                        cell.x + 400,
+                        cell.z + 400
+                    ];
+                });
+                changedCells.clear();
+                return bounds;
             }
-            return false;
+            return null;
         },
         stats() {
             const list = [...cache.values()].map((x) => x.built.stats());
@@ -336,6 +349,7 @@ export function createRoadStructures(world) {
                     const old = cache.get(key);
                     if (old) old.built.group.visible = false;
                     active.delete(key);
+                    changedCells.add(key);
                     changed = true;
                 }
             for (const key of wanted) {
@@ -345,6 +359,7 @@ export function createRoadStructures(world) {
                     if (!active.has(key)) {
                         entry.built.group.visible = true;
                         active.add(key);
+                        changedCells.add(key);
                         changed = true;
                     }
                 }
@@ -375,6 +390,7 @@ export function createRoadStructures(world) {
                         cache.set(key, { built, last: tick });
                         group.add(built.group);
                         active.add(key);
+                        changedCells.add(key);
                         builds++;
                         preparation = null;
                         changed = true;
@@ -413,6 +429,7 @@ export function createRoadStructures(world) {
             preparation?.iterator.return(/** @type {never} */ (undefined));
             preparation = null;
             active.clear();
+            changedCells.clear();
             cuts?.dispose();
             for (const entry of cache.values()) entry.built.dispose();
             cache.clear();
