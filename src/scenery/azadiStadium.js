@@ -1,13 +1,26 @@
+import { stadiumToLocal, stadiumToWorld } from './stadiumFrame.js';
+import {
+    createStadiumExteriorGeometry,
+    STADIUM_OUTER,
+    STADIUM_PLAZA_HEIGHT,
+    stadiumExteriorHeight
+} from './stadiumExterior.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Original procedural model. Track/field proportions and tier organization follow
 // the cached footprint and photographic audit, not individual-seat survey data.
-export const STADIUM_SOURCES = ['w119372471-0', 'w119374214-0'];
 export const STADIUM_BOUNDARIES = [
     'w119371989-0',
     'w119372474-0',
     'w119372477-0'
+];
+// Replace cached access embankments together with the bowl: their independent
+// footprints otherwise leave detached ramps and duplicate entrance notches.
+export const STADIUM_SOURCES = [
+    'w119372471-0',
+    'w119374214-0',
+    ...STADIUM_BOUNDARIES
 ];
 const segments = 128;
 /** @param {number} a @param {number} radius */
@@ -32,7 +45,10 @@ export function stadiumBowlPoint(a, t) {
     ];
 }
 /** @param {number} x @param {number} z */
-export const stadiumInside = (x, z) => Math.hypot(x / 165, z / 182) <= 1;
+export const stadiumInside = (x, z) => {
+    const [lx, lz] = stadiumToLocal(x, z);
+    return Math.hypot(lx / STADIUM_OUTER[0], lz / STADIUM_OUTER[1]) <= 1;
+};
 /** @param {(x:number,z:number)=>number} height @param {number} x @param {number} z */
 export function stadiumBaseHeight(height, x, z) {
     let top = height(x, z);
@@ -41,24 +57,34 @@ export function stadiumBaseHeight(height, x, z) {
             const a = (i * Math.PI) / 64;
             top = Math.max(
                 top,
-                height(x + Math.sin(a) * 165 * r, z + Math.cos(a) * 182 * r)
+                height(
+                    x +
+                        stadiumToWorld(
+                            Math.sin(a) * STADIUM_OUTER[0] * r,
+                            Math.cos(a) * STADIUM_OUTER[1] * r
+                        )[0],
+                    z +
+                        stadiumToWorld(
+                            Math.sin(a) * STADIUM_OUTER[0] * r,
+                            Math.cos(a) * STADIUM_OUTER[1] * r
+                        )[1]
+                )
             );
         }
-    return top + 2;
+    return top + 0.6 - STADIUM_PLAZA_HEIGHT;
 }
 /** Solid foundation and tier volume; keep the playable interior open above pitch.
  * @param {number} x @param {number} y @param {number} z */
 export function stadiumContains(x, y, z) {
     if (!stadiumInside(x, z) || y < -50) return false;
+    [x, z] = stadiumToLocal(x, z);
     if (y <= 0) return true;
     // The envelope tops out at 38 m. Bomb-marker roof probes call this
     // thousands of times per frame: invert height first, not two nested searches.
     if (y > 38) return false;
     if (Math.hypot(x, Math.max(0, Math.abs(z) - 42.2)) < 53) return false;
     if (Math.hypot(x / 120, z / 137) > 1) {
-        const outer = Math.hypot(x / 158, z / 174);
-        const inner = Math.hypot(x / 120, z / 137);
-        return y <= (outer >= 1 ? 0 : (38 * (1 - outer)) / (inner - outer));
+        return y <= stadiumExteriorHeight(x, z);
     }
     if (y <= 2) return true;
     const t =
@@ -307,20 +333,10 @@ export function createAzadiStadiumGeometry() {
         2,
         concrete
     );
-    band(
-        (a) => stadiumBowlPoint(a, 1),
-        38,
-        (a) => [Math.sin(a) * 158, Math.cos(a) * 174],
-        0,
-        concrete
-    );
-    band(
-        (a) => stadiumBowlPoint(a, 1),
-        38,
-        (a) => [Math.sin(a) * 122, Math.cos(a) * 139],
-        38,
-        concrete
-    );
+    parts.push(createStadiumExteriorGeometry());
+    // The exterior already owns the horizontal upper-ring deck. A second
+    // rim band here coincided with it and flickered beneath the flag poles.
+    // Keep only the vertical inner parapet below.
     band(
         (a) => stadiumBowlPoint(a, 1),
         38,
@@ -329,17 +345,10 @@ export function createAzadiStadiumGeometry() {
         concrete
     );
     band(
-        (a) => [Math.sin(a) * 158, Math.cos(a) * 174],
-        0,
-        (a) => [Math.sin(a) * 165, Math.cos(a) * 182],
-        0,
-        concrete
-    );
-    band(
-        (a) => [Math.sin(a) * 165, Math.cos(a) * 182],
+        (a) => [Math.sin(a) * STADIUM_OUTER[0], Math.cos(a) * STADIUM_OUTER[1]],
         -50,
-        (a) => [Math.sin(a) * 165, Math.cos(a) * 182],
-        0,
+        (a) => [Math.sin(a) * STADIUM_OUTER[0], Math.cos(a) * STADIUM_OUTER[1]],
+        STADIUM_PLAZA_HEIGHT,
         concrete
     );
     // Radial stairs follow each tread, with a separate wide middle concourse.
@@ -371,48 +380,52 @@ export function createAzadiStadiumGeometry() {
         const p = stadiumBowlPoint(a, 0.51);
         box([3, 2.3, 1.5], [p[0], 19.2, p[1]], dark);
     }
-    // Access routes run down the outer concourse; portals remain dark recesses.
-    for (let i = 0; i < 24; i++) {
-        const a = (i * Math.PI) / 12,
-            da = 0.009;
-        const p = [Math.sin(a - da) * 122, Math.cos(a - da) * 139],
-            q = [Math.sin(a - da) * 158, Math.cos(a - da) * 174];
-        const r = [Math.sin(a + da) * 158, Math.cos(a + da) * 174],
-            s = [Math.sin(a + da) * 122, Math.cos(a + da) * 139];
-        quad(
-            [
-                [p[0], 36.15, p[1]],
-                [q[0], 0.15, q[1]],
-                [r[0], 0.15, r[1]],
-                [s[0], 36.15, s[1]]
-            ],
-            0xa4a28e
-        );
-    }
     // Broad central hospitality / press frontage replaces seat-like uniformity.
     box([2.5, 5, 28], [-101, 25.5, 0], concrete);
     box([0.25, 3.6, 26], [-99.6, 25.5, 0], 0x426169);
     // Large recognizable fixtures, all merged rather than separate seat meshes.
     for (const side of [-1, 1]) {
-        box([21, 9, 1.8], [0, 43, side * 135], 0x4c5654);
-        box([19, 6.8, 0.2], [0, 43, side * 133.9], 0x1d3438);
+        // A broad central neck raises the board above the 38 m rim.
+        box([18, 6, 2], [0, 41, side * 135], 0x6b7470);
+        box([44, 17, 1.8], [0, 52.5, side * 135], 0x4c5654);
+        box([42, (42 * 6.8) / 19, 0.2], [0, 52.5, side * 133.9], 0x1d3438);
     }
-    for (const x of [-106, 106])
-        for (const z of [-108, 108]) {
+    for (const x of [-84.85, 84.85])
+        for (const z of [-96.87, 96.87]) {
             add(
-                new THREE.CylinderGeometry(1.1, 2.4, 88, 8).translate(x, 4, z),
+                new THREE.CylinderGeometry(0.7, 1.1, 16, 8).translate(x, 46, z),
                 concrete
             );
-            box([15, 5.5, 1.8], [x, 48, z], 0x5c6764);
+            // Build each array in local space, with its lamps on +Z, then
+            // turn the housing toward the pitch with a shallow, photo-derived tilt.
+            // Fix world-up as well as aim: a shortest-arc quaternion from +Z
+            // leaves a corner-dependent roll, making the rectangular arrays skew.
+            const aim = new THREE.Object3D();
+            aim.position.set(x, 54, z);
+            // The visible frame is almost upright; individual lamp aiming
+            // should not dictate the tilt of the whole supporting panel.
+            const drop =
+                Math.hypot(x, z) * Math.tan(THREE.MathUtils.degToRad(5));
+            aim.lookAt(0, 54 - drop, 0);
+            const orientation = aim.quaternion;
+            /** @param {number[]} size @param {number[]} offset @param {number} color */
+            const fixtureBox = (size, offset, color) => {
+                const geometry = new THREE.BoxGeometry(
+                    size[0],
+                    size[1],
+                    size[2]
+                );
+                geometry.translate(offset[0], offset[1], offset[2]);
+                geometry.applyQuaternion(orientation);
+                geometry.translate(x, 54, z);
+                add(geometry, color);
+            };
+            fixtureBox([15, 5.5, 1.8], [0, 0, 0], 0x5c6764);
             for (let col = 0; col < 10; col++)
                 for (let row = 0; row < 3; row++)
-                    box(
+                    fixtureBox(
                         [0.9, 0.9, 0.3],
-                        [
-                            x - 6.4 + col * 1.42,
-                            46.5 + row * 1.5,
-                            z + (z > 0 ? -1 : 1)
-                        ],
+                        [-6.4 + col * 1.42, -1.5 + row * 1.5, 1.05],
                         0xe0dfc8
                     );
         }

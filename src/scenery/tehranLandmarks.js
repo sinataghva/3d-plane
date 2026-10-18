@@ -1,3 +1,7 @@
+import { STADIUM_YAW } from './stadiumFrame.js';
+import { createStadiumLandscape } from './stadiumLandscape.js';
+import { createStadiumApproaches } from './stadiumExterior.js';
+import { createStadiumDecorations } from './stadiumDecorations.js';
 import {
     createAzadiStadiumGeometry,
     stadiumContains,
@@ -393,6 +397,14 @@ export function createTehranLandmarks(world) {
         );
         mesh.castShadow = mesh.receiveShadow = true;
         group.add(mesh);
+        if (landmark.id === 'stadium') {
+            mesh.rotation.y = STADIUM_YAW;
+            mesh.add(
+                createStadiumDecorations(),
+                createStadiumApproaches(world),
+                createStadiumLandscape()
+            );
+        }
         if (landmark.id === 'azadi') group.add(createAzadiSquare(world));
         if (landmark.id === 'university')
             group.add(createUniversitySetting(world, landmark));

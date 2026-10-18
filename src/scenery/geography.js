@@ -1,3 +1,4 @@
+import { stadiumRampGroundHeight } from './stadiumExterior.js';
 import {
     stadiumBaseHeight,
     stadiumInside,
@@ -294,13 +295,21 @@ export function createGeography(data, dem, departure) {
               )
           }
         : null;
-    /** Flight contact includes the level stadium platform; the underlying terrain
-     * remains below it and uses its own unchanged triangles.
+    /** The recessed pitch supplies the base contact datum. Stadium tiers and
+     * banks have their own obstacle envelope; the terrain renderer cuts out
+     * the bowl while preserving the surrounding terrain triangles.
      * @param {number} x @param {number} z */
     const height = (x, z) =>
         stadium && stadiumInside(x - stadium.x, z - stadium.z)
             ? stadium.base
-            : groundHeight(x, z);
+            : stadium
+              ? stadiumRampGroundHeight(
+                    x - stadium.x,
+                    z - stadium.z,
+                    groundHeight(x, z),
+                    stadium.base
+                )
+              : groundHeight(x, z);
     const landmarkBases = new Map(
         landmarks.map((l) => [
             l.id,

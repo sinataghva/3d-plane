@@ -1,3 +1,4 @@
+import { stadiumToWorld } from './stadiumFrame.js';
 import { test, expect, vi } from 'vitest';
 import fs from 'node:fs';
 import * as THREE from 'three';
@@ -44,7 +45,7 @@ test('stadium has opaque seating and upward track faces', () => {
     g.dispose();
     m.dispose();
 });
-test('real stadium platform clears every underlying terrain sample and matches flight contact', () => {
+test('recessed stadium pitch and exterior plaza use separate terrain datums', () => {
     const data = JSON.parse(fs.readFileSync('data/tehran/map.json'));
     data.airfield = 'OIII';
     const world = createGeography(
@@ -57,8 +58,8 @@ test('real stadium platform clears every underlying terrain sample and matches f
         for (let dz = -182; dz <= 182; dz += 3)
             if (stadiumInside(dx, dz)) {
                 expect(
-                    base - world.terrainHeight(x + dx, z + dz)
-                ).toBeGreaterThan(1);
+                    base + 12 - world.terrainHeight(x + dx, z + dz)
+                ).toBeGreaterThan(0);
                 expect(world.height(x + dx, z + dz)).toBe(base);
             }
     expect(world.obstacle(x, z, base - 0.1)).toBe('building');
@@ -74,7 +75,9 @@ test('stadium collision retains tier heights without nested searches for marker 
         [0.75, 28]
     ])
         for (let i = 0; i < 32; i++) {
-            const [x, z] = stadiumBowlPoint((i * Math.PI) / 16, t);
+            const [x, z] = stadiumToWorld(
+                ...stadiumBowlPoint((i * Math.PI) / 16, t)
+            );
             expect(stadiumContains(x, height - 0.1, z)).toBe(true);
             expect(stadiumContains(x, height + 0.1, z)).toBe(false);
         }
@@ -89,4 +92,24 @@ test('stadium collision retains tier heights without nested searches for marker 
     } finally {
         spy.mockRestore();
     }
+});
+
+test('flag rim has a single deck surface in the assembled bowl and exterior', () => {
+    const geometry = createAzadiStadiumGeometry();
+    const material = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.updateMatrixWorld(true);
+    for (let i = 0; i < 72; i++) {
+        const a = ((i + 0.371) * Math.PI) / 36;
+        const x = Math.sin(a) * 120.9,
+            z = Math.cos(a) * 137.9;
+        const hits = new THREE.Raycaster(
+            new THREE.Vector3(x, 70, z),
+            new THREE.Vector3(0, -1, 0)
+        ).intersectObject(mesh);
+        const decks = hits.filter((h) => Math.abs(h.point.y - 38) < 0.001);
+        expect(decks.length, `rim sample ${i}`).toBe(1);
+    }
+    geometry.dispose();
+    material.dispose();
 });

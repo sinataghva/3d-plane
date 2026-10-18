@@ -1,3 +1,4 @@
+import { cutStadiumTerrain } from './stadiumTerrain.js';
 import { STADIUM_BOUNDARIES } from './azadiStadium.js';
 import { buildingBase } from './buildingFoundation.js';
 import { tehranBuildingStyle } from './tehranBuildingStyle.js';
@@ -60,7 +61,7 @@ export function createTerrain(world) {
         );
     ground.computeVertexNormals();
     const terrain = new THREE.Mesh(
-        ground,
+        cutStadiumTerrain(ground, world.stadium),
         new THREE.MeshLambertMaterial({ map: texture })
     );
     terrain.receiveShadow = true;
