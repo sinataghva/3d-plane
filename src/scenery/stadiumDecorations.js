@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { azadiFlagGeometry } from './azadiFlags.js';
 
-// Shift the rim positions clear of the scoreboards and diagonal floodlights.
+// Shift the rim positions clear of the scoreboard and diagonal floodlights.
 export const STADIUM_FLAG_ANGLES = Array.from({ length: 36 }, (_, index) => {
-    // Eighteen positions per half, leaving clear space at the two boards.
+    // Eighteen positions per half, preserving the existing flag spacing.
     return (index >= 18 ? 180 : 0) + 13 + ((index % 18) * 154) / 17;
 });
 
@@ -72,13 +72,10 @@ export function createStadiumDecorations() {
             new URL('../assets/stadium-portraits.png', import.meta.url).href
         )
     });
-    for (const side of [-1, 1]) {
-        const screen = new THREE.Mesh(display, portraits);
-        screen.name = `Stadium portrait display ${side}`;
-        // Existing screen backing ends at |z|=133.8; leave a real 20 cm gap.
-        screen.position.set(0, 52.5, side * 133.6);
-        screen.rotation.y = side > 0 ? Math.PI : 0;
-        group.add(screen);
-    }
+    const screen = new THREE.Mesh(display, portraits);
+    screen.name = 'Stadium north portrait display';
+    // North backing ends at z=-133.8; leave a real 20 cm gap.
+    screen.position.set(0, 52.5, -133.6);
+    group.add(screen);
     return group;
 }

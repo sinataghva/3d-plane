@@ -383,13 +383,11 @@ export function createAzadiStadiumGeometry() {
     // Broad central hospitality / press frontage replaces seat-like uniformity.
     box([2.5, 5, 28], [-101, 25.5, 0], concrete);
     box([0.25, 3.6, 26], [-99.6, 25.5, 0], 0x426169);
-    // Large recognizable fixtures, all merged rather than separate seat meshes.
-    for (const side of [-1, 1]) {
-        // A broad central neck raises the board above the 38 m rim.
-        box([18, 6, 2], [0, 41, side * 135], 0x6b7470);
-        box([44, 17, 1.8], [0, 52.5, side * 135], 0x4c5654);
-        box([42, (42 * 6.8) / 19, 0.2], [0, 52.5, side * 133.9], 0x1d3438);
-    }
+    // The photos show one scoreboard on the north (lake-side) rim.
+    // Its broad central neck raises the board above the 38 m rim.
+    box([18, 6, 2], [0, 41, -135], 0x6b7470);
+    box([44, 17, 1.8], [0, 52.5, -135], 0x4c5654);
+    box([42, (42 * 6.8) / 19, 0.2], [0, 52.5, -133.9], 0x1d3438);
     for (const x of [-84.85, 84.85])
         for (const z of [-96.87, 96.87]) {
             add(
