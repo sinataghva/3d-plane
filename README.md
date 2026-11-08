@@ -6,6 +6,16 @@ An arcade-style 3D flight simulator for your browser, built with Three.js and Vi
 
 **[Launch Open Skies](https://sinataghva.github.io/3d-plane/)** — choose a flight and press **Fly**. Free flight is the default; guides and landing challenges are optional. On a phone, fly in landscape orientation.
 
+Each flight's loading screen previews its own in-game views, with a random
+opening photograph and gentle transitions every three seconds. Status messages follow
+scenery loading, terrain/aircraft preparation, and flight preparation. The thin
+loading line indicates activity rather than a percentage. The slideshow can be
+paused, respects reduced motion, and closes as soon as the first flight frame
+is rendered. Image sources and capture instructions:
+[Saint-Cyr](public/previews/saint-cyr-loading/README.md),
+[Luxeuil](public/previews/luxeuil-loading/README.md), and
+[Tehran](public/previews/tehran-loading/README.md).
+
 ## Basic controls
 
 | Action | Keyboard | Touch |

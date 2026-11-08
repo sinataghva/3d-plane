@@ -1,4 +1,5 @@
 import { createGoldenCrownDisplay } from './display/goldenCrownDisplay.js';
+import { createSceneryLoading } from './ui/sceneryLoading.js';
 import { createGoldenCrownPlayable } from './display/goldenCrownPlayable.js';
 import { createRoadStructures } from './scenery/roadStructures.js';
 import { isJet } from './aircraft/capabilities.js';
@@ -86,10 +87,13 @@ import { createWarningBanner } from './ui/warnings.js';
 
 setupMobileViewport();
 
+let clearLoading = () => {};
+
 /**
  * @param {unknown} error
  */
 function reportRuntimeError(error) {
+    clearLoading();
     console.error(error);
     showRuntimeFallback('The 3D scene could not be started.');
 }
@@ -242,7 +246,16 @@ async function startApp() {
     document.title = `${mission.title} · Open Skies`;
     updateFlightGuide(mission.aircraft);
     const loading = document.getElementById('scenery-loading');
-    if (loading) loading.textContent = `Loading ${mission.title}…`;
+    const sceneryLoading = loading ? createSceneryLoading(loading, mission) : null;
+    let loadingFinished = false;
+    const finishLoading = () => {
+        if (loadingFinished) return;
+        loadingFinished = true;
+        sceneryLoading?.dispose();
+        loading?.remove();
+        clearLoading = () => {};
+    };
+    clearLoading = finishLoading;
     const mapCaption = document.querySelector('#world-map p');
     if (mapCaption)
         mapCaption.textContent = `${mission.title} · north up · live position`;
@@ -282,6 +295,8 @@ async function startApp() {
         loadData(mission.elevation)
     ]);
     if (closed) return;
+    if (sceneryLoading)
+        await sceneryLoading.paint('Preparing terrain and aircraft…');
     geoData.airfield = mission.airfield;
     const world = createGeography(
         geoData,
@@ -313,7 +328,9 @@ async function startApp() {
 
     const restoreRandom = visualScenario ? useSeededRandom(12345) : null;
     const roadStructures = createRoadStructures(world);
+    if (sceneryLoading) await sceneryLoading.paint();
     const airbase = createTerrain(world);
+    if (sceneryLoading) await sceneryLoading.paint();
     roadStructures.attachTerrain(
         /** @type {THREE.Mesh<THREE.BufferGeometry,THREE.MeshLambertMaterial>} */ (
             airbase.children[0]
@@ -340,6 +357,7 @@ async function startApp() {
     scene.add(roadTraffic.mesh);
     const groundDetail = createGroundDetail(world);
     scene.add(groundDetail.group);
+    if (sceneryLoading) await sceneryLoading.paint();
 
     const goldenCrown =
         mission.id === 'tehran' ? createGoldenCrownDisplay(world) : null;
@@ -381,6 +399,7 @@ async function startApp() {
     const machEffect = isJet(mission.aircraft)
         ? createMachEffect(airplane)
         : null;
+    if (sceneryLoading) await sceneryLoading.paint('Preparing your flight…');
 
     const keyboard = createKeyboardState(mission.aircraft);
     const planePhysics = createPlanePhysics();
@@ -984,7 +1003,7 @@ async function startApp() {
         }
         goldenCrown?.prepareCamera(camera);
         renderer.render(scene, camera);
-        document.getElementById('scenery-loading')?.remove();
+        finishLoading();
         if (import.meta.env.DEV)
             document.documentElement.dataset.sceneryStats = JSON.stringify({
                 calls: renderer.info.render.calls,
@@ -1433,7 +1452,7 @@ async function startApp() {
         const trafficMs = performance.now() - trafficStarted;
         goldenCrown?.prepareCamera(camera);
         renderer.render(scene, camera);
-        document.getElementById('scenery-loading')?.remove();
+        finishLoading();
         fpsCounter.update(timestamp);
         if (trafficBench) trafficBench.sample(timestamp, trafficMs);
         frames++;

@@ -3,7 +3,8 @@ import { test, expect } from '@playwright/test';
 test('Tehran graphics presets switch live and persist', async ({
     page
 }, info) => {
-    test.setTimeout(60000);
+    // Two scenery loads plus three live shader/preset changes on headless GPUs.
+    test.setTimeout(120000);
     await page.goto('/3d-plane/?mission=tehran&automation=1');
     await ready(page);
     for (const quality of ['low', 'balanced', 'high']) {
@@ -17,6 +18,7 @@ test('Tehran graphics presets switch live and persist', async ({
         });
     }
     await page.goto('/3d-plane/?mission=tehran&automation=1');
+    await ready(page);
     await page.locator('#settings-button').click();
     await expect(page.locator('#graphics-quality')).toHaveValue('high');
 });
